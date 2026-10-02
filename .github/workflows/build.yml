@@ -95,7 +95,7 @@ jobs:
 
       - name: Lint
         if: steps.decide.outputs.skip != 'true'
-        run: just check
+        run: just lint
 
       # The runner's disk is too small for a 7 GB image, its rechunked copy
       # and Podman's working space without clearing the preinstalled SDKs.

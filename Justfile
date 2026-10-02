@@ -85,15 +85,45 @@ vm-stop name="atlasos":
 # Boot stock Kinoite 44 (installed from the ISO in ~/VMs) and AtlasOS one after
 # the other with 8 GB of RAM, and record memory and services 2 minutes after login.
 [group('VMs')]
-mem disk="build/atlasos.qcow2":
+mem-stock disk="build/atlasos.qcow2":
     scripts/vm.sh mem {{ disk }}
 
-# Check the Justfile's formatting and lint the shell scripts.
+# The disk `boot`, `mem` and `check` use: build/atlasos.qcow2 updated to the
+# latest local build, logging in to Plasma by itself, booted once already.
+[group('Measure')]
+bench-disk tag="latest":
+    scripts/vm.sh update atlasos-bench {{ tag }} settle
+
+# Boot times: systemd-analyze, blame (top 15), critical-chain, and when Plasma's
+# shell starts. `runs` boots, each from a fresh overlay; prints the medians.
+[group('Measure')]
+boot runs="3" out=("build/bench/boot-" + datetime("%Y%m%d-%H%M%S")):
+    scripts/vm.sh bench boot build/vm/updated/atlasos-bench.qcow2 {{ runs }} {{ out }}
+
+# Idle memory two minutes after Plasma starts: free -h and ps_mem.
+[group('Measure')]
+mem runs="3" out=("build/bench/mem-" + datetime("%Y%m%d-%H%M%S")):
+    scripts/vm.sh bench mem build/vm/updated/atlasos-bench.qcow2 {{ runs }} {{ out }}
+
+# Boot and memory from the same boots (what the optimization loop runs).
+[group('Measure')]
+bench runs="3" out=("build/bench/all-" + datetime("%Y%m%d-%H%M%S")):
+    scripts/vm.sh bench all build/vm/updated/atlasos-bench.qcow2 {{ runs }} {{ out }}
+
+# Boot once and check the desktop works: Plasma, network, audio, Bluetooth,
+# printing, Flatpak, SELinux, firewalld, zram, systemd-oomd, and Brave Origin,
+# Ghostty and Dolphin opening. Screenshots in the output folder.
+[group('Measure')]
+check out=("build/bench/check-" + datetime("%Y%m%d-%H%M%S")):
+    scripts/vm.sh bench check build/vm/updated/atlasos-bench.qcow2 1 {{ out }}
+
+# Check the Justfile's formatting and lint the scripts.
 [group('Checks')]
-check:
+lint:
     just --unstable --fmt --check
     shellcheck build_files/*.sh scripts/*.sh
     shellcheck -s sh branding/render.sh
+    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory
@@ -101,5 +131,5 @@ check:
 # stays; `sudo podman rmi localhost/atlasos` removes it.
 [group('Checks')]
 clean:
-    for vm in atlasos kinoite-stock kinoite-stock-install; do scripts/vm.sh stop $vm || true; done
+    for vm in atlasos atlasos-bench kinoite-stock kinoite-stock-install; do scripts/vm.sh stop $vm || true; done
     rm -rf build/

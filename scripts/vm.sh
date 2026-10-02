@@ -9,7 +9,9 @@
 #                                  build/vm/updated/<name>.qcow2: build/atlasos.qcow2
 #                                  switched to localhost/atlasos:<tag>
 #   vm.sh install-stock            install stock Kinoite 44 from the ISO in ~/VMs
-#   vm.sh mem [disk]               the `just mem` comparison
+#   vm.sh mem [disk]               stock Kinoite vs AtlasOS memory (`just mem-stock`)
+#   vm.sh bench <boot|mem|check|all> <disk> <runs> <out dir>
+#                                  measure or check boots (`just boot`, `mem`, `check`)
 #
 # Every VM is UEFI (OVMF) with 8 GB of RAM, 4 CPUs, a serial console, and
 # virtio video with 3D acceleration, so Plasma runs on the host GPU (virgl) as
@@ -241,7 +243,7 @@ password_file() {
 # On Ctrl-C or a failure, don't leave an 8 GB VM running.
 stop_all() {
 	local vm
-	for vm in kinoite-stock-install kinoite-stock atlasos; do
+	for vm in kinoite-stock-install kinoite-stock atlasos atlasos-bench; do
 		(stop "$vm") || true
 	done
 }
@@ -281,6 +283,35 @@ mem() {
 	echo "Full reports and screenshots: build/mem/$stamp/"
 }
 
+# Boots <disk> <runs> times, each from a fresh overlay, and has
+# scripts/vmbench.py measure or check each boot into <out>/run<N>. The disk
+# should come from `update ... settle`.
+bench() {
+	local mode=$1 disk=$2 runs=$3 out=$4 i failed=0
+	trap stop_all EXIT
+	trap 'exit 130' INT TERM
+	[ -f "$disk" ] || {
+		echo "No $disk. Make it with: scripts/vm.sh update atlasos-bench latest settle" >&2
+		exit 1
+	}
+	# ps_mem is copied into the VM, so the image needn't ship it. From Fedora's
+	# own repos, signature checked.
+	[ "$mode" = check ] || [ -f build/tools/usr/bin/ps_mem ] || (
+		mkdir -p build/tools && cd build/tools &&
+			dnf download --quiet --repo=fedora --repo=updates ps_mem &&
+			rpm -K ps_mem-*.rpm && rpm2cpio ps_mem-*.rpm | cpio -idm --quiet ./usr/bin/ps_mem
+	)
+	mkdir -p "$out"
+	for i in $(seq "$runs"); do
+		echo ">> $mode, run $i of $runs"
+		run atlasos-bench "$disk" >/dev/null
+		uv run --quiet scripts/vmbench.py "$mode" atlasos-bench "$out/run$i" build/vm-password || failed=1
+		stop atlasos-bench
+	done
+	[ "$mode" = check ] || uv run --quiet scripts/benchsum.py "$out"
+	return "$failed"
+}
+
 case ${1-} in
 run) run "$2" "$3" ;;
 stop) stop "$2" ;;
@@ -296,8 +327,9 @@ install-stock)
 	install_stock
 	;;
 mem) mem "${2:-build/atlasos.qcow2}" ;;
+bench) bench "$2" "$3" "$4" "$5" ;;
 *)
-	sed -n '2,13p' "$0"
+	sed -n '2,15p' "$0"
 	exit 2
 	;;
 esac
