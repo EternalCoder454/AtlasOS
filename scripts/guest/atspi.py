@@ -4,7 +4,9 @@ Copied in and run by scripts/vmlive.py's "ui" step.
 
     atspi.py on                        turn accessibility on for the session (Qt follows it)
     atspi.py dump APP                  the app's accessible tree: role, name, text
-    atspi.py press APP NAME [SECONDS]  press the first showing control named NAME (waits for it);
+    atspi.py press APP NAME [SECONDS]  press the first showing control named NAME (waits for it;
+                                       one scrolled out of view is focused first, which
+                                       scrolls it in, and pressed anyway if it is the only match);
                                        "ROLE:NAME" (button:Go back) also matches the role,
                                        and "NAME#2" presses the second match (a dialog's twin)
     atspi.py wait APP TEXT [SECONDS]   wait until TEXT appears anywhere in the app
@@ -61,6 +63,21 @@ def showing(node) -> bool:
         return False
 
 
+def press(node) -> bool:
+    try:
+        action = node.get_action_iface()
+    except Exception:
+        return False
+    if action is None or action.get_n_actions() == 0:
+        return False
+    # Qt lists SetFocus first on list items and Toggle first on checkable
+    # ones; Press is the click.
+    names = [action.get_action_name(i).lower() for i in range(action.get_n_actions())]
+    pick = next((names.index(n) for n in ("press", "click", "toggle") if n in names), 0)
+    action.do_action(pick)
+    return True
+
+
 def need_app(name: str, seconds: float = 30):
     deadline = time.time() + seconds
     while (a := app(name)) is None:
@@ -92,23 +109,29 @@ def main() -> None:
         m = re.fullmatch(r"(?:([a-z ]+):)?(.+?)(?:#(\d+))?", target)
         role, name, nth = m.group(1) or "", m.group(2), int(m.group(3) or 1)
         deadline = time.time() + seconds
+        focused = False
         while True:
-            seen = 0
-            for node, _ in walk(need_app(sys.argv[2])):
-                if (node.get_name() or "") == name and (not role or node.get_role_name() == role) and showing(node):
-                    seen += 1
-                    if seen < nth:
-                        continue
+            matches = [node for node, _ in walk(need_app(sys.argv[2]))
+                       if (node.get_name() or "") == name and (not role or node.get_role_name() == role)]
+            shown = [node for node in matches if showing(node)]
+            node = shown[nth - 1] if len(shown) >= nth else None
+            if node is None and matches and not focused:
+                # Qt reports a control scrolled out of view as neither showing nor
+                # visible. Focusing it makes the page scroll it into view.
+                focused = True
+                for c in matches:
                     try:
-                        action = node.get_action_iface()
+                        c.get_component_iface().grab_focus()
                     except Exception:
-                        action = None
-                    if action is not None and action.get_n_actions() > 0:
-                        # Qt lists SetFocus first on list items; Press is the click.
-                        names = [action.get_action_name(i).lower() for i in range(action.get_n_actions())]
-                        action.do_action(next((i for i, n in enumerate(names) if n in ("press", "click", "toggle")), 0))
-                        print(f"pressed {target!r} ({node.get_role_name()})")
-                        return
+                        pass
+                time.sleep(1)
+                continue
+            if node is None and len(matches) == 1 and nth == 1:
+                node = matches[0]  # unambiguous, even if still out of view
+            # Read the role first: pressing can destroy the control (a card's own button).
+            if node is not None and (kind := node.get_role_name()) and press(node):
+                print(f"pressed {target!r} ({kind})")
+                return
             if time.time() > deadline:
                 sys.exit(f"no showing control named {target!r}")
             time.sleep(1)

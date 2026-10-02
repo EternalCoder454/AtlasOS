@@ -23,3 +23,24 @@ then (each failed boot takes about 3 minutes, 4 boots, so allow 15 minutes) watc
 on the serial console. Expect `boot_counter` 3, 2, 1, 0 over four failed boots,
 then a boot of the previous image with `bootc status` showing the broken one as
 the rollback entry.
+
+## b: a visible change to update to
+
+`b/Containerfile` adds one app (KCalc) and turns the active window's header,
+title bar included, AtlasOS purple, on top of any AtlasOS image (`--build-arg A=`).
+After the update both are easy to check: KCalc is in the launcher and its title
+bar is purple. Give it a newer version label than the image the VM runs:
+
+```sh
+podman build -v "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" --build-arg A=localhost/atlasos:update-e \
+    --label org.opencontainers.image.version=44.20261022 -t localhost/atlasos:update-g tests/update/b
+```
+
+KWin colours title bars from the scheme's `[Colors:Header]` group; `[WM]` is
+only read by schemes without one, so an earlier version of this layer that
+changed `[WM]` had no visible effect.
+
+## Release notes
+
+`notes-*.md` are release notes for the test images, in the Markdown Atlas
+Updater renders: `scripts/vm.sh publish <tag> <channel> tests/update/notes-f.md`.

@@ -24,7 +24,10 @@ up)
 		podman run -d --pod "$pod" --name "$pod-db" -e POSTGRES_PASSWORD=postgres docker.io/library/postgres:17 >/dev/null
 	podman container exists "$pod-valkey" ||
 		podman run -d --pod "$pod" --name "$pod-valkey" docker.io/valkey/valkey:8 >/dev/null
-	until podman exec "$pod-db" pg_isready -q -U postgres; do sleep 1; done
+	# Containers from an earlier boot exist but are stopped.
+	podman pod start "$pod" >/dev/null
+	for _ in $(seq 120); do podman exec "$pod-db" pg_isready -q -U postgres && break; sleep 1; done
+	podman exec "$pod-db" pg_isready -q -U postgres || { echo "postgres did not start" >&2; exit 1; }
 	podman container exists "$pod-web" || podman run -d --pod "$pod" --name "$pod-web" "${env[@]}" "$image" >/dev/null
 	podman container exists "$pod-worker" ||
 		podman run -d --pod "$pod" --name "$pod-worker" "${env[@]}" "$image" ./bin/run-celery-with-beat.sh >/dev/null
@@ -67,8 +70,8 @@ def mod(*names):
     raise ImportError(names)
 ev = mod("apps.issue_events.models", "issue_events.models", "events.models")
 out = []
-for e in ev.IssueEvent.objects.order_by("-received")[:20]:
-    out.append({"id": str(e.id), "received": str(e.received), "data": e.data})
+for e in ev.IssueEvent.objects.order_by("-timestamp")[:20]:
+    out.append({"id": str(e.id), "timestamp": str(e.timestamp), "title": e.title, "data": e.data})
 print(json.dumps(out, default=str))
 ' | tail -1
 	;;
