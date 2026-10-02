@@ -41,7 +41,14 @@ SESSION_ENV = (
 
 
 def attach(con: Console, password: str) -> None:
-    """Reuses a shell an earlier run left logged in, or logs in."""
+    """Reuses a shell an earlier run left logged in, or logs in. Ctrl-C first
+    stops a command an interrupted run left running there."""
+    # A fresh virsh console prints this once; Ctrl-C before it would stop virsh.
+    try:
+        con.p.expect("Escape character", timeout=10)
+    except pexpect.TIMEOUT:
+        pass
+    con.p.sendcontrol("c")
     i = 2
     for _ in range(5):
         con.p.send("\r")

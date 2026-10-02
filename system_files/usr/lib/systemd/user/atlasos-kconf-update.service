@@ -1,0 +1,20 @@
+# Runs AtlasOS's settings updates (kconf_update) at the start of each Plasma
+# session, before KWin and the shell read the settings. kded6 runs
+# kconf_update too, but it only picks a .upd file whose mtime differs from the
+# one recorded, and ostree gives every file in /usr mtime 0, the same as "never
+# recorded", so it skips ours. Naming the file makes kconf_update read it
+# anyway; each Id still runs once per user (recorded in kconf_updaterc).
+# Login waits for it (Before=), so a hung script is killed after 30 s and the
+# session starts anyway; a failure never stops the session (no Requires=).
+[Unit]
+Description=AtlasOS settings updates for this user
+ConditionPathExists=/usr/share/kconf_update/atlasos.upd
+Before=plasma-kwin_wayland.service plasma-plasmashell.service plasma-kded6.service
+
+[Service]
+Type=oneshot
+TimeoutStartSec=30
+ExecStart=/usr/libexec/kf6/kconf_update /usr/share/kconf_update/atlasos.upd
+
+[Install]
+WantedBy=plasma-core.target

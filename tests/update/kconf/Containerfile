@@ -1,0 +1,17 @@
+# A settings update for existing users, the way a real image would add one:
+# a new Id in atlasos.upd with its script. The script only writes a marker
+# (~/.config/atlasos-testrc), so the test can see that kconf_update ran it once
+# for a user set up on an older image (atlasos-kconf-update.service).
+#
+#   podman build --build-arg BASE=localhost/atlasos:update-o \
+#       -t localhost/atlasos:update-o-kconf tests/update/kconf
+ARG BASE=localhost/atlasos:latest
+FROM ${BASE}
+
+RUN f=/usr/share/kconf_update/atlasos-20261099-test.sh && \
+    printf '#!/bin/sh\nset -eu\ncfg=${XDG_CONFIG_HOME:-$HOME/.config}\nn=$(kreadconfig6 --file "$cfg/atlasos-testrc" --group Test --key Runs --default 0)\nkwriteconfig6 --file "$cfg/atlasos-testrc" --group Test --key Runs "$((n + 1))"\n' >"$f" && \
+    chmod 0755 "$f" && \
+    printf '\nId=atlasos-20261099-test\nScript=atlasos-20261099-test.sh,sh\n' >>/usr/share/kconf_update/atlasos.upd
+
+LABEL org.opencontainers.image.version="44.20261032"
+RUN bootc container lint

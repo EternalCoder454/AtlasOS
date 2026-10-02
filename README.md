@@ -67,9 +67,12 @@ is in `flatpak-preinstall(1)`).
 
 Plasma applies the image's `/etc/xdg` defaults to keys a user hasn't set, but
 anything a theme's `defaults` file or an old image already wrote into
-`~/.config` stays. `kconf_update` fixes that. Plasma's `kded6` runs it for
-each user at every session start (and when a `.upd` file changes); each `Id`
-runs once per user, recorded in `~/.config/kconf_updaterc`.
+`~/.config` stays. `kconf_update` fixes that. `atlasos-kconf-update.service`
+(a user unit) runs it on `atlasos.upd` at every Plasma login, before KWin and
+the shell start; each `Id` runs once per user, recorded in
+`~/.config/kconf_updaterc`. Plasma's `kded6` also runs `kconf_update`, but
+skips our file: it only reads a `.upd` whose mtime changed, and ostree gives
+every file in `/usr` mtime 0, the same as "never seen".
 
 To add an update:
 

@@ -232,6 +232,13 @@ done
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer
+# kconf_update runs AtlasOS's settings updates at each Plasma login (kded6's
+# own run skips them: ostree's mtime 0 looks unchanged).
+systemctl --global enable atlasos-kconf-update.service
+[ -x /usr/libexec/kf6/kconf_update ] || {
+	echo "build.sh: /usr/libexec/kf6/kconf_update is missing" >&2
+	exit 1
+}
 # kconf_update scripts and helpers must keep their execute bit.
 for f in /usr/share/kconf_update/atlasos-*.sh /usr/libexec/atlasos/*; do
 	[ -x "$f" ] || {

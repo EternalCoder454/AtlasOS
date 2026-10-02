@@ -10,6 +10,8 @@ Copied in and run by scripts/vmlive.py's "ui" step.
                                        "ROLE:NAME" (button:Go back) also matches the role,
                                        and "NAME#2" presses the second match (a dialog's twin)
     atspi.py wait APP TEXT [SECONDS]   wait until TEXT appears anywhere in the app
+    atspi.py set APP NAME VALUE        set the value of the showing control named NAME
+                                       (a spin box or slider, through its Value interface)
 
 APP matches the start of the application's accessible name, case-insensitively.
 """
@@ -146,6 +148,17 @@ def main() -> None:
             if time.time() > deadline:
                 sys.exit(f"{target!r} never appeared")
             time.sleep(2)
+    elif cmd == "set":
+        if len(sys.argv) < 5:
+            sys.exit(__doc__)
+        name, value = sys.argv[3], float(sys.argv[4])
+        for node, _ in walk(a):
+            if (node.get_name() or "") == name and showing(node):
+                v = node.get_value_iface()
+                if v is not None and v.set_current_value(value):
+                    print(f"set {name!r} to {v.get_current_value():g}")
+                    return
+        sys.exit(f"no showing control named {name!r} that takes a value")
     else:
         sys.exit(__doc__)
 

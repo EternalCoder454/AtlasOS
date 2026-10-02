@@ -30,6 +30,10 @@ it is reasoned from documentation or code, not tested.
 | `update-i` | 44.20261024 | Atlas Updater fixes (keyboard focus, crash report screens) |
 | `update-j` | 44.20261025 | the stale check-result fix (stager and Atlas Updater) |
 | `update-k`, `update-l` | 44.20261026, 44.20261027 | J with only a newer version label |
+| `update-m` | 44.20261028 | the bad-update warning in Atlas Updater |
+| `update-n` | 44.20261030 | Atlas Updater scheduled restart, Flatpak updates, history |
+| `update-o-kconf` | 44.20261032 | the kconf_update fix, the plural fix, and a test settings update (`tests/update/kconf`) |
+| `update-p` | 44.20261033 | O with only a newer version label |
 | `broken` | 44.20261099-broken | a greeter and a plasmashell that exit at once (`tests/update/broken`), built on I and again on J |
 
 ## Results
@@ -52,6 +56,30 @@ it is reasoned from documentation or code, not tested.
   "Restart to update" (a Tokio timer built outside the runtime) is fixed and
   covered by a test.
 
+- Evidence (scheduled restart, N, 2026-10-02): with N staged on M, **Restart
+  later…** for 17:57 saved the time (`ScheduledAt` in `atlas-updaterrc`) and
+  **Cancel scheduled restart** cleared it. Scheduled again with the window
+  closed, the tray process warned at 17:52 ("Restarting in 5 minutes", with
+  **Restart now** and **Cancel restart**), restarted at 17:57:03 into N and
+  cleared the schedule. The same on O into P (18:38).
+- Evidence (background staging, N): with no window open the stager staged O
+  in 35 s and exited without restarting; `MemoryPeak` **1.8 GB**. The tray
+  process then sent "Update ready" with **Open Atlas Updater** and **Restart
+  to update**, once for that digest.
+
+### Release notes, apps and history
+
+- Evidence: with `release_notes_url` pointed at the real GitHub release
+  44.20261002, "What's new" showed its body as formatted Markdown; a version
+  with no release shows "No release notes for this version". The URL is read
+  when the app starts, so a changed `updater.toml` needs the tray restarted.
+- Evidence (Flatpak, N): Flatseal rolled back one commit was listed under app
+  updates and **Update apps** installed the current commit without a password
+  prompt. Flatseal itself came from the Flatpak preinstall service at boot.
+- Evidence (History, N): every version this machine started, with its first
+  start and channel, from `/var/lib/atlas-core/history.jsonl`. The version
+  that failed its checks (44.20261029) looks like the others.
+
 ### What a user sees change
 
 - Evidence: after updating to G, KCalc is in the launcher and the active
@@ -65,6 +93,15 @@ it is reasoned from documentation or code, not tested.
   update, `ColorSchemeHash` in the user's `~/.config/kdeglobals` equalled the
   new file's SHA-1 and the file had been rewritten, so a scheme change in an
   image reaches existing users without a migration script.
+
+- Evidence (the kconf_update finding, 2026-10-02): kded6 runs `kconf_update`
+  only on a `.upd` file whose mtime differs from the recorded one, and ostree
+  gives every file in `/usr` mtime 0, which reads as "never recorded", so
+  `atlasos.upd` never ran on an installed system. `atlasos-kconf-update.service`
+  (a user unit) now names the file at each Plasma login, before KWin starts.
+  Updating N to O, whose `atlasos.upd` had a new test Id, ran it once at the
+  first login (the unit finished 65 ms before KWin); after the update to P
+  it had still run once.
 
 ### Going back
 
@@ -185,7 +222,7 @@ that image boots healthy (green.d), and the warning with it.
 
 | | |
 |---|---|
-| Stager while staging (`atlasos-update-stage.service` `MemoryPeak`) | 1.3 GB |
+| Stager while staging (`atlasos-update-stage.service` `MemoryPeak`) | 1.3 GB (E), 1.8 GB (O) |
 | Idle, 2 minutes after login, image I (`just mem`, median of 3) | 1,059 MiB used (ps_mem 816 MiB); Atlas Updater in the tray 17.6 MiB |
 
 ## Fixed during testing
@@ -208,6 +245,9 @@ that image boots healthy (green.d), and the warning with it.
   (see "After a rollback").
 - The broken test image only broke the greeter, so it passed on the autologin
   VM; it now breaks plasmashell too.
+- AtlasOS's settings updates (`atlasos.upd`) never ran (see "What a user sees
+  change").
+- The restart warning said "Restarting in 5 minute(s)".
 
 ## Known issues
 
@@ -223,5 +263,9 @@ that image boots healthy (green.d), and the warning with it.
 - Without autologin the health checks only exercise the greeter, so a Plasma
   session that crashes right after login isn't caught (inference, from how the
   checks work; see the README).
+- `sudo rpm-ostree override remove atlas-updater` removes Atlas Updater (it
+  needs the admin password; `rpm-ostree override reset` undoes it). dnf
+  refuses, the image build fails without it.
+- The stager peaks at 1.8 GB while staging, a lot on an 8 GB machine.
 - The update that first introduces greenboot isn't protected by it
   (inference, README).
