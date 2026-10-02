@@ -5,10 +5,13 @@
 `broken/Containerfile` builds a deliberately broken AtlasOS on top of another
 AtlasOS image (`--build-arg BASE=`, default `localhost/atlasos:update-a`),
 labelled version `44.20261099-broken`. The machine still boots to a serial
-console, but `/usr/libexec/plasma-login-greeter` is replaced by a script that
-exits at once, so there is never a login screen and the greenboot login check
+console, but `/usr/libexec/plasma-login-greeter` and `/usr/bin/plasmashell` are
+replaced by scripts that exit at once, so there is neither a login screen nor,
+with autologin, a desktop, and the greenboot login check
 (`/usr/lib/greenboot/check/required.d/10_atlasos_login.sh`) fails 180 s after
-boot. Each failed boot reboots; after 4 boots in all greenboot runs
+boot. (An earlier version broke only the greeter: on the autologin test VM
+plasmalogin started the session without it, the check passed on the running
+plasmashell, and the image was kept.) Each failed boot reboots; after 4 boots in all greenboot runs
 `bootc rollback` and comes back up on the previous image. The base must be an
 image with greenboot, and the VM must already be running one (see "Boot health
 checks and rollback" in the top-level README for the limits).
