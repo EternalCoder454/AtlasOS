@@ -3,11 +3,17 @@
 # this run quietly. Skips
 #  - on metered connections, using NetworkManager's own overall verdict (the
 #    Metered property: 0 unknown, 1 yes, 2 no, 3 guess-yes, 4 guess-no);
-#  - when the newest image on the registry is one that failed its boot health
-#    checks and was rolled back (/var/lib/atlasos/bad-image-digests, written by
-#    the greenboot red.d script), so a bad update isn't staged again. A newer
-#    image has a new digest and goes ahead.
-# If NetworkManager or the registry can't be asked, the run goes ahead.
+#  - when the newest image is the one this machine went back from: the
+#    rollback deployment. After "Go back" in Atlas Updater (or greenboot's
+#    automatic rollback) the image left behind stays on the registry until a
+#    newer one is published, and staging it again would undo the user's choice
+#    at the next reboot. Updating to it by hand in Atlas Updater still works.
+#  - when the newest image failed its boot health checks and was rolled back
+#    (/var/lib/atlasos/bad-image-digests, written by the greenboot red.d
+#    script), so a bad update isn't staged again even after the rollback
+#    deployment is gone.
+# A newer image has a new digest and goes ahead. If NetworkManager, bootc or
+# the registry can't be asked, the run goes ahead.
 metered=$(busctl --system get-property org.freedesktop.NetworkManager \
 	/org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null) || metered=
 case $metered in
@@ -17,33 +23,22 @@ case $metered in
 	;;
 esac
 
+# `upgrade --check` fetches only the manifest and records it as the booted
+# entry's cachedUpdate, with the digest bootc itself would deploy (for a
+# multi-arch image, this machine's entry), the same digest bootc status shows
+# for a deployment and the red.d script records.
+timeout 300 bootc upgrade --check >/dev/null 2>&1 || exit 0
+status=$(timeout 30 bootc status --json 2>/dev/null) || exit 0
+latest=$(printf '%s' "$status" | jq -r '.status.booted.cachedUpdate.imageDigest // empty' 2>/dev/null)
+[ -n "$latest" ] || exit 0
+rollback=$(printf '%s' "$status" | jq -r '.status.rollback.image.imageDigest // empty' 2>/dev/null)
+if [ "$latest" = "$rollback" ]; then
+	echo "$latest is the version this machine went back from; waiting for a newer image"
+	exit 1
+fi
 bad=/var/lib/atlasos/bad-image-digests
-if [ -s "$bad" ]; then
-	ref=$(bootc status --json 2>/dev/null | jq -r '.status.booted.image | select(.image.transport == "registry") | .image.image' 2>/dev/null)
-	if [ -n "$ref" ]; then
-		# The digest bootc records is that of the manifest for this machine: for
-		# a multi-arch image, the entry of the index, not the index itself.
-		# bootc's registry login (if any) is in one of these files.
-		auth=
-		for f in /etc/ostree/auth.json /run/ostree/auth.json; do
-			[ -f "$f" ] && auth=$f && break
-		done
-		raw=$(mktemp) || exit 0
-		trap 'rm -f "$raw"' EXIT
-		latest=
-		if timeout 60 skopeo inspect ${auth:+--authfile "$auth"} --raw "docker://$ref" >"$raw" 2>/dev/null; then
-			case $(uname -m) in
-			x86_64) arch=amd64 ;;
-			aarch64) arch=arm64 ;;
-			*) arch=$(uname -m) ;;
-			esac
-			latest=$(jq -r --arg a "$arch" '.manifests // empty | map(select(.platform.os == "linux" and .platform.architecture == $a)) | .[0].digest // empty' "$raw" 2>/dev/null)
-			[ -n "$latest" ] || latest=$(skopeo manifest-digest "$raw" 2>/dev/null)
-		fi
-		if [ -n "$latest" ] && grep -qxF "$latest" "$bad"; then
-			echo "$latest failed its boot health checks and was rolled back; waiting for a newer image"
-			exit 1
-		fi
-	fi
+if [ -s "$bad" ] && grep -qxF "$latest" "$bad"; then
+	echo "$latest failed its boot health checks and was rolled back; waiting for a newer image"
+	exit 1
 fi
 exit 0
