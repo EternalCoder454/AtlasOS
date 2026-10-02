@@ -1,0 +1,17 @@
+# Windows 11-style title bars: the window menu (app icon) on the left;
+# minimize, maximize and close on the right.
+[org.kde.kdecoration2]
+ButtonsOnLeft=M
+ButtonsOnRight=IAX
+
+# Fedora turns on the on-screen keyboard (plasma-keyboard, about 270 MB of
+# RAM). Off by default, like Windows on a non-touch PC; System Settings >
+# Keyboard > Virtual Keyboard turns it back on.
+[Wayland]
+InputMethod[$e]=
+VirtualKeyboardEnabled=false
+
+# A faint noise over blurred surfaces (menus, the taskbar, popups), as in
+# Windows 11's acrylic. Blur strength stays Plasma's default.
+[Effect-blur]
+NoiseStrength=2

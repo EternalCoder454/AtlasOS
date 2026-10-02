@@ -1,0 +1,190 @@
+name: Build AtlasOS
+
+on:
+  push:
+    branches: [main, beta]
+    paths-ignore: ["**.md"]
+  pull_request:
+    branches: [main, beta]
+  # Daily, to pick up Fedora's updates. Skipped when neither the base image
+  # nor this repo changed since the last published build; see "Decide".
+  schedule:
+    - cron: "05 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to a pull request replaces its running build. Branch builds
+# finish, so a cancel can't leave the tags half-pushed or an image unsigned.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Registry paths must be lowercase.
+  IMAGE_REGISTRY: ghcr.io/eternalcoder454
+  IMAGE_NAME: atlasos
+  BASE_IMAGE: quay.io/fedora/fedora-kinoite:44
+
+jobs:
+  build:
+    name: Build and push
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # main publishes :latest, beta publishes :beta. Pull requests build
+      # and lint but never push.
+      - name: Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main) tag="latest" ;;
+            beta) tag="beta" ;;
+            *) tag="pr" ;;
+          esac
+          push=false
+          if [ "${GITHUB_EVENT_NAME}" != pull_request ] && [ "$tag" != pr ]; then
+            push=true
+          fi
+
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+
+          # The Kinoite build to use, by digest, so the image records exactly
+          # what it was built on.
+          digest=$(skopeo inspect --format '{{.Digest}}' "docker://${BASE_IMAGE}")
+          base="${BASE_IMAGE}@${digest}"
+
+          # A scheduled run with nothing new to build stops here: the image
+          # already published for this branch was built from this commit on
+          # this same Kinoite. That saves a whole build most days.
+          skip=false
+          if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
+            # No published image yet (or the registry is down) means build.
+            labels='{}'
+            if json=$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+              "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}" 2>/dev/null); then
+              labels=$(jq -c '.Labels // {}' <<<"$json")
+            fi
+            if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
+               [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
+              skip=true
+              echo "::notice::Nothing new since the last ${tag} build; skipping."
+            fi
+          fi
+
+          {
+            echo "tag=$tag"
+            echo "push=$push"
+            echo "base=$base"
+            echo "skip=$skip"
+            echo "date=$(date -u +%Y%m%d)"
+            echo "week=$(date -u +%G-W%V)"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Install just
+        if: steps.decide.outputs.skip != 'true'
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+
+      - name: Lint
+        if: steps.decide.outputs.skip != 'true'
+        run: just check
+
+      # The runner's disk is too small for a 7 GB image, its rechunked copy
+      # and Podman's working space without clearing the preinstalled SDKs.
+      - name: Maximize build space
+        if: steps.decide.outputs.skip != 'true'
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+
+      # dnf's metadata and packages, bound into the build at /var/cache/libdnf5
+      # by `just build`. Keyed by the week, so it follows Fedora's updates: a
+      # new week starts from the last one's and saves once. (A key that never
+      # changes is an exact hit forever, is never saved again, and goes stale.)
+      - name: Cache dnf downloads
+        if: steps.decide.outputs.skip != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/cache/dnf
+          key: dnf-f44-${{ steps.decide.outputs.week }}
+          restore-keys: dnf-f44-
+
+      - name: Build
+        if: steps.decide.outputs.skip != 'true'
+        env:
+          IMAGE_VERSION: 44.${{ steps.decide.outputs.date }}
+        run: |
+          just build "${{ steps.decide.outputs.tag }}" \
+            --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
+            --label org.opencontainers.image.revision="${GITHUB_SHA}" \
+            --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
+            --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
+          # Each week's cache starts from the last one, so drop packages
+          # nothing has downloaded for a month before it is saved.
+          find build/cache/dnf -name '*.rpm' -mtime +30 -delete
+
+      # Smaller updates for users. Only for images that get pushed.
+      - name: Rechunk
+        if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
+        run: just rechunk "${{ steps.decide.outputs.tag }}"
+
+      - name: Log in to ghcr.io
+        if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # latest -> latest, 44, 44.YYYYMMDD; beta -> beta, beta-44.YYYYMMDD
+      - name: Push
+        id: push
+        if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
+        run: |
+          set -euo pipefail
+          tag="${{ steps.decide.outputs.tag }}"
+          version="44.${{ steps.decide.outputs.date }}"
+          if [ "$tag" = latest ]; then
+            tags=(latest 44 "$version")
+          else
+            tags=("$tag" "$tag-$version")
+          fi
+          for t in "${tags[@]}"; do
+            podman push --digestfile=/tmp/digest "localhost/${IMAGE_NAME}:${tag}" \
+              "${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
+          done
+          echo "digest=$(cat /tmp/digest)" >>"$GITHUB_OUTPUT"
+
+      # Signing starts once the SIGNING_SECRET repository secret holds a cosign
+      # private key (see the README). Until then images are pushed unsigned.
+      - name: Check for a signing key
+        id: signing
+        if: steps.push.outcome == 'success'
+        env:
+          SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+        run: echo "enabled=$([ -n "$SIGNING_SECRET" ] && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+      - name: Install cosign
+        if: steps.signing.outputs.enabled == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      - name: Sign
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          # Empty unless the key was made with a password (see the README).
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          # The old bundle format is what rpm-ostree and containers/image can
+          # verify (containers/container-libs#388, coreos/rpm-ostree#5509).
+          cosign sign -y --new-bundle-format=false --use-signing-config=false \
+            --key env://COSIGN_PRIVATE_KEY \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"

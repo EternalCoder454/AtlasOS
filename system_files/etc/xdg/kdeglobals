@@ -1,0 +1,20 @@
+[KDE]
+LookAndFeelPackage=org.atlasos.desktop
+
+# IBM Plex Sans for the interface and JetBrains Mono for fixed-width text
+# (Noto stays as the fallback for scripts they don't cover); Ghostty and
+# Brave Origin as the terminal and browser. The colour scheme's colours are
+# appended at build time by build.sh.
+[General]
+ColorScheme=AtlasOSLight
+TerminalApplication=ghostty
+TerminalService=com.mitchellh.ghostty.desktop
+BrowserApplication=brave-origin.desktop
+fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+font=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+menuFont=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+toolBarFont=IBM Plex Sans,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+smallestReadableFont=IBM Plex Sans,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+[WM]
+activeFont=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1

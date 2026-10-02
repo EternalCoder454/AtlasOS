@@ -1,0 +1,10 @@
+# Only branding/, build_files/ and system_files/ go into the image. Keeping
+# build/ out matters most: it holds VM disks many GB in size.
+build/
+.git/
+.github/
+disk_config/
+scripts/
+*.md
+# The 14.6 MB original of branding/wallpaper.jpg
+branding/*.png

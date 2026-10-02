@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Atlas — folded ribbon mark (motion reference)</title>
+  
+  <defs>
+    <linearGradient id="grad-leg-left" gradientUnits="userSpaceOnUse" x1="220" y1="168" x2="340" y2="872"><stop offset="0" stop-color="#C3B8FF"></stop><stop offset="1" stop-color="#9C8CF8"></stop></linearGradient>
+    <linearGradient id="grad-leg-right" gradientUnits="userSpaceOnUse" x1="600" y1="168" x2="660" y2="872"><stop offset="0" stop-color="#251B72"></stop><stop offset=".3" stop-color="#7262EA"></stop><stop offset="1" stop-color="#6252DD"></stop></linearGradient>
+    <linearGradient id="grad-crossbar" gradientUnits="userSpaceOnUse" x1="434.7" y1="572" x2="644.5" y2="707"><stop offset="0" stop-color="#8A7AF4"></stop><stop offset="1" stop-color="#7A69EE"></stop></linearGradient>
+    <linearGradient id="grad-shadow-apex" gradientUnits="userSpaceOnUse" x1="546" y1="300" x2="601.5" y2="322.7"><stop offset="0" stop-color="#1A2A80" stop-opacity=".45"></stop><stop offset="1" stop-color="#1A2A80" stop-opacity="0"></stop></linearGradient>
+    <linearGradient id="grad-shadow-crossbar" gradientUnits="userSpaceOnUse" x1="576.2" y1="656.2" x2="616.9" y2="639.5"><stop offset="0" stop-color="#1A2A80" stop-opacity="0"></stop><stop offset="1" stop-color="#1A2A80" stop-opacity=".42"></stop></linearGradient>
+    <linearGradient id="grad-highlight" gradientUnits="userSpaceOnUse" x1="360" y1="0" x2="900" y2="0"><stop offset="0" stop-color="#FFE6F7" stop-opacity=".8"></stop><stop offset="1" stop-color="#FFE6F7" stop-opacity=".35"></stop></linearGradient>
+    <linearGradient id="grad-glint" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="0" gradientTransform="translate(-700 0)"><stop offset="0" stop-color="#FFE6F7" stop-opacity="0"></stop><stop offset=".42" stop-color="#FFE6F7" stop-opacity="0"></stop><stop offset=".5" stop-color="#FFE6F7" stop-opacity=".45"></stop><stop offset=".58" stop-color="#FFE6F7" stop-opacity="0"></stop><stop offset="1" stop-color="#FFE6F7" stop-opacity="0"></stop>
+      </linearGradient>
+  
+    <clipPath id="clip-leg-left" clipPathUnits="userSpaceOnUse"><rect x="0" y="880" width="1024" height="1024"><animate attributeName="y" values="880;90" dur="0.47s" begin="0s" calcMode="spline" keyTimes="0;1" keySplines="0.55 0 0.85 0.55" fill="freeze"/></rect></clipPath>
+    <clipPath id="clip-leg-right" clipPathUnits="userSpaceOnUse"><rect x="0" y="80" width="1024" height="70"><animate attributeName="height" values="70;1040" dur="0.5s" begin="0.43s" calcMode="spline" keyTimes="0;1" keySplines="0.15 0.45 0.35 1" fill="freeze"/></rect></clipPath>
+    <clipPath id="clip-crossbar" clipPathUnits="userSpaceOnUse"><path d="M-1400 0L460 0L878.9 1024L-1400 1024Z" transform="translate(-500 0)"><animateTransform attributeName="transform" type="translate" values="-500 0;0 0" dur="0.55s" begin="0.64s" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1" fill="freeze"/></path></clipPath>
+  
+    <linearGradient id="grad-shine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="614" gradientTransform="translate(-1100 -660)">
+      <stop offset="0" stop-color="#FFF3FB" stop-opacity="0"/><stop offset=".40" stop-color="#FFF3FB" stop-opacity="0"/>
+      <stop offset=".455" stop-color="#FFF3FB" stop-opacity=".22"/><stop offset=".485" stop-color="#FFF3FB" stop-opacity=".5"/><stop offset=".505" stop-color="#FFF3FB" stop-opacity=".22"/>
+      <stop offset=".53" stop-color="#FFF3FB" stop-opacity="0"/><stop offset=".545" stop-color="#FFF3FB" stop-opacity="0"/>
+      <stop offset=".555" stop-color="#FFF3FB" stop-opacity=".38"/><stop offset=".565" stop-color="#FFF3FB" stop-opacity="0"/>
+      <stop offset="1" stop-color="#FFF3FB" stop-opacity="0"/>
+      <animateTransform attributeName="gradientTransform" type="translate" values="-1100 -660;1100 660;1100 660" keyTimes="0;0.3;1" calcMode="spline" keySplines="0.5 0 0.3 1;0 0 1 1" dur="5s" begin="1.25s" repeatCount="indefinite"/>
+    </linearGradient>
+  
+    <filter id="soft-glow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <g transform="translate(512 520)"><g><animateTransform attributeName="transform" type="scale" values="0.94;1" dur="1.25s" begin="0s" calcMode="spline" keyTimes="0;1" keySplines="0.16 1 0.3 1" fill="freeze"/><g transform="translate(-512 -520)"><g opacity="0"><animate attributeName="opacity" values="0;1" dur="0.2s" begin="0s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1" fill="freeze"/>
+  <g id="atlas-mark">
+    <g id="crossbar" clip-path="url(#clip-crossbar)" data-pivot="407 640">
+      <path id="crossbar-face" fill="url(#grad-crossbar)" d="M346.7 572L677.3 572L732.5 707L291.5 707Z"></path><path id="crossbar-shine" fill="url(#grad-shine)" d="M346.7 572L677.3 572L732.5 707L291.5 707Z"/>
+      <path id="crossbar-shadow" fill="url(#grad-shadow-crossbar)" d="M545.3 572L591.3 572L646.5 707L600.5 707Z"></path>
+      <path id="crossbar-highlight" fill="url(#grad-highlight)" d="M430.7 572.5L593.3 572.5L593.3 574.5L430.7 574.5Z" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.4s" begin="1.05s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1" fill="freeze"/></path>
+      
+    </g>
+    <g id="leg-right" clip-path="url(#clip-leg-right)" data-pivot="512 168">
+      <path id="leg-right-glow" d="M445.3 191.9Q424 168 456 168L590 168Q600 168 603.8 177.3L875.9 842.4Q888 872 856 872L744 872Q712 872 699.9 842.4L527.1 420.1Q512 383.1 527.1 346.1L544.7 303.1Z" fill="#7262EA" filter="url(#soft-glow)" opacity="0"><animate attributeName="opacity" values="0;0.5" dur="1.3s" begin="0.15s" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.4 1" fill="freeze"/><animate attributeName="opacity" values="0.5;0.75;0.5" keyTimes="0;0.35;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.6 1" dur="5s" begin="1.45s" repeatCount="indefinite"/></path>
+      <path id="leg-right-face" fill="url(#grad-leg-right)" d="M445.3 191.9Q424 168 456 168L590 168Q600 168 603.8 177.3L875.9 842.4Q888 872 856 872L744 872Q712 872 699.9 842.4L527.1 420.1Q512 383.1 527.1 346.1L544.7 303.1Z"></path><path id="leg-right-shine" fill="url(#grad-shine)" d="M445.3 191.9Q424 168 456 168L590 168Q600 168 603.8 177.3L875.9 842.4Q888 872 856 872L744 872Q712 872 699.9 842.4L527.1 420.1Q512 383.1 527.1 346.1L544.7 303.1Z"/>
+    </g>
+    <g id="leg-left" clip-path="url(#clip-leg-left)" data-pivot="224 872">
+      <path id="leg-left-glow" d="M411.9 197.6Q424 168 456 168L590 168Q600 168 596.2 177.3L324.1 842.4Q312 872 280 872L168 872Q136 872 148.1 842.4Z" fill="#C3B8FF" filter="url(#soft-glow)" opacity="0"><animate attributeName="opacity" values="0;0.55" dur="1.3s" begin="0.15s" calcMode="spline" keyTimes="0;1" keySplines="0.45 0 0.4 1" fill="freeze"/><animate attributeName="opacity" values="0.55;0.8;0.55" keyTimes="0;0.35;1" calcMode="spline" keySplines="0.4 0 0.2 1;0.4 0 0.6 1" dur="5s" begin="1.45s" repeatCount="indefinite"/></path>
+      <path id="leg-left-face" fill="url(#grad-leg-left)" d="M411.9 197.6Q424 168 456 168L590 168Q600 168 596.2 177.3L324.1 842.4Q312 872 280 872L168 872Q136 872 148.1 842.4Z"></path><path id="leg-left-shine" fill="url(#grad-shine)" d="M411.9 197.6Q424 168 456 168L590 168Q600 168 596.2 177.3L324.1 842.4Q312 872 280 872L168 872Q136 872 148.1 842.4Z"/>
+    </g>
+    <g id="fold-apex" data-pivot="512 168" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.35s" begin="0.62s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1" fill="freeze"/>
+      <path id="fold-apex-shadow" fill="url(#grad-shadow-apex)" d="M592.6 186L607.4 186L630 241.3L542 456.4L527.1 420.1Q512 383.1 527.1 346.1L544.7 303.1Z"></path>
+      <path id="fold-apex-highlight" fill="url(#grad-highlight)" d="M456 168.5L586 168.5L586 170.5L456 170.5Z" opacity="0"><animate attributeName="opacity" values="0;1" dur="0.4s" begin="0.95s" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1" fill="freeze"/></path>
+      
+    </g>
+  </g>
+</g></g></g></g>
+</svg>

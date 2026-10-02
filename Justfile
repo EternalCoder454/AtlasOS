@@ -1,0 +1,105 @@
+image_name := "atlasos"
+image := "localhost/" + image_name
+
+[private]
+default:
+    @just --list
+
+# Build the image with rootless Podman. Extra arguments go to `podman build`.
+[group('Build')]
+build tag="latest" *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # dnf's downloads are kept here between builds (gitignored, never in the image).
+    mkdir -p build/cache/dnf
+    # CI passes IMAGE_VERSION so the image and its pushed tag carry the same date.
+    version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
+    podman build --pull=newer \
+        --volume "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" \
+        --build-arg IMAGE_VERSION="$version" \
+        --label org.opencontainers.image.version="$version" \
+        --label org.opencontainers.image.title=AtlasOS \
+        --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
+        --label org.opencontainers.image.licenses=Apache-2.0 \
+        --label containers.bootc=1 \
+        {{ args }} \
+        --tag "{{ image }}:{{ tag }}" .
+
+# Split the built image into up to 127 layers by package (rpm-ostree's
+# chunker), so an update downloads only the parts that changed. CI does this
+# before pushing; local test builds don't need it.
+[group('Build')]
+rechunk tag="latest":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    graphroot="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
+    # The chunker writes a fresh image config, so carry the labels over (the
+    # daily CI run reads two of them to decide whether to rebuild).
+    list=$(podman image inspect "{{ image }}:{{ tag }}" |
+        jq -r '.[0].Labels // {} | to_entries[] | "\(.key)=\(.value)"')
+    [ -n "$list" ] || { echo "{{ image }}:{{ tag }} has no labels to carry over" >&2; exit 1; }
+    labels=()
+    while IFS= read -r l; do labels+=(--label "$l"); done <<<"$list"
+    podman run --rm --pull=never --privileged \
+        --mount=type=image,src="{{ image }}:{{ tag }}",target=/rpm-ostree \
+        --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw \
+        --mount=type=tmpfs,target=/run/rpm-ostree-storage \
+        --entrypoint /usr/bin/rpm-ostree \
+        "{{ image }}:{{ tag }}" \
+        compose build-chunked-oci \
+        --max-layers 127 --format-version=2 --bootc "${labels[@]}" \
+        --rootfs /rpm-ostree \
+        --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]{{ image }}:{{ tag }}"
+
+# Make a VM disk (build/atlasos.qcow2) with bootc-image-builder. Needs sudo.
+[group('Disk images')]
+qcow2 tag="latest":
+    scripts/bib.sh qcow2 "{{ image }}:{{ tag }}"
+
+# Make an installer ISO (build/atlasos.iso) with bootc-image-builder. Needs sudo.
+[group('Disk images')]
+iso tag="latest":
+    scripts/bib.sh iso "{{ image }}:{{ tag }}"
+
+# Boot build/atlasos.qcow2 in libvirt (UEFI, serial console). The disk itself
+# is never written: each boot starts from a fresh overlay.
+[group('VMs')]
+vm:
+    scripts/vm.sh run atlasos build/atlasos.qcow2
+    @echo "Serial console: virsh -c qemu:///system console atlasos   (leave with Ctrl+])"
+    @echo "Screen:         open 'atlasos' in virt-manager"
+    @echo "Stop:           just vm-stop"
+
+# Without root: build/vm/updated/atlasos-<tag>.qcow2, which is
+# build/atlasos.qcow2 updated in place to the latest local build, the way a
+# user's system would be (`bootc switch`).
+[group('VMs')]
+vm-update tag="latest":
+    scripts/vm.sh update atlasos-{{ tag }} {{ tag }}
+
+# Stop and remove the VM `just vm` started (its overlay disk goes with it).
+[group('VMs')]
+vm-stop name="atlasos":
+    scripts/vm.sh stop {{ name }}
+
+# Boot stock Kinoite 44 (installed from the ISO in ~/VMs) and AtlasOS one after
+# the other with 8 GB of RAM, and record memory and services 2 minutes after login.
+[group('VMs')]
+mem disk="build/atlasos.qcow2":
+    scripts/vm.sh mem {{ disk }}
+
+# Check the Justfile's formatting and lint the shell scripts.
+[group('Checks')]
+check:
+    just --unstable --fmt --check
+    shellcheck build_files/*.sh scripts/*.sh
+    shellcheck -s sh branding/render.sh
+
+# Stop the test VMs and remove everything in build/: disk images, the stock
+# Kinoite VM (reinstalled on the next `just mem`), the VM password, memory
+# reports and the dnf cache. Root's copy of the image, made by `just qcow2`,
+# stays; `sudo podman rmi localhost/atlasos` removes it.
+[group('Checks')]
+clean:
+    for vm in atlasos kinoite-stock kinoite-stock-install; do scripts/vm.sh stop $vm || true; done
+    rm -rf build/

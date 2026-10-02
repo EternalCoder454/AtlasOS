@@ -1,0 +1,3 @@
+[Global]
+# Discover stays as the Flatpak front end, but never updates in the background.
+UseUnattendedUpdates=false

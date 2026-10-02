@@ -1,0 +1,3 @@
+# rhgb shows the Plymouth boot splash; Anaconda adds these two on a stock
+# install, bootc installs take them from here.
+kargs = ["rhgb", "quiet"]

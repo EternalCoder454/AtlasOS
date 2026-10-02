@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AtlasOS"
+            }
+        ],
+        "Category": "",
+        "Description": "Light colours from the AtlasOS logo, with a macOS-style menu bar and a Windows 11-style taskbar",
+        "Id": "org.atlasos.desktop",
+        "License": "GPLv2+",
+        "Name": "AtlasOS Light",
+        "Website": "https://github.com/EternalCoder454/AtlasOS"
+    }
+}

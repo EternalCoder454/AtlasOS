@@ -1,0 +1,12 @@
+# bootc-image-builder config for `just qcow2`, the VM test disk.
+# scripts/bib.sh copies this to build/ and adds the test user there, so the
+# password never lands in git.
+
+[[customizations.filesystem]]
+mountpoint = "/"
+minsize = "30 GiB"
+
+# Serial console for `virsh console`. VM disks only: the installed image keeps
+# the stock kernel arguments.
+[customizations.kernel]
+append = "console=ttyS0,115200 console=tty0 plymouth.ignore-serial-consoles"

@@ -1,0 +1,31 @@
+# VM disks, installer ISOs and every other build output live here.
+/build/
+
+# Never commit disk images, wherever they end up.
+*.iso
+*.qcow2
+*.raw
+*.img
+
+# Image signing key. Only cosign.pub belongs in the repo.
+cosign.key
+
+# Leftovers from bootc-image-builder and rechunking runs.
+_build*/
+*_chunkah_*
+*_rpm-ostree_*
+
+# Local Claude Code session config (personal hooks, absolute paths)
+/.claude/
+/CLAUDE.md
+
+# Editor / OS cruft
+*.swp
+*~
+.DS_Store
+
+# Original of branding/wallpaper.jpg (14.6 MB); the repo keeps the 4K JPEG copy.
+/branding/sakura_blossoming.png
+
+# Python bytecode from the test scripts
+__pycache__/

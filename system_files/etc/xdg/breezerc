@@ -1,0 +1,18 @@
+# Windows 11-style window frames for Breeze
+
+# Window shadows lighter and softer than Breeze's, like Windows 11's
+# elevation shadows (shared by the decoration and the widget style)
+[Common]
+ShadowSize=ShadowLarge
+ShadowStrength=110
+
+# Title on the left, rounded corners, and a thin outline in place of a border
+[Windeco]
+TitleAlignment=AlignLeft
+RoundedCorners=true
+OutlineEnabled=true
+
+# Menus see-through by 15%, so KWin's blur shows behind them: Windows 11's
+# "acrylic" for flyouts
+[Style]
+MenuOpacity=85
