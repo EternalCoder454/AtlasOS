@@ -1,0 +1,14 @@
+[Unit]
+Description=Install AtlasOS's preinstalled Flatpak apps after boot
+Documentation=https://github.com/EternalCoder454/AtlasOS
+
+[Timer]
+# A few minutes after boot, so the desktop is up first. With no network the
+# service fails without writing its stamp, and the timer tries again every
+# 6 hours and on the next boot. When the list is unchanged a run does nothing.
+OnBootSec=3min
+OnUnitInactiveSec=6h
+RandomizedDelaySec=1min
+
+[Install]
+WantedBy=timers.target

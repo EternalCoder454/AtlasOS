@@ -1,0 +1,16 @@
+# Flatpak apps AtlasOS installs for every user (system-wide). They are set up
+# in the background after the network is up (atlasos-flatpak-preinstall.service,
+# `flatpak preinstall`); one the user uninstalls stays uninstalled.
+#
+# To add an app, add a group named after its Flatpak ID. Find the ID and
+# branch on Flathub, or with `flatpak search`. Then rebuild: the service runs
+# again on the next boot after the list changes.
+#
+#   [Flatpak Preinstall org.gnome.Loupe]
+#   Branch=stable
+#
+# Runtimes are installed with the app. A list entry for a runtime needs
+# IsRuntime=true. See flatpak-preinstall(1).
+
+[Flatpak Preinstall com.github.tchx84.Flatseal]
+Branch=stable

@@ -152,6 +152,11 @@ cp -a /ctx/system_files/. /
 # where it is lower (IDEs and file watchers run out), and never lowers it.
 systemctl enable atlasos-inotify-watches.service
 systemctl enable atlasos-update-stage.timer
+# Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
+# the Flatpaks in preinstall.d installed in the background after boot.
+systemctl enable atlasos-flatpak-preinstall.timer
+[ -f /usr/share/flatpak/remotes.d/flathub.flatpakrepo ]
+[ -f /usr/share/flatpak/preinstall.d/atlasos.preinstall ]
 # Nothing may apply an update or reboot unattended (bootc-fetch-apply-updates
 # runs `bootc upgrade --apply`; rpm-ostreed-automatic can stage and reboot).
 for t in bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer; do

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Installs the Flatpaks in preinstall.d (see atlasos-flatpak-preinstall.service).
+# Skips when nothing changed since the last success: the stamp holds a hash of
+# the names and contents of every .preinstall file. The stamp is written only
+# after `flatpak preinstall` succeeds, so a failure (no network, say) is retried.
+set -eu
+
+state=/var/lib/atlasos
+stamp=$state/flatpak-preinstall.sha256
+dirs="/usr/share/flatpak/preinstall.d /etc/flatpak/preinstall.d"
+
+# shellcheck disable=SC2086 # $dirs is a list of paths without spaces
+want=$(find $dirs -maxdepth 1 -type f -name '*.preinstall' -exec sha256sum {} + 2>/dev/null |
+	sort -k2 | sha256sum | cut -d' ' -f1)
+
+if [ -r "$stamp" ] && [ "$(cat "$stamp")" = "$want" ]; then
+	echo "Preinstall list unchanged; nothing to do."
+	exit 0
+fi
+
+mkdir -p "$state"
+
+# Fedora's and Flathub's remotes both carry some apps. Flatpak takes the
+# remote with the higher priority (default 1 for both, then alphabetical, which
+# would pick Fedora's), so Flathub gets 2, once: a priority the user sets
+# later is left alone.
+if [ ! -e "$state/flathub-prio" ] && flatpak remote-list --system --columns=name | grep -qx flathub; then
+	flatpak remote-modify --system --prio=2 flathub
+	touch "$state/flathub-prio"
+fi
+
+flatpak preinstall --system -y --noninteractive
+printf '%s\n' "$want" >"$stamp"

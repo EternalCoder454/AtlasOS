@@ -1,0 +1,17 @@
+[Unit]
+Description=Install AtlasOS's preinstalled Flatpak apps
+Documentation=https://github.com/EternalCoder454/AtlasOS man:flatpak-preinstall(1)
+# Started by atlasos-flatpak-preinstall.timer a few minutes after boot, never
+# as part of the boot itself: it is not ordered before multi-user.target,
+# graphical.target or the display manager, so it cannot hold up boot or login.
+ConditionPathExists=/usr/share/flatpak/preinstall.d
+After=network-online.target flatpak-add-fedora-repos.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/atlasos/flatpak-preinstall
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+TimeoutStartSec=1h
