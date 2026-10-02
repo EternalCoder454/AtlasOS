@@ -14,10 +14,18 @@ build tag="latest" *args:
     mkdir -p build/cache/dnf
     # CI passes IMAGE_VERSION so the image and its pushed tag carry the same date.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
+    # The Atlas apps' source (Atlas Updater and atlas-core): a named build
+    # context, so the Containerfile can build their RPMs. CI points it at a
+    # checkout of EternalCoder454/atlasos-updater.
+    updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
+    [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
     podman build --pull=newer \
+        --build-context atlas-updater="$updater" \
         --volume "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
         --label org.opencontainers.image.version="$version" \
+        --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
+        --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \

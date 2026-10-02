@@ -12,6 +12,19 @@ RUN apk add --no-cache rsvg-convert imagemagick imagemagick-jpeg imagemagick-jxl
 COPY branding /branding
 RUN sh /branding/render.sh /branding /out
 
+# The Atlas apps (Atlas Updater and atlas-core), built into RPMs in a Fedora 44
+# container, the release the image is based on. The source is the build
+# context named "atlas-updater" (`podman build --build-context
+# atlas-updater=<path>`; `just build` and CI pass it). Cargo's registry and
+# dnf's downloads are cache mounts, so they survive between builds without
+# ending up in an image layer.
+FROM registry.fedoraproject.org/fedora:44 AS atlas-apps
+COPY --from=atlas-updater / /src
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    /src/packaging/build-rpm.sh /out
+
 # Build scripts and config files, mounted into the build rather than copied
 # into the image.
 FROM scratch AS ctx
@@ -28,6 +41,7 @@ LABEL org.atlasos.base-image="${BASE_IMAGE}"
 # keep it between builds. Without that bind, dnf just downloads as usual.
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=branding,source=/out,target=/branding \
+    --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
     --mount=type=tmpfs,dst=/tmp \
     IMAGE_VERSION="${IMAGE_VERSION}" /ctx/build.sh
 

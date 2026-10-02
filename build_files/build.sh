@@ -133,6 +133,21 @@ keep=(
 )
 rpm -q "${keep[@]}"
 
+### Atlas apps
+
+# Atlas Updater and atlas-core, built by the atlas-apps stage of the
+# Containerfile (bound in at /atlas-rpms; nothing is copied into the image).
+# They are required parts of the system: the build fails without them, and
+# atlas-core ships /etc/dnf/protected.d/atlas.conf so dnf won't remove them.
+"${dnf[@]}" install /atlas-rpms/*.rpm
+rpm -q atlas-core atlas-updater
+[ -f /etc/dnf/protected.d/atlas.conf ]
+# The updater autostarts in the tray at login (users can turn that off in
+# System Settings; the background staging timer above does not depend on it).
+rpm -ql atlas-updater >/tmp/atlas-updater.files
+grep -q '/autostart/' /tmp/atlas-updater.files
+rm /tmp/atlas-updater.files
+
 ### Services
 
 # dnf can't change an image-based system, so refreshing its metadata in the
@@ -148,10 +163,29 @@ systemctl disable bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer
 
 cp -a /ctx/system_files/. /
 
+# Atlas Updater is the only update notifier. Discover's (plasma-discover-notifier,
+# removed above) and every other background updater stay out, and Discover
+# never updates on its own.
+[ ! -e /usr/libexec/DiscoverNotifier ]
+[ -z "$(find /etc/xdg/autostart /usr/share/applications -iname '*discover*notifier*' -print -quit)" ]
+for p in plasma-discover-notifier PackageKit; do
+	if rpm -q "$p" >/dev/null 2>&1; then
+		echo "build.sh: $p must not be installed" >&2
+		exit 1
+	fi
+done
+grep -qx 'UseUnattendedUpdates=false' /etc/xdg/PlasmaDiscoverUpdates
+
 # The kernel sizes the inotify watch limit by RAM; this raises it to 524288
 # where it is lower (IDEs and file watchers run out), and never lowers it.
 systemctl enable atlasos-inotify-watches.service
 systemctl enable atlasos-update-stage.timer
+# Records each newly booted image in /var/lib/atlas-core/history.jsonl. The
+# system helper is D-Bus activated and must stay that way: nothing runs at idle.
+systemctl enable atlas-record-boot.service
+[ "$(systemctl is-enabled atlas-record-boot.service)" = enabled ]
+[ "$(systemctl is-enabled atlas-system-helper.service 2>&1 || true)" != enabled ]
+[ -f /usr/share/dbus-1/system-services/net.eterneon.atlas.SystemHelper.service ]
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer
@@ -166,7 +200,8 @@ done
 while IFS=, read -r script _; do
 	[ -x "/usr/share/kconf_update/${script#Script=}" ]
 done < <(grep '^Script=' /usr/share/kconf_update/atlasos.upd)
-[ -z "$(grep '^Id=' /usr/share/kconf_update/atlasos.upd | sort | uniq -d)" ]
+dup=$(grep '^Id=' /usr/share/kconf_update/atlasos.upd | sort | uniq -d)
+[ -z "$dup" ]
 [ -f /usr/share/flatpak/remotes.d/flathub.flatpakrepo ]
 [ -f /usr/share/flatpak/preinstall.d/atlasos.preinstall ]
 # Nothing may apply an update or reboot unattended (bootc-fetch-apply-updates
