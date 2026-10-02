@@ -155,6 +155,18 @@ systemctl enable atlasos-update-stage.timer
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer
+# kconf_update scripts and helpers must keep their execute bit.
+for f in /usr/share/kconf_update/atlasos-*.sh /usr/libexec/atlasos/*; do
+	[ -x "$f" ] || {
+		echo "build.sh: $f is not executable" >&2
+		exit 1
+	}
+done
+# Every script in the .upd has to exist, and every Id has to be unique.
+while IFS=, read -r script _; do
+	[ -x "/usr/share/kconf_update/${script#Script=}" ]
+done < <(grep '^Script=' /usr/share/kconf_update/atlasos.upd)
+[ -z "$(grep '^Id=' /usr/share/kconf_update/atlasos.upd | sort | uniq -d)" ]
 [ -f /usr/share/flatpak/remotes.d/flathub.flatpakrepo ]
 [ -f /usr/share/flatpak/preinstall.d/atlasos.preinstall ]
 # Nothing may apply an update or reboot unattended (bootc-fetch-apply-updates
