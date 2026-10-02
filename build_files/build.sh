@@ -139,6 +139,11 @@ rpm -q "${keep[@]}"
 # background only costs memory, disk and bandwidth.
 systemctl disable dnf-makecache.timer
 
+# Background update checks stage an update and never apply it:
+# atlasos-update-stage.timer runs `bootc upgrade` (download and stage, no
+# reboot). The two timers that apply or reboot by themselves stay off.
+systemctl disable bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer
+
 ### Branding
 
 cp -a /ctx/system_files/. /
@@ -146,6 +151,17 @@ cp -a /ctx/system_files/. /
 # The kernel sizes the inotify watch limit by RAM; this raises it to 524288
 # where it is lower (IDEs and file watchers run out), and never lowers it.
 systemctl enable atlasos-inotify-watches.service
+systemctl enable atlasos-update-stage.timer
+# Nothing may apply an update or reboot unattended (bootc-fetch-apply-updates
+# runs `bootc upgrade --apply`; rpm-ostreed-automatic can stage and reboot).
+for t in bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer; do
+	[ "$(systemctl is-enabled "$t")" = disabled ] || {
+		echo "build.sh: $t must stay disabled" >&2
+		exit 1
+	}
+done
+[ "$(systemctl is-enabled atlasos-update-stage.timer)" = enabled ]
+grep -qx 'ExecStart=/usr/bin/bootc upgrade --quiet' /usr/lib/systemd/system/atlasos-update-stage.service
 
 # Icons and logos rendered from branding/ (see branding/render.sh)
 cp -a /branding/icons/. /usr/share/icons/

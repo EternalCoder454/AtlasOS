@@ -1,0 +1,14 @@
+#!/bin/sh
+# ExecCondition of atlasos-update-stage.service: exit 0 to go ahead, 1 to skip
+# this run quietly. Skips on metered connections, using NetworkManager's own
+# overall verdict (the Metered property: 0 unknown, 1 yes, 2 no, 3 guess-yes,
+# 4 guess-no). If NetworkManager can't be asked, the check goes ahead.
+metered=$(busctl --system get-property org.freedesktop.NetworkManager \
+	/org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null) || exit 0
+case $metered in
+"u 1" | "u 3")
+	echo "metered connection; not downloading an update now"
+	exit 1
+	;;
+esac
+exit 0

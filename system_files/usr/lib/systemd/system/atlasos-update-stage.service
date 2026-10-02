@@ -1,0 +1,19 @@
+[Unit]
+Description=Download and stage the next AtlasOS update
+Documentation=https://github.com/EternalCoder454/AtlasOS
+# Only on an image-based boot, only with a network, and not on metered ones
+# (the condition script). `bootc upgrade` downloads the new image and stages
+# it; it never reboots. A staged update is used at the next shutdown or reboot.
+ConditionPathExists=/run/ostree-booted
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/libexec/atlasos/update-stage-condition
+ExecStart=/usr/bin/bootc upgrade --quiet
+# Background work: out of the way of whatever the user is doing.
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+TimeoutStartSec=2h
