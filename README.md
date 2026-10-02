@@ -140,7 +140,8 @@ to the journal on every failed boot. Only at the **last** failure (boot counter
 the image digest to `/var/lib/atlasos/bad-image-digests`;
 `update-stage-condition` then skips staging while the newest image on the
 registry has that digest, so a rolled-back update isn't downloaded again (a
-newer image has a new digest). `green.d/10_atlasos_green.sh` records
+newer image has a new digest), and Atlas Updater shows it as an update that
+didn't start properly instead of offering it. `green.d/10_atlasos_green.sh` records
 `health-check-passed` once per deployment, on its first good boot (the last 20
 passed digests are in `/var/lib/atlasos/health-passed-digests`; a digest that
 boots healthy also leaves `bad-image-digests`, which holds at most 20). The hooks never fail: greenboot's

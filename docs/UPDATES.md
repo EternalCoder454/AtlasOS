@@ -150,6 +150,26 @@ without root), or that entry's own image when it has none.
   `cachedUpdate` was again K; the stager skipped: "is the version this machine
   went back from".
 
+### A bad update in Atlas Updater (image M)
+
+From M, Atlas Updater reads `bad-image-digests` too (without root, next to
+the ref heads). An update with a listed digest isn't offered as a normal one:
+the Updates page says "Version X didn't start properly", with a warning icon
+and only "Download anyway", behind a confirmation. When the bad image is the
+rollback entry, the Go back page says so and offers "Go back anyway" instead of
+the usual button, also behind a confirmation. The digest leaves the list once
+that image boots healthy (green.d), and the warning with it.
+
+- Evidence (M, 2026-10-02): before the failure, "Check for updates" offered the
+  broken image (44.20261029, built on M) as "AtlasOS 44.20261029 is
+  available" with "Download update". After `bootc upgrade` and a restart it
+  failed four boots, and greenboot rolled back to M about 14 minutes later; its
+  digest was in `bad-image-digests`. Atlas Updater then showed "Version
+  44.20261029 didn't start properly", still after another check, and
+  "Download anyway" opened "Download 44.20261029 anyway?". The Go back page
+  showed "The previous version didn't start properly" with "Go back anyway"
+  (that page's wording was checked with the final build over a `/usr` overlay).
+
 ## Memory
 
 | | |
