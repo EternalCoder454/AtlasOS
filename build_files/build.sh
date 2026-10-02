@@ -157,6 +157,8 @@ rm /tmp/atlas-updater.files
 # laptops without a network. The checks are AtlasOS's own, in system_files.
 "${dnf[@]}" install greenboot
 rpm -q greenboot
+# The health-check hooks and update-stage-condition use these.
+command -v jq skopeo bootc grub2-editenv >/dev/null
 if rpm -q greenboot-default-health-checks >/dev/null 2>&1; then
 	echo "build.sh: greenboot-default-health-checks must not be installed" >&2
 	exit 1

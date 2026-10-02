@@ -6,6 +6,8 @@ ConditionPathExists=/usr/lib/bootupd/grub2-static/configs.d/08_greenboot.cfg
 ConditionPathIsDirectory=/boot/grub2
 RequiresMountsFor=/boot
 After=ostree-remount.service bootloader-update.service
+# Stops (ExecStop) before these at shutdown, while the rollback is still queued.
+After=ostree-finalize-staged.service greenboot-set-rollback-trigger.service
 Before=greenboot-healthcheck.service
 
 [Service]

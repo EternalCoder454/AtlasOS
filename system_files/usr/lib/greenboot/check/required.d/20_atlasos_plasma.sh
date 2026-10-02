@@ -42,7 +42,7 @@ while :; do
 		# shellcheck disable=SC2046
 		pid=$(hc_first_stable $(hc_greeter_pids)) || pid=
 		# shellcheck disable=SC2046
-		gk=$(hc_first_stable $(pgrep -x -u plasmalogin kwin_wayland || true)) || gk=
+		gk=$(hc_first_stable $(pgrep -x -u plasmalogin 'kwin_wayland|kwin_wayland_wrapper' || true)) || gk=
 		if [ -n "$pid" ] && [ -n "$gk" ]; then
 			r=$(systemctl show -p NRestarts --value plasmalogin.service 2>/dev/null)
 			if [ "${r:-0}" -ge 2 ]; then

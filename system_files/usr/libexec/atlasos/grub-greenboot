@@ -31,6 +31,10 @@ begin='# BEGIN atlasos-greenboot (atlasos-grub-greenboot.service, do not edit)'
 end='# END atlasos-greenboot'
 
 say() { echo "atlasos-grub-greenboot: $*"; }
+err() {
+	say "error: $*"
+	logger -t atlasos-grub-greenboot -p daemon.err "$*" 2>/dev/null || true
+}
 
 # /boot is read-only; the unit runs in its own mount namespace (MountFlags=slave).
 boot_rw() {
@@ -41,7 +45,8 @@ boot_rw() {
 
 if [ "${1:-start}" = stop ]; then
 	[ -f "$grubenv" ] || exit 0
-	grub2-editenv "$grubenv" list 2>/dev/null | grep -q '^boot_counter=' || exit 0
+	vars=$(grub2-editenv "$grubenv" list 2>/dev/null) || exit 0
+	grep -q '^boot_counter=' <<<"$vars" || exit 0
 	queued=$(timeout 30 bootc status --json 2>/dev/null | jq -r '.status.rollbackQueued // false' 2>/dev/null) || exit 0
 	if [ "$queued" = true ]; then
 		boot_rw || exit 0
@@ -64,8 +69,9 @@ fi
 has_block=0
 if [ -f "$custom" ] && grep -qxF "$begin" "$custom"; then
 	grep -qxF "$end" "$custom" || {
-		say "$custom has our BEGIN marker but no END; leaving it alone"
-		exit 1
+		# exit 0, not 1: a failed unit would not run ExecStop at shutdown.
+		err "$custom has our BEGIN marker but no END; leaving it alone"
+		exit 0
 	}
 	has_block=1
 fi
@@ -78,7 +84,6 @@ strip() {
 block() {
 	echo "$begin"
 	cat "$snippet"
-	[ -z "$(tail -c1 "$snippet")" ] || echo # the greenboot RPM's file has no final newline
 	echo "$end"
 }
 
@@ -112,8 +117,8 @@ if [ "$action" = install ]; then
 	# Refuse to install a file GRUB could not parse.
 	if command -v grub2-script-check >/dev/null; then
 		grub2-script-check "$tmp" || {
-			say "the new custom.cfg does not pass grub2-script-check; leaving GRUB alone"
-			exit 1
+			err "the new custom.cfg does not pass grub2-script-check; leaving GRUB alone"
+			exit 0
 		}
 	else
 		say "warning: grub2-script-check is missing, the new custom.cfg is unchecked"

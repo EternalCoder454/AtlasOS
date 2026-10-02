@@ -131,7 +131,7 @@ after login is not caught (the checks run once, before anyone logs in).
 `greenboot-healthcheck.service` has no `After=` on `multi-user.target` or
 `graphical.target` (it is only `WantedBy=multi-user.target`, and
 `Before=boot-complete.target`), so waiting for the checks delays neither.
-A drop-in sets its `TimeoutStartSec=900`.
+A drop-in sets its `TimeoutStartSec=infinity` (the checks bound themselves).
 
 `red.d/10_atlasos_red.sh` logs `atlasos-health: boot health check failed ...`
 to the journal on every failed boot. Only at the **last** failure (boot counter
@@ -141,8 +141,9 @@ the image digest to `/var/lib/atlasos/bad-image-digests`;
 `update-stage-condition` then skips staging while the newest image on the
 registry has that digest, so a rolled-back update isn't downloaded again (a
 newer image has a new digest). `green.d/10_atlasos_green.sh` records
-`health-check-passed` once per deployment, on its first good boot
-(`/var/lib/atlasos/health-passed-digest`). The hooks never fail: greenboot's
+`health-check-passed` once per deployment, on its first good boot (the last 20
+passed digests are in `/var/lib/atlasos/health-passed-digests`; a digest that
+boots healthy also leaves `bad-image-digests`, which holds at most 20). The hooks never fail: greenboot's
 reboot must not depend on them. Each check leaves its result in
 `/run/atlasos/health/<name>`, which red.d reads.
 

@@ -22,8 +22,11 @@ logger -t atlasos-health -p daemon.crit "$msg" 2>/dev/null || true
 if [ "$counter" = 0 ]; then
 	digest=$(timeout 30 bootc status --json 2>/dev/null | jq -r '.status.booted.image.imageDigest // empty' 2>/dev/null)
 	if [ -n "$digest" ]; then
-		mkdir -p /var/lib/atlasos 2>/dev/null &&
-			echo "$digest" >>/var/lib/atlasos/bad-image-digests 2>/dev/null || true
+		bad=/var/lib/atlasos/bad-image-digests
+		if mkdir -p /var/lib/atlasos 2>/dev/null; then
+			{ cat "$bad" 2>/dev/null; echo "$digest"; } | tail -n 20 >|"$bad.new" 2>/dev/null &&
+				mv -f "$bad.new" "$bad" 2>/dev/null || true
+		fi
 		logger -t atlasos-health -p daemon.crit "update $digest failed its health checks for the last time; it will be rolled back" 2>/dev/null || true
 	fi
 	helper=/usr/libexec/atlas-system-helper

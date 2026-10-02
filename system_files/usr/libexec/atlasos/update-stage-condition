@@ -21,7 +21,25 @@ bad=/var/lib/atlasos/bad-image-digests
 if [ -s "$bad" ]; then
 	ref=$(bootc status --json 2>/dev/null | jq -r '.status.booted.image | select(.image.transport == "registry") | .image.image' 2>/dev/null)
 	if [ -n "$ref" ]; then
-		latest=$(timeout 60 skopeo inspect --no-tags --format '{{.Digest}}' "docker://$ref" 2>/dev/null) || latest=
+		# The digest bootc records is that of the manifest for this machine: for
+		# a multi-arch image, the entry of the index, not the index itself.
+		# bootc's registry login (if any) is in one of these files.
+		auth=
+		for f in /etc/ostree/auth.json /run/ostree/auth.json; do
+			[ -f "$f" ] && auth=$f && break
+		done
+		raw=$(mktemp) || exit 0
+		trap 'rm -f "$raw"' EXIT
+		latest=
+		if timeout 60 skopeo inspect ${auth:+--authfile "$auth"} --raw "docker://$ref" >"$raw" 2>/dev/null; then
+			case $(uname -m) in
+			x86_64) arch=amd64 ;;
+			aarch64) arch=arm64 ;;
+			*) arch=$(uname -m) ;;
+			esac
+			latest=$(jq -r --arg a "$arch" '.manifests // empty | map(select(.platform.os == "linux" and .platform.architecture == $a)) | .[0].digest // empty' "$raw" 2>/dev/null)
+			[ -n "$latest" ] || latest=$(skopeo manifest-digest "$raw" 2>/dev/null)
+		fi
 		if [ -n "$latest" ] && grep -qxF "$latest" "$bad"; then
 			echo "$latest failed its boot health checks and was rolled back; waiting for a newer image"
 			exit 1
