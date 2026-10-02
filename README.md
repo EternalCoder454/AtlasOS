@@ -7,10 +7,89 @@ services.
 
 Images: `ghcr.io/eternalcoder454/atlasos`
 
-| Tag | Built from |
-|---|---|
-| `latest`, `44`, `44.YYYYMMDD` | `main` |
-| `beta`, `beta-44.YYYYMMDD` | `beta` |
+| Tag | Channel | Built from |
+|---|---|---|
+| `testing`, `testing-44.YYYYMMDD` | Testing: built daily and on every push | `main` |
+| `stable`, `latest`, `44`, `44.YYYYMMDD` | Stable: weekly | the newest testing image, copied by digest (never rebuilt) |
+| `beta`, `beta-44.YYYYMMDD` | Beta | `beta` |
+
+`latest` is `stable`. The version `44.YYYYMMDD` (the build's UTC date) is the
+same in the image's `org.opencontainers.image.version` label, in
+`/etc/os-release` and in the tags. The `org.opencontainers.image.revision`
+label is the AtlasOS commit the image was built from, and
+`net.eterneon.atlas.updater.revision` the Atlas Updater commit.
+
+## Updates
+
+- **Staging:** `atlasos-update-stage.timer` runs `bootc upgrade --quiet`
+  (`atlasos-update-stage.service`) about an hour after boot and every 6 hours
+  after that, with a random delay of up to 30 minutes. It downloads and stages
+  the new image and never reboots; a staged update is used at the next
+  shutdown or reboot. It runs at idle CPU and disk priority, only on an
+  image-based boot, with the network up, and not on a connection NetworkManager
+  reports as metered. `bootc-fetch-apply-updates.timer` (which reboots) and
+  `rpm-ostreed-automatic.timer` stay disabled; `build.sh` fails if they are
+  enabled.
+- **Notifier:** [Atlas Updater](https://github.com/EternalCoder454/atlasos-updater)
+  shows what is staged and offers the restart. Discover's notifier is removed
+  and its unattended updates are off; the build checks both.
+- **Release notes:** every stable build gets a git tag `44.YYYYMMDD` on the
+  commit it was built from and a GitHub release with that tag: the commits
+  since the previous stable tag, grouped by what they touch.
+  `scripts/release-notes.sh` writes them; the first stable lists the newest
+  commits.
+- **Atlas apps are system components.** `atlas-core` and `atlas-updater` are
+  RPMs built into the image under `/usr`, so Discover (its backends here are
+  Flatpak, fwupd, KNewStuff and rpm-ostree, no PackageKit) has no way to
+  uninstall them, and `/etc/dnf/protected.d/atlas.conf` (from `atlas-core`)
+  stops dnf removing them. The build fails without them. Root can still run
+  `rpm-ostree override remove`; that is the limit on an open system. The
+  tray autostart can be turned off in System Settings; background staging is
+  a system timer and keeps working.
+
+## Flatpaks and Flathub
+
+Flathub is a system remote (`/usr/share/flatpak/remotes.d/flathub.flatpakrepo`)
+next to Fedora's. Apps in `/usr/share/flatpak/preinstall.d/atlasos.preinstall`
+(Flatseal for now) are installed by `atlasos-flatpak-preinstall.service`,
+which `atlasos-flatpak-preinstall.timer` starts 3 minutes after boot, so it
+can't delay boot or login. It runs `flatpak preinstall --system -y
+--noninteractive`, and skips while `/var/lib/atlasos/flatpak-preinstall.sha256`
+matches a hash of the `preinstall.d` files. The stamp is written only on
+success, so without a network it tries again every 6 hours and at the next
+boot. Flathub gets remote priority 2 the first time it runs (Fedora's remote
+has Flatseal too); change it with `flatpak remote-modify` and it stays.
+Users who uninstall a preinstalled app don't get it back. To add an app, add a
+`[Flatpak Preinstall <app id>]` group with `Branch=` to the file (the format
+is in `flatpak-preinstall(1)`).
+
+## Settings updates for existing users
+
+Plasma applies the image's `/etc/xdg` defaults to keys a user hasn't set, but
+anything a theme's `defaults` file or an old image already wrote into
+`~/.config` stays. `kconf_update` fixes that. Plasma's `kded6` runs it for
+each user at every session start (and when a `.upd` file changes); each `Id`
+runs once per user, recorded in `~/.config/kconf_updaterc`.
+
+To add an update:
+
+1. Write `system_files/usr/share/kconf_update/atlasos-YYYYMMDD-<name>.sh`
+   (executable, safe to run twice, never overwriting a value the user set;
+   `kreadconfig6` and `kwriteconfig6` are there).
+2. Add to `atlasos.upd` in the same folder:
+   ```
+   Id=atlasos-YYYYMMDD-<name>
+   Script=atlasos-YYYYMMDD-<name>.sh,sh
+   ```
+   The `Id` must be new and never change.
+3. Try it: `kconf_update --testmode --debug system_files/usr/share/kconf_update/atlasos.upd`
+   with a throwaway `HOME` (the image's `/usr/libexec/kf6/kconf_update`; in
+   a container, with the folder mounted at `/usr/share/kconf_update`).
+   `--testmode` doesn't record the `Id`, so it runs again each time.
+
+`build.sh` checks that the scripts are executable and the `Id`s unique. The
+first entry fills look-and-feel keys of the user's AtlasOS theme that they
+never set.
 
 ## What differs from Kinoite
 
@@ -22,11 +101,13 @@ Images: `ghcr.io/eternalcoder454/atlasos`
   DrKonqi, KDE's crash reporter, which needs it. Also two wallpaper sets
   nothing depends on. (Menu Editor and Emoji Selector stay: they are part
   of `plasma-desktop`.)
-- **Turned off:** Discover's unattended updates, dnf's metadata refresh
+- **Turned off:** Discover's unattended updates, automatic reboots for
+  updates (see Updates), dnf's metadata refresh
   timer (dnf can't change an image-based system anyway), and Fedora's
   on-screen keyboard (System Settings > Keyboard > Virtual Keyboard turns it
   back on).
-- **Added:** Ghostty as the terminal (Ctrl+Alt+T), from the
+- **Added:** Atlas Updater (the update screen and tray, with its `atlas-core`
+  helper), Flathub, Ghostty as the terminal (Ctrl+Alt+T), from the
   [scottames/ghostty](https://copr.fedorainfracloud.org/coprs/scottames/ghostty/)
   COPR that Ghostty's install guide points to, since Fedora doesn't package
   it; Brave Origin as the browser, from
@@ -66,8 +147,8 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 
 | Path | What it is |
 |---|---|
-| `Containerfile` | The image: a branding stage, then Kinoite plus `build_files/build.sh` |
-| `build_files/build.sh` | Package removals, services, branding, initramfs |
+| `Containerfile` | The image: a branding stage and an Atlas apps stage (RPMs), then Kinoite plus `build_files/build.sh` |
+| `build_files/build.sh` | Package removals, the Atlas apps, services, branding, initramfs |
 | `system_files/` | Files copied as-is into the image (`/etc`, `/usr`), including the two Global Themes, their colour schemes and the taskbar layout |
 | `branding/source/` | The AtlasOS logo SVGs (copies, never edited) |
 | `branding/wallpaper.jpg` | The wallpaper, a 4K copy of the original; also blurred for the login screen |
@@ -75,11 +156,19 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `disk_config/` | bootc-image-builder configs, and the kickstart for the stock baseline VM |
 | `scripts/` | `bib.sh` (disk images), `vm.sh`, `vmctl.py` and `vmswitch.py` (test VMs) |
 | `docs/` | Phase reports |
-| `.github/workflows/build.yml` | Builds, rechunks, pushes and signs |
+| `.github/workflows/build.yml` | Builds, rechunks, pushes and signs testing and beta |
+| `.github/workflows/promote-stable.yml` | Weekly: testing becomes stable, then tag and release |
+| `scripts/release-notes.sh` | Writes a stable release's notes from the git log |
 
 ## Building and testing locally
 
 Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
+
+The Atlas apps are built from a second repository, passed to `podman build` as
+the named build context `atlas-updater`. `just build` uses `../Atlas Updater`
+(next to this repo), or `$ATLAS_UPDATER_SRC`; it needs
+`packaging/build-rpm.sh` there. Its commit goes in the
+`net.eterneon.atlas.updater.revision` label.
 
 | Command | Does |
 |---|---|
@@ -119,18 +208,29 @@ can't `bootc upgrade` afterwards, since its image source was the share.
 ## CI
 
 `.github/workflows/build.yml` runs on pushes to `main` and `beta`, on pull
-requests (build only), daily, and by hand.
+requests (build only), daily, and by hand. It checks out
+`EternalCoder454/atlasos-updater` (`main`) as the `atlas-updater` build context
+(if that repository is private, put a token that can read it in the
+`ATLAS_UPDATER_TOKEN` secret).
 
+- `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default
-  branch), and skips the build when the published image already has this
-  commit on the current Kinoite digest. GitHub pauses schedules in repos with
-  no activity for 60 days.
+  branch), and skips the build when the published `testing` image already has
+  this commit, this Atlas Updater commit and the current Kinoite digest.
+  GitHub pauses schedules in repos with no activity for 60 days.
+- `promote-stable.yml` runs weekly (Saturday) and by hand: `skopeo copy --all`
+  of the `testing` image, by digest, to `stable`, `latest`, `44` and
+  `44.YYYYMMDD`; then the release job (the only one with `contents: write`)
+  creates the tag and the release. Nothing happens if `stable` already has
+  that digest, and an existing release is left as it is.
 - dnf's downloads are cached between runs, keyed by ISO week.
 - Images are rechunked before pushing, so updates download only what changed.
 - Signing turns on when the `SIGNING_SECRET` repository secret is set:
   generate a key pair with `cosign generate-key-pair` (leave the password
   empty, or store it in a `COSIGN_PASSWORD` secret), store `cosign.key`'s
-  contents in `SIGNING_SECRET`, and commit `cosign.pub`.
+  contents in `SIGNING_SECRET`, and commit `cosign.pub`. A signature belongs
+  to a digest, so one signature covers every tag of a promoted image; the
+  promote workflow signs it again if the key is set.
 
 ## License
 
