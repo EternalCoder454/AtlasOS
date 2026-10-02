@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Panel background, adaptive (see-through until a window is maximized).
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+  </style>
+ </defs>
+ <g id="topleft">
+  <rect x="0" y="0" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M0 14 V13 A13 13 0 0 1 13 0 H14 V14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 14 V13 A13 13 0 0 1 13 0 H14 V14 Z M1 14 V13 A12 12 0 0 1 13 1 H14 V14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="top">
+  <rect x="14" y="0" width="8" height="14" fill="#000" opacity="0.004"/>
+  <path d="M14 0 H22 V14 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 0 H22 V14 H14 Z M14 1 H22 V14 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="topright">
+  <rect x="22" y="0" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M22 0 H23 A13 13 0 0 1 36 13 V14 H22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 0 H23 A13 13 0 0 1 36 13 V14 H22 Z M22 1 H23 A12 12 0 0 1 35 13 V14 H22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="left">
+  <rect x="0" y="14" width="14" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 14 H14 V22 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 14 H14 V22 H0 Z M1 14 H14 V22 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="center">
+  <rect x="14" y="14" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M14 14 H22 V22 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 14 H22 V22 H14 Z M14 14 H22 V22 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="right">
+  <rect x="22" y="14" width="14" height="8" fill="#000" opacity="0.004"/>
+  <path d="M22 14 H36 V22 H22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 14 H36 V22 H22 Z M22 14 H35 V22 H22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="bottomleft">
+  <rect x="0" y="22" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M0 22 V23 A13 13 0 0 0 13 36 H14 V22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 22 V23 A13 13 0 0 0 13 36 H14 V22 Z M1 22 V23 A12 12 0 0 0 13 35 H14 V22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="bottom">
+  <rect x="14" y="22" width="8" height="14" fill="#000" opacity="0.004"/>
+  <path d="M14 22 H22 V36 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 22 H22 V36 H14 Z M14 22 H22 V35 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="bottomright">
+  <rect x="22" y="22" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M22 22 V36 H23 A13 13 0 0 0 36 23 V22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 22 V36 H23 A13 13 0 0 0 36 23 V22 Z M22 22 V35 H23 A12 12 0 0 0 35 23 V22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <rect id="hint-stretch-borders" width="1" height="1" fill="#000" opacity="0.004"/>
+ <rect id="hint-top-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="hint-bottom-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="hint-left-margin" x="0" y="0" width="4" height="1" fill="#000" opacity="0.004"/>
+ <rect id="hint-right-margin" x="0" y="0" width="4" height="1" fill="#000" opacity="0.004"/>
+ <g id="mask-topleft">
+  <path d="M0 14 V13 A13 13 0 0 1 13 0 H14 V14 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-top">
+  <path d="M14 0 H22 V14 H14 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-topright">
+  <path d="M22 0 H23 A13 13 0 0 1 36 13 V14 H22 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-left">
+  <path d="M0 14 H14 V22 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-center">
+  <path d="M14 14 H22 V22 H14 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-right">
+  <path d="M22 14 H36 V22 H22 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-bottomleft">
+  <path d="M0 22 V23 A13 13 0 0 0 13 36 H14 V22 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-bottom">
+  <path d="M14 22 H22 V36 H14 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="mask-bottomright">
+  <path d="M22 22 V36 H23 A13 13 0 0 0 36 23 V22 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="thick-topleft">
+  <rect x="0" y="0" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M0 14 V13 A13 13 0 0 1 13 0 H14 V14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 14 V13 A13 13 0 0 1 13 0 H14 V14 Z M1 14 V13 A12 12 0 0 1 13 1 H14 V14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-top">
+  <rect x="14" y="0" width="8" height="14" fill="#000" opacity="0.004"/>
+  <path d="M14 0 H22 V14 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 0 H22 V14 H14 Z M14 1 H22 V14 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-topright">
+  <rect x="22" y="0" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M22 0 H23 A13 13 0 0 1 36 13 V14 H22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 0 H23 A13 13 0 0 1 36 13 V14 H22 Z M22 1 H23 A12 12 0 0 1 35 13 V14 H22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-left">
+  <rect x="0" y="14" width="14" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 14 H14 V22 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 14 H14 V22 H0 Z M1 14 H14 V22 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-center">
+  <rect x="14" y="14" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M14 14 H22 V22 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 14 H22 V22 H14 Z M14 14 H22 V22 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-right">
+  <rect x="22" y="14" width="14" height="8" fill="#000" opacity="0.004"/>
+  <path d="M22 14 H36 V22 H22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 14 H36 V22 H22 Z M22 14 H35 V22 H22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-bottomleft">
+  <rect x="0" y="22" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M0 22 V23 A13 13 0 0 0 13 36 H14 V22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M0 22 V23 A13 13 0 0 0 13 36 H14 V22 Z M1 22 V23 A12 12 0 0 0 13 35 H14 V22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-bottom">
+  <rect x="14" y="22" width="8" height="14" fill="#000" opacity="0.004"/>
+  <path d="M14 22 H22 V36 H14 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M14 22 H22 V36 H14 Z M14 22 H22 V35 H14 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <g id="thick-bottomright">
+  <rect x="22" y="22" width="14" height="14" fill="#000" opacity="0.004"/>
+  <path d="M22 22 V36 H23 A13 13 0 0 0 36 23 V22 Z" class="ColorScheme-Background" fill="currentColor" opacity="0.55"/>
+  <path d="M22 22 V36 H23 A13 13 0 0 0 36 23 V22 Z M22 22 V35 H23 A12 12 0 0 0 35 23 V22 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+ </g>
+ <rect id="thick-hint-top-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="thick-hint-bottom-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="thick-hint-left-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <rect id="thick-hint-right-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+</svg>

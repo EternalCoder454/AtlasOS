@@ -1,0 +1,7 @@
+[Plugins]
+# Search in KRunner and the app launcher. Off: file search (AtlasOS has no
+# Baloo index, so it only started an idle helper), Konsole profiles (Ghostty
+# is the terminal) and software from AppStream (loads the whole catalogue).
+baloosearchEnabled=false
+krunner_konsoleprofilesEnabled=false
+krunner_appstreamEnabled=false

@@ -1,0 +1,8 @@
+# kded6 still reads kded5rc. Modules that can't do anything on AtlasOS:
+# Baloo's (no file indexer) and the reminder to install Plasma Browser
+# Integration.
+[Module-baloosearchmodule]
+autoload=false
+
+[Module-browserintegrationreminder]
+autoload=false

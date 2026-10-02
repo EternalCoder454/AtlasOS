@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AtlasOS"
+            }
+        ],
+        "Category": "Windows and Tasks",
+        "Description": "A thin line between groups of icons, like the one in macOS's Dock",
+        "Icon": "distribute-horizontal-margin",
+        "Id": "org.atlasos.dockseparator",
+        "License": "Apache-2.0",
+        "Name": "Dock Separator"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

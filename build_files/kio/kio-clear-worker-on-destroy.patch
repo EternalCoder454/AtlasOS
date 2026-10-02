@@ -1,0 +1,17 @@
+--- a/src/core/slavebase.cpp
++++ b/src/core/slavebase.cpp
+@@ -293,6 +293,14 @@
+ 
+ SlaveBase::~SlaveBase()
+ {
++#ifdef Q_OS_UNIX
++    // The SIGTERM handler must not reach a destroyed worker: a thumbnail
++    // worker is often sent SIGTERM while its QApplication shuts down, after
++    // this object is gone (https://bugs.kde.org/show_bug.cgi?id=518400).
++    if (globalSlave == this) {
++        globalSlave = nullptr;
++    }
++#endif
+     delete d->configGroup;
+     delete d->config;
+     delete d->remotefile;

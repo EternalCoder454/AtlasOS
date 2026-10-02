@@ -24,8 +24,14 @@ _build*/
 *~
 .DS_Store
 
-# Original of branding/wallpaper.jpg (14.6 MB); the repo keeps the 4K JPEG copy.
+# Originals of branding/wallpaper.jpg and wallpaper-dark.jpg (14.6 and 19.8
+# MB); the repo keeps the 4K JPEG copies.
 /branding/sakura_blossoming.png
+/branding/new_sakura_blossoming.png
 
 # Python bytecode from the test scripts
 __pycache__/
+
+# Private keys (the NVIDIA module signing key). Kept outside /build/ so
+# `just clean` never deletes them.
+/secrets/

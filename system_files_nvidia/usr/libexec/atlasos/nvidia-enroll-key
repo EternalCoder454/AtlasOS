@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Asks the firmware to trust the AtlasOS module key, so NVIDIA's driver loads
+# with Secure Boot on. Run it once as root:
+#   sudo /usr/libexec/atlasos/nvidia-enroll-key
+# It asks for a one-time password; at the next boot the blue MOK Manager screen
+# asks for it again: choose "Enroll MOK", "Continue", "Yes", type the password.
+set -euo pipefail
+
+cert=/usr/share/atlasos/nvidia/atlasos-module-signing.der
+
+if [ "$(id -u)" -ne 0 ]; then
+	echo "Run as root: sudo $0" >&2
+	exit 1
+fi
+if ! mokutil --sb-state 2>/dev/null | grep -q 'SecureBoot enabled'; then
+	echo "Secure Boot is off: the driver loads without enrolling a key."
+	exit 0
+fi
+if mokutil --test-key "$cert" 2>/dev/null | grep -q 'is already enrolled'; then
+	echo "The AtlasOS module key is already enrolled."
+	exit 0
+fi
+mokutil --import "$cert"
+echo "Reboot, then choose \"Enroll MOK\" in the blue screen and type the same password."

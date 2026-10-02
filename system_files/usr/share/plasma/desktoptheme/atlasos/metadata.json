@@ -1,0 +1,17 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AtlasOS"
+            }
+        ],
+        "Description": "Breeze, with AtlasOS's dock: rounded highlights and a short underline under running apps",
+        "EnabledByDefault": true,
+        "Id": "atlasos",
+        "License": "Apache-2.0",
+        "Name": "AtlasOS",
+        "Version": "1.0",
+        "Website": "https://github.com/EternalCoder454/AtlasOS"
+    },
+    "X-Plasma-API": "5.0"
+}

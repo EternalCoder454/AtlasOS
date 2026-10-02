@@ -114,6 +114,58 @@ jobs:
             --key env://COSIGN_PRIVATE_KEY \
             "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.pick.outputs.digest }}"
 
+  # The same for atlasos-nvidia, whose testing image the build workflow makes
+  # from each atlasos testing image. Its signature, like atlasos's, was made
+  # when testing was pushed.
+  promote-nvidia:
+    name: Copy testing to stable (NVIDIA)
+    needs: promote
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      NVIDIA_IMAGE: atlasos-nvidia
+    steps:
+      - name: Copy by digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROMOTED_VERSION: ${{ needs.promote.outputs.version }}
+          PROMOTED_REVISION: ${{ needs.promote.outputs.revision }}
+        run: |
+          set -euo pipefail
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          creds="${GITHUB_ACTOR}:${GH_TOKEN}"
+          repo="${IMAGE_REGISTRY}/${NVIDIA_IMAGE}"
+          if ! json=$(skopeo inspect --creds "$creds" "docker://${repo}:testing" 2>/dev/null); then
+            echo "::notice::No ${NVIDIA_IMAGE}:testing yet; nothing to promote."
+            exit 0
+          fi
+          digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
+          version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
+          [[ "$version" =~ ^44\.[0-9]{8}$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
+          # Only the NVIDIA build of the atlasos image just promoted: an older
+          # one (its build failed since) would ship a stable without the
+          # release's changes.
+          revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
+          if [ "$version" != "$PROMOTED_VERSION" ] || [ "$revision" != "$PROMOTED_REVISION" ]; then
+            echo "::error::${NVIDIA_IMAGE}:testing is ${version} (${revision}), atlasos stable is ${PROMOTED_VERSION} (${PROMOTED_REVISION}); not promoted."
+            exit 1
+          fi
+          current=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:stable" 2>/dev/null || true)
+          if [ "$current" = "$digest" ]; then
+            echo "::notice::stable is already ${version}; nothing to copy."
+            exit 0
+          fi
+          for t in stable latest 44 "$version"; do
+            skopeo copy --all --preserve-digests --src-creds "$creds" --dest-creds "$creds" \
+              "docker://${repo}@${digest}" "docker://${repo}:${t}"
+          done
+          for t in stable latest 44 "$version"; do
+            got=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:${t}")
+            [ "$got" = "$digest" ] || { echo "::error::${t} is ${got}"; exit 1; }
+          done
+
   release:
     name: Tag and release
     needs: promote

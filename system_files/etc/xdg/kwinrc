@@ -11,7 +11,8 @@ ButtonsOnRight=IAX
 InputMethod[$e]=
 VirtualKeyboardEnabled=false
 
-# A faint noise over blurred surfaces (menus, the taskbar, popups), as in
-# Windows 11's acrylic. Blur strength stays Plasma's default.
+# Windows 11's acrylic for every blurred surface (the dock, the menu bar,
+# menus, popups): a strong blur with a little noise over it.
 [Effect-blur]
-NoiseStrength=2
+BlurStrength=13
+NoiseStrength=4

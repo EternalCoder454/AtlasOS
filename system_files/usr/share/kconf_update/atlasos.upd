@@ -15,3 +15,9 @@ Version=6
 
 Id=atlasos-20261001-look-and-feel
 Script=atlasos-20261001-look-and-feel.sh,sh
+
+Id=atlasos-20261002-cursors
+Script=atlasos-20261002-cursors.sh,sh
+
+Id=atlasos-20261002-dock-icons
+Script=atlasos-20261002-dock-icons.sh,sh

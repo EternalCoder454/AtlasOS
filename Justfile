@@ -33,31 +33,53 @@ build tag="latest" *args:
         {{ args }} \
         --tag "{{ image }}:{{ tag }}" .
 
+# Build the NVIDIA image (localhost/atlasos-nvidia) on top of a built AtlasOS
+# image with the same tag. Needs the module signing key: secrets/nvidia-signing.key
+# here, or the file named in NVIDIA_SIGNING_KEY (CI). Extra arguments go to
+# `podman build`.
+[group('Build')]
+build-nvidia tag="latest" *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    key="${NVIDIA_SIGNING_KEY:-secrets/nvidia-signing.key}"
+    [ -s "$key" ] || { echo "No module signing key at $key (see DEV.md, NVIDIA)" >&2; exit 1; }
+    mkdir -p build/cache/dnf
+    podman build \
+        --volume "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" \
+        --secret id=nvidia-signing-key,src="$key" \
+        --build-arg BASE_IMAGE="{{ image }}:{{ tag }}" \
+        --label org.opencontainers.image.title="AtlasOS (NVIDIA)" \
+        --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop with NVIDIA's driver" \
+        {{ args }} \
+        --file Containerfile.nvidia \
+        --tag "{{ image }}-nvidia:{{ tag }}" .
+
 # Split the built image into up to 127 layers by package (rpm-ostree's
 # chunker), so an update downloads only the parts that changed. CI does this
 # before pushing; local test builds don't need it.
 [group('Build')]
-rechunk tag="latest":
+rechunk tag="latest" name=image_name:
     #!/usr/bin/env bash
     set -euo pipefail
+    img="localhost/{{ name }}:{{ tag }}"
     graphroot="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
     # The chunker writes a fresh image config, so carry the labels over (the
     # daily CI run reads two of them to decide whether to rebuild).
-    list=$(podman image inspect "{{ image }}:{{ tag }}" |
+    list=$(podman image inspect "$img" |
         jq -r '.[0].Labels // {} | to_entries[] | "\(.key)=\(.value)"')
-    [ -n "$list" ] || { echo "{{ image }}:{{ tag }} has no labels to carry over" >&2; exit 1; }
+    [ -n "$list" ] || { echo "$img has no labels to carry over" >&2; exit 1; }
     labels=()
     while IFS= read -r l; do labels+=(--label "$l"); done <<<"$list"
     podman run --rm --pull=never --privileged \
-        --mount=type=image,src="{{ image }}:{{ tag }}",target=/rpm-ostree \
+        --mount=type=image,src="$img",target=/rpm-ostree \
         --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw \
         --mount=type=tmpfs,target=/run/rpm-ostree-storage \
         --entrypoint /usr/bin/rpm-ostree \
-        "{{ image }}:{{ tag }}" \
+        "$img" \
         compose build-chunked-oci \
         --max-layers 127 --format-version=2 --bootc "${labels[@]}" \
         --rootfs /rpm-ostree \
-        --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]{{ image }}:{{ tag }}"
+        --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]$img"
 
 # Make a VM disk (build/atlasos.qcow2) with bootc-image-builder. Needs sudo.
 [group('Disk images')]
@@ -119,8 +141,9 @@ bench runs="3" out=("build/bench/all-" + datetime("%Y%m%d-%H%M%S")):
     scripts/vm.sh bench all build/vm/updated/atlasos-bench.qcow2 {{ runs }} {{ out }}
 
 # Boot once and check the desktop works: Plasma, network, audio, Bluetooth,
-# printing, Flatpak, SELinux, firewalld, zram, systemd-oomd, and Brave Origin,
-# Ghostty and Dolphin opening. Screenshots in the output folder.
+# printing, Flatpak, SELinux, firewalld, zram (zstd), systemd-oomd, power
+# profiles, no crashes, and Brave Origin, Ghostty and Dolphin opening.
+# Screenshots in the output folder.
 [group('Measure')]
 check out=("build/bench/check-" + datetime("%Y%m%d-%H%M%S")):
     scripts/vm.sh bench check build/vm/updated/atlasos-bench.qcow2 1 {{ out }}
@@ -139,7 +162,7 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
     shellcheck -s sh branding/render.sh
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py
 

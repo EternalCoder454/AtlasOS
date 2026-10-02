@@ -158,6 +158,22 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     ok("firewalld active", "systemctl is-active firewalld", r"^active")
     ok("zram swap active", "swapon --show=NAME,TYPE --noheadings", r"zram")
     ok("systemd-oomd active", "systemctl is-active systemd-oomd", r"^active")
+    ok("zram uses zstd, swappiness 180", "cat /sys/block/zram0/comp_algorithm; sysctl -n vm.swappiness",
+       r"(?s)\[zstd\].*\n180\s*$")
+    ok("power profiles (power-profiles-daemon)", "systemctl is-active power-profiles-daemon; powerprofilesctl get",
+       r"(?s)^active\n(balanced|performance|power-saver)")
+    # Plasma's session reads ~/.config/kdedefaults (the Global Theme's
+    # defaults, written at login) before /etc/xdg; so must these reads.
+    ok("cursor theme (Bibata, no Breeze cursors)",
+       "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file kcminputrc --group Mouse --key cursorTheme; "
+       "ls -d -1 --color=never /usr/share/icons/Bibata-Modern-*/cursors /usr/share/icons/breeze_cursors 2>&1",
+       r"(?s)\ABibata-Modern-(Ice|Classic)\n(?=.*^/usr/share/icons/Bibata-Modern-Classic/cursors$)"
+       r"(?=.*^/usr/share/icons/Bibata-Modern-Ice/cursors$)(?=.*breeze_cursors.*No such file)")
+    ok("icons (Dracula) and Plasma style (AtlasOS)",
+       "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file kdeglobals --group Icons --key Theme; "
+       "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file plasmarc --group Theme --key name; "
+       "ls -d -1 --color=never /usr/share/icons/Dracula/index.theme /usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg",
+       r"\ADracula\natlasos\n/usr/share/icons/Dracula/index.theme\n/usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg$")
 
     apps = [
         ("Ghostty", "ghostty", "(^|/)ghostty( |$)"),
@@ -195,16 +211,14 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     # Stability: nothing failed or crashed during the boot and the app launches.
     ok("no failed system units", "systemctl --failed --no-legend --plain | wc -l", r"^0$")
     ok("no failed user units", "systemctl --user --failed --no-legend --plain | wc -l", r"^0$")
-    # kioworker (thumbnails) sometimes crashes in Qt's font database while
-    # being shut down: a known upstream race (kf6-kio 6.30), reported apart
-    # from the gate rather than failing it.
+    # Any crash fails the gate. (Closing Dolphin used to crash its thumbnail
+    # kioworkers; AtlasOS's KIO build fixes that, see build_files/kio.)
     dumps = con.sudo("coredumpctl list --no-legend --no-pager --since=\"$(uptime -s)\" 2>&1 | grep -v 'No coredumps' || true",
                      password)
-    known = [line for line in dumps.splitlines() if "kioworker" in line]
-    other = [line for line in dumps.splitlines() if line.strip() and "kioworker" not in line]
-    results.append(("no crashes (coredumps) this boot, apart from the known kioworker one", not other))
+    crashes = [line for line in dumps.splitlines() if line.strip()]
+    results.append(("no crashes (coredumps) this boot", not crashes))
     report += ["### coredumps this boot", dumps.strip() or "(none)", ""]
-    result["known_kioworker_crashes"] = len(known)
+    result["crashes"] = len(crashes)
     ok("KWin and plasmashell never restarted",
        f"journalctl -b --no-pager -o cat _UID=$(id -u {USER}) | grep -cE 'KCrash|kwin_wayland_wrapper.*(crash|restart)|plasmashell.*crash' || true",
        r"^0$")

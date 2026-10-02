@@ -25,11 +25,38 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     /src/packaging/build-rpm.sh /out
 
+# KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
+# kf6-kio, rebuilt at the version the base image has.
+FROM ${BASE_IMAGE} AS base-kio
+RUN rpm -q kf6-kio-core --qf '%{VERSION}-%{RELEASE}' >/kio-nvr
+
+FROM registry.fedoraproject.org/fedora:44 AS kio
+COPY --from=base-kio /kio-nvr /kio-nvr
+COPY build_files/kio /kio
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    /kio/build-rpm.sh /out
+
+# The first-run wizard in AtlasOS's style (see
+# build_files/plasma-setup/build-rpm.sh): Fedora's plasma-setup, rebuilt at
+# the version the base image has.
+FROM ${BASE_IMAGE} AS base-plasma-setup
+RUN rpm -q plasma-setup --qf '%{VERSION}-%{RELEASE}' >/plasma-setup-nvr
+
+FROM registry.fedoraproject.org/fedora:44 AS plasma-setup
+COPY --from=base-plasma-setup /plasma-setup-nvr /plasma-setup-nvr
+COPY build_files/plasma-setup /plasma-setup
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    /plasma-setup/build-rpm.sh /out
+
 # Build scripts and config files, mounted into the build rather than copied
 # into the image.
 FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
+COPY branding/cursors /cursors
+COPY branding/icon-theme /icon-theme
 
 FROM ${BASE_IMAGE}
 
@@ -42,6 +69,8 @@ LABEL org.atlasos.base-image="${BASE_IMAGE}"
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=branding,source=/out,target=/branding \
     --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
+    --mount=type=bind,from=kio,source=/out,target=/kio-rpms \
+    --mount=type=bind,from=plasma-setup,source=/out,target=/plasma-setup-rpms \
     --mount=type=tmpfs,dst=/tmp \
     IMAGE_VERSION="${IMAGE_VERSION}" /ctx/build.sh
 

@@ -55,8 +55,46 @@ remove=(
 	# kde-settings requires it.
 	fedora-workstation-backgrounds
 	plasma-workspace-wallpapers
+	# Left behind by the removals above, with nothing else using them:
+	# Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's
+	# and Partition Manager's libraries, and help pages without KHelpCenter.
+	mariadb-server
+	mariadb-backup
+	mariadb-cracklib-password-check
+	mariadb-gssapi-server
+	qt6-qtbase-mysql
+	python3-sentry-sdk
+	python3-pygdbmi
+	xapian-core-libs
+	kjournald-libs
+	kpmcore
+	plasma-desktop-doc
+	# Unused: Konqueror's bookmark editor, Python's Qt bindings, and sos
+	# (Red Hat's support-case report tool).
+	keditbookmarks
+	keditbookmarks-libs
+	python3-pyside6
+	sos
+	# Xwayland Video Bridge (30 MiB, running all the time) lets X11 apps
+	# share Wayland windows; apps share the screen through the portal now.
+	xwaylandvideobridge
+	# KDE's push-notification service starts with every session; no app here
+	# uses it.
+	kunifiedpush
 )
 "${dnf[@]}" remove "${remove[@]}"
+# What only those used. rpm-ostree images don't record why a package was
+# installed, so dnf can't find these by itself.
+"${dnf[@]}" remove mariadb mariadb-common mariadb-errmsg mariadb-connector-c \
+	mariadb-connector-c-config python3-shiboken6 python3-boto3 python3-botocore \
+	python3-s3transfer python3-jmespath
+
+# power-profiles-daemon in place of TuneD and its PPD bridge: the same power
+# profiles in Plasma's battery applet and in powerdevil, for about 5 MiB
+# instead of 50.
+"${dnf[@]}" swap tuned-ppd power-profiles-daemon
+"${dnf[@]}" remove tuned
+systemctl enable power-profiles-daemon.service
 
 # Fedora's logos out, the generic ones in; the AtlasOS ones go on top below.
 "${dnf[@]}" swap fedora-logos generic-logos
@@ -127,11 +165,55 @@ keep=(
 	plasma-login-manager NetworkManager NetworkManager-wifi
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
-	plymouth zram-generator
+	plymouth zram-generator power-profiles-daemon xorg-x11-server-Xwayland
 	podman podman-compose podman-docker toolbox distrobox git gh just mise
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
 )
 rpm -q "${keep[@]}"
+
+### KIO
+
+# Fedora's kf6-kio rebuilt with AtlasOS's fix for a crash on closing Dolphin
+# (the kio stage of the Containerfile, bound in at /kio-rpms; see
+# kio/build-rpm.sh). Only the parts Kinoite has are updated, all to the
+# same release.
+#
+# The RPMs are built in a fedora:44 container against Fedora's newest
+# libraries. With every repo off, the upgrade fails if they need newer Qt or
+# KDE libraries than the base image has, rather than pulling those in.
+kio=()
+for f in /kio-rpms/*.rpm; do
+	rpm -q "$(rpm -qp --qf '%{NAME}' "$f")" >/dev/null 2>&1 && kio+=("$f")
+done
+[ ${#kio[@]} -gt 0 ]
+"${dnf[@]}" --disablerepo='*' upgrade "${kio[@]}"
+rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
+	echo "build.sh: kf6-kio-core is not AtlasOS's build" >&2
+	exit 1
+}
+[ "$(rpm -qa --qf '%{RELEASE}\n' 'kf6-kio-*' | sort -u | wc -l)" -eq 1 ] || {
+	echo "build.sh: KIO packages from different builds:" >&2
+	rpm -qa 'kf6-kio-*' >&2
+	exit 1
+}
+
+### First-run wizard
+
+# Fedora's plasma-setup rebuilt in AtlasOS's style (the plasma-setup stage of
+# the Containerfile, bound in at /plasma-setup-rpms; see
+# plasma-setup/build-rpm.sh). AtlasOS's launcher page beside it is in
+# system_files (org.atlasos.plasmasetup.launcher).
+# Only the parts Kinoite has, with every repo off, as for KIO.
+ps=()
+for f in /plasma-setup-rpms/*.rpm; do
+	rpm -q "$(rpm -qp --qf '%{NAME}' "$f")" >/dev/null 2>&1 && ps+=("$f")
+done
+[ ${#ps[@]} -gt 0 ]
+"${dnf[@]}" --disablerepo='*' upgrade "${ps[@]}"
+rpm -q plasma-setup | grep -q '\.atlas1\.' || {
+	echo "build.sh: plasma-setup is not AtlasOS's build" >&2
+	exit 1
+}
 
 ### Atlas apps
 
@@ -181,8 +263,24 @@ systemctl disable dnf-makecache.timer
 # reboot). The two timers that apply or reboot by themselves stay off.
 systemctl disable bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer
 
+# Power profiles come from power-profiles-daemon (swapped in above).
+[ "$(systemctl is-enabled power-profiles-daemon.service)" = enabled ]
+for p in tuned tuned-ppd xwaylandvideobridge kunifiedpush mariadb-server; do
+	if rpm -q "$p" >/dev/null 2>&1; then
+		echo "build.sh: $p must not be installed" >&2
+		exit 1
+	fi
+done
+
 ### Branding
 
+# Modes come from the checkout: a file a local checkout made private would
+# ship private, so that fails the build.
+unreadable=$(find /ctx/system_files ! -type l ! -perm -o=r)
+[ -z "$unreadable" ] || {
+	echo "build.sh: not readable by everyone: $unreadable" >&2
+	exit 1
+}
 cp -a /ctx/system_files/. /
 
 # Atlas Updater is the only update notifier. Discover's (plasma-discover-notifier,
@@ -269,6 +367,37 @@ grep -qx 'ExecStart=/usr/bin/bootc upgrade --quiet' /usr/lib/systemd/system/atla
 cp -a /branding/icons/. /usr/share/icons/
 cp -a /branding/pixmaps/. /usr/share/pixmaps/
 cp -a /branding/wallpapers/. /usr/share/wallpapers/
+# Cursors: Bibata Modern Ice (light) and Classic (dark), see
+# branding/cursors/README.md. They replace Breeze's, whose files go:
+# plasma-integration requires the breeze-cursor-theme package, so it stays
+# installed, empty. "default" is the cursor anything without its own setting
+# uses (X11 apps, the login screen before Plasma's settings load).
+for c in Bibata-Modern-Ice Bibata-Modern-Classic; do
+	tar -xJf "/ctx/cursors/$c.tar.xz" -C /usr/share/icons --no-same-owner --no-same-permissions
+	[ -f "/usr/share/icons/$c/cursors/left_ptr" ] && [ -f "/usr/share/icons/$c/index.theme" ]
+done
+install -Dm644 /ctx/cursors/LICENSE /usr/share/licenses/bibata-cursor-themes/LICENSE
+rm -r /usr/share/icons/breeze_cursors /usr/share/icons/Breeze_Light
+grep -qx 'Inherits=Adwaita' /usr/share/icons/default/index.theme
+sed -i 's/^Inherits=Adwaita$/Inherits=Bibata-Modern-Ice/' /usr/share/icons/default/index.theme
+# Nothing may still point at Breeze's cursors.
+if grep -rIl -e breeze_cursors -e Breeze_Light /etc/xdg /usr/share/plasma/look-and-feel/org.atlasos*; then
+	echo "build.sh: settings above still name Breeze's cursors" >&2
+	exit 1
+fi
+# Icons: Dracula, for AtlasOS Light and Dark (see
+# branding/icon-theme/README.md). Breeze's stay for what Dracula lacks; its own
+# fallback list names themes Fedora doesn't have.
+tar -xJf /ctx/icon-theme/Dracula.tar.xz -C /usr/share/icons --no-same-owner --no-same-permissions
+grep -q '^Inherits=' /usr/share/icons/Dracula/index.theme
+sed -i 's/^Inherits=.*/Inherits=breeze-dark,hicolor/' /usr/share/icons/Dracula/index.theme
+[ -f /usr/share/icons/Dracula/scalable/places/folder.svg ]
+install -Dm644 /ctx/icon-theme/LICENSE /usr/share/licenses/dracula-icons/LICENSE
+# Every user must be able to read them (tar keeps the archive's modes).
+if find /usr/share/icons/Dracula /usr/share/icons/Bibata-Modern-* ! -type l ! -perm -o=r | grep .; then
+	echo "build.sh: the icon or cursor files above are not readable by everyone" >&2
+	exit 1
+fi
 # "Default" (and "Fedora", which points at it) is the wallpaper anything
 # without its own setting falls back to. The first-run wizard loads two
 # files from it by name; branding/render.sh makes those too.
@@ -317,7 +446,7 @@ replace() { # file, old, new
 
 # Two Global Themes, AtlasOS Light (org.atlasos.desktop, the default in
 # /etc/xdg/kdeglobals) and AtlasOS Dark (org.atlasos.dark.desktop). Each is
-# our metadata, defaults and Windows 11-style panel layout from system_files,
+# our metadata, defaults and layout (menu bar and dock) from system_files,
 # completed with Fedora's theme and then Breeze for every file we don't have.
 # Complete, because Plasma looks up missing files in Breeze's theme, which is
 # removed below.
@@ -353,6 +482,10 @@ for t in "$themes"/*; do
 done
 find /usr/share/color-schemes -name '*.colors' ! -name 'AtlasOS*.colors' -delete
 rm -r /usr/share/plasma/desktoptheme/breeze-dark /usr/share/plasma/desktoptheme/breeze-light
+# The AtlasOS Plasma style (system_files) is Breeze with its own dock
+# indicators (widgets/tasks.svg); everything else falls back to "default".
+# Breeze's settings (blur behind panels and popups) come along.
+cp /usr/share/plasma/desktoptheme/default/plasmarc /usr/share/plasma/desktoptheme/atlasos/plasmarc
 # Copied symlinks that pointed into a removed theme would now break quietly.
 dangling=$(find "$themes" /usr/share/plasma/desktoptheme -xtype l)
 [ -z "$dangling" ] || {
@@ -394,10 +527,20 @@ dracut --no-hostonly --kver "$kver" --reproducible --add ostree \
 
 # New icons and wallpapers need the icon cache to know about them
 gtk-update-icon-cache -f /usr/share/icons/hicolor
+gtk-update-icon-cache -f /usr/share/icons/Dracula
 
 ### Clean up
 
+# Package docs (140 MB): READMEs, changelogs and KDE's handbooks, which
+# nothing here opens (KHelpCenter is gone; Help buttons go to docs.kde.org).
+# License texts stay, wherever a package put them; man pages stay too.
+find /usr/share/doc -type f \
+	! -iname '*licen[cs]e*' ! -iname '*copying*' ! -iname '*notice*' -delete
+find /usr/share/doc -type l -delete
+find /usr/share/doc -mindepth 1 -type d -empty -delete
+
 # Nothing written to /var during the build belongs in the image. The dnf cache
 # is left alone when it is the host's, bound in for the next build.
-rm -rf /var/lib/dnf /var/log/dnf5.log* /run/dnf /var/cache/ldconfig/aux-cache
+rm -rf /var/lib/dnf /var/log/dnf5.log* /run/dnf /var/cache/ldconfig/aux-cache \
+	/var/lib/power-profiles-daemon # systemd makes it (StateDirectory=)
 mountpoint -q /var/cache/libdnf5 || rm -rf /var/cache/libdnf5

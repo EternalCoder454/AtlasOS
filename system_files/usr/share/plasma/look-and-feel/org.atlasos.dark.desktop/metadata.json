@@ -7,7 +7,7 @@
             }
         ],
         "Category": "",
-        "Description": "Dark colours from the AtlasOS logo, with a macOS-style menu bar and a Windows 11-style taskbar",
+        "Description": "Dark colours from the AtlasOS logo, with a macOS-style menu bar and a dock",
         "Id": "org.atlasos.dark.desktop",
         "License": "GPLv2+",
         "Name": "AtlasOS Dark",

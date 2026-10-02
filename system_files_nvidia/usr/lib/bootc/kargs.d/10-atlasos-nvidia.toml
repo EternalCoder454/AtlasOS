@@ -1,0 +1,4 @@
+# NVIDIA's driver drives the GPU: nouveau is kept out, also from the initramfs,
+# and nvidia-drm runs KMS so Plasma's Wayland session works. Keeping video
+# memory over suspend needs nvidia-suspend/-resume (enabled in the image).
+kargs = ["rd.driver.blacklist=nouveau", "modprobe.blacklist=nouveau", "nvidia-drm.modeset=1", "nvidia-drm.fbdev=1", "nvidia.NVreg_PreserveVideoMemoryAllocations=1"]

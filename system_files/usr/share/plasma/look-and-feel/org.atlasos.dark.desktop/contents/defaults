@@ -5,16 +5,16 @@ widgetStyle=Breeze
 ColorScheme=AtlasOSDark
 
 [kdeglobals][Icons]
-Theme=breeze-dark
+Theme=Dracula
 
 [plasmarc][Theme]
-name=default
+name=atlasos
 
 [Wallpaper]
 Image=AtlasOS
 
 [kcminputrc][Mouse]
-cursorTheme=breeze_cursors
+cursorTheme=Bibata-Modern-Classic
 
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.breeze

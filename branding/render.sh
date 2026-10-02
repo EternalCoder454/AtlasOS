@@ -1,7 +1,7 @@
 #!/bin/sh
 # Renders every image the OS installs: the logos from branding/source/, which
 # are copies of the AtlasOS logo set and are never edited, and the wallpaper in
-# branding/wallpaper.jpg. Runs in the Containerfile's branding stage; needs
+# branding/wallpaper.jpg (light) and wallpaper-dark.jpg (dark). Runs in the Containerfile's branding stage; needs
 # rsvg-convert and ImageMagick.
 #
 #   render.sh <branding dir> <output dir>
@@ -34,7 +34,9 @@ rsvg-convert -h 48 atlas-lockup-dark.svg -o "$out/plymouth/watermark.png"
 
 # Wallpaper packages, one image per common screen size so Plasma never has
 # to decode a 4K image to fill a smaller screen:
-#   AtlasOS        wallpaper.jpg, cropped to fill (the desktop)
+#   AtlasOS        wallpaper.jpg, cropped to fill (the desktop), and
+#                  wallpaper-dark.jpg as its dark variant (images_dark), which
+#                  Plasma shows instead while the colour scheme is dark
 #   AtlasOS-Login  the same picture blurred and tinted with the logo's ink
 #                  #1B1748, macOS style, so the clock, avatar and password
 #                  field read clearly (login and lock screens). Blurred here,
@@ -54,6 +56,9 @@ for size in $sizes; do
 	desktop=$out/wallpapers/AtlasOS/contents/images/$size.jpg
 	magick "$1/wallpaper.jpg" -resize "$size^" -gravity center -extent "$size" \
 		-quality 90 "$desktop"
+	mkdir -p "$out/wallpapers/AtlasOS/contents/images_dark"
+	magick "$1/wallpaper-dark.jpg" -resize "$size^" -gravity center -extent "$size" \
+		-quality 90 "$out/wallpapers/AtlasOS/contents/images_dark/$size.jpg"
 	# Blur at a tenth of the size, then scale back up: the same soft result
 	# as a full-size blur, many times faster.
 	magick "$desktop" -resize 10% -blur "0x$((h / 300 + 2))" -resize "$size!" \
@@ -61,10 +66,13 @@ for size in $sizes; do
 		-quality 90 "$out/wallpapers/AtlasOS-Login/contents/images/$size.jpg"
 done
 # The first-run wizard (plasma-setup) ignores the wallpaper setting and loads
-# these two files, by name, from wallpapers/Default, which points here.
+# these two files, by name, from wallpapers/Default, which points here (the
+# dark ones once AtlasOS Dark is chosen).
 for size in 5120x2880 1440x2960; do
 	magick "$1/wallpaper.jpg" -resize "$size^" -gravity center -extent "$size" \
 		-quality 85 "$out/wallpapers/AtlasOS/contents/images/$size.jxl"
+	magick "$1/wallpaper-dark.jpg" -resize "$size^" -gravity center -extent "$size" \
+		-quality 85 "$out/wallpapers/AtlasOS/contents/images_dark/$size.jxl"
 done
 for p in AtlasOS AtlasOS-Login; do
 	magick "$out/wallpapers/$p/contents/images/1920x1200.jpg" -resize 400x250 \

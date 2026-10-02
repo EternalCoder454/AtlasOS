@@ -1,0 +1,38 @@
+# AtlasOS for NVIDIA graphics: the AtlasOS image plus NVIDIA's driver, with
+# its open kernel modules (GeForce GTX 16 and RTX 20 series and newer).
+# Published as ghcr.io/eternalcoder454/atlasos-nvidia; built by
+# `just build-nvidia` on top of a finished AtlasOS image.
+
+# The AtlasOS image to add the driver to.
+ARG BASE_IMAGE=localhost/atlasos:latest
+
+# The kernel modules, built for exactly the kernel the image has and signed
+# with the AtlasOS module key (see build_files/nvidia/build-kmod.sh). The
+# compilers and kernel headers stay in this stage.
+FROM ${BASE_IMAGE} AS base-kernel
+RUN find /usr/lib/modules -mindepth 1 -maxdepth 1 -printf '%f\n' >/kver && \
+    cp /etc/yum.repos.d/rpmfusion-nonfree-nvidia-driver.repo /nvidia-driver.repo
+
+FROM registry.fedoraproject.org/fedora:44 AS nvidia-kmod
+COPY --from=base-kernel /kver /kver
+COPY --from=base-kernel /nvidia-driver.repo /etc/yum.repos.d/rpmfusion-nonfree-nvidia-driver.repo
+COPY build_files/nvidia /nvidia
+COPY system_files_nvidia/usr/share/atlasos/nvidia/atlasos-module-signing.der /signing.der
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+# The private key is a build secret: never written to a layer.
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=secret,id=nvidia-signing-key,target=/signing.key \
+    /nvidia/build-kmod.sh /out
+
+FROM scratch AS ctx
+COPY build_files/nvidia /nvidia
+COPY system_files_nvidia /system_files_nvidia
+
+FROM ${BASE_IMAGE}
+
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=bind,from=nvidia-kmod,source=/out,target=/kmod \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/nvidia/build.sh
+
+RUN bootc container lint

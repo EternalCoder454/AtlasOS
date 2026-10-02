@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "KDE/PlasmaSetup",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "AtlasOS"
+            }
+        ],
+        "Description": "Choose the app launcher on the dock: Modern or Classic.",
+        "Id": "org.atlasos.plasmasetup.launcher",
+        "License": "Apache-2.0",
+        "Name": "App Launcher",
+        "Version": "1.0"
+    },
+    "NoDisplay": true,
+    "X-KDE-Weight": 11
+}

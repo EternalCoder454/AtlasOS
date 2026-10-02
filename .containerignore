@@ -8,3 +8,5 @@ scripts/
 *.md
 # The 14.6 MB original of branding/wallpaper.jpg
 branding/*.png
+# The NVIDIA module signing key reaches the build only as a secret mount.
+secrets/
