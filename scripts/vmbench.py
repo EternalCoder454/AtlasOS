@@ -99,6 +99,7 @@ def mem(con: Console, password: str, report: list, result: dict) -> None:
     free_m = con.run("free -m")
     m = re.search(r"Mem:\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", free_m)
     result.update(mem_used_mib=int(m.group(2)), mem_available_mib=int(m.group(6)))
+    result["inotify_max_user_watches"] = int(con.run("cat /proc/sys/fs/inotify/max_user_watches").split()[-1])
     psm = con.sudo("python3 /tmp/ps_mem", password, timeout=120)
     m = re.search(r"^\s+([\d.]+) (KiB|MiB|GiB)\s*$", psm, re.M)
     if m:

@@ -101,14 +101,34 @@ rm -f /etc/cron.daily/brave-origin
 [ -f /usr/share/applications/brave-origin.desktop ]
 [ ! -e /etc/yum.repos.d/brave-browser.repo ]
 
+# Developer tools: AtlasOS is for developers. Containers (Podman with a
+# `docker` command and compose; toolbox and distrobox for mutable dev
+# environments), everyday command-line tools, debuggers and profilers, and
+# Kate as the text editor. Docker CE stays out: podman-docker answers to
+# `docker`, and Docker's daemon would run as root at all times.
+"${dnf[@]}" install \
+	podman-compose podman-docker toolbox distrobox \
+	git gh just jq ripgrep fd-find btop curl wget2-wget gdb strace perf \
+	kate
+# podman-docker would print a warning on every `docker` command.
+touch /etc/containers/nodocker
+
+# mise manages language versions (Node, Python, Go...) per user and project.
+# Fedora doesn't package it; this is mise's own signed RPM repo, which goes
+# again afterwards. /etc/profile.d/atlasos-mise.sh turns it on in shells.
+curl -fsSL --retry 3 -o /etc/yum.repos.d/mise.repo https://mise.jdx.dev/rpm/mise.repo
+"${dnf[@]}" install mise
+rm /etc/yum.repos.d/mise.repo
+
 # The desktop the image promises. A removal above that took one of these with
 # it fails the build here instead of shipping a broken image.
 keep=(
-	plasma-workspace kwin ghostty brave-origin dolphin plasma-systemsettings kinfocenter
+	plasma-workspace kwin ghostty brave-origin dolphin kate plasma-systemsettings kinfocenter
 	plasma-login-manager NetworkManager NetworkManager-wifi
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
 	plymouth zram-generator
+	podman podman-compose podman-docker toolbox distrobox git gh just mise
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
 )
 rpm -q "${keep[@]}"
@@ -122,6 +142,10 @@ systemctl disable dnf-makecache.timer
 ### Branding
 
 cp -a /ctx/system_files/. /
+
+# The kernel sizes the inotify watch limit by RAM; this raises it to 524288
+# where it is lower (IDEs and file watchers run out), and never lowers it.
+systemctl enable atlasos-inotify-watches.service
 
 # Icons and logos rendered from branding/ (see branding/render.sh)
 cp -a /branding/icons/. /usr/share/icons/

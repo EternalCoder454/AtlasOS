@@ -1,0 +1,17 @@
+[Unit]
+Description=Raise the inotify watch limit to 524288 where it is lower
+Documentation=https://github.com/EternalCoder454/AtlasOS
+# The kernel's default is about 1% of RAM in watches: below 524288 on
+# machines with less than about 14 GB. IDEs, file watchers and language
+# servers run out of watches below that. Bigger defaults are left alone.
+DefaultDependencies=no
+After=systemd-sysctl.service
+Before=sysinit.target shutdown.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'f=/proc/sys/fs/inotify/max_user_watches; n=$(cat $f); echo "kernel default: $n"; [ "$n" -ge 524288 ] || echo 524288 >$f; echo "now: $(cat $f)"'
+
+[Install]
+WantedBy=sysinit.target

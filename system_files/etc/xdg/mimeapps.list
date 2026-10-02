@@ -1,6 +1,37 @@
-# Brave Origin opens web pages. Ahead of Fedora's lists, which name Firefox.
+# Brave Origin opens web pages, Kate opens text and source files. Ahead of
+# Fedora's lists, which name Firefox and KWrite.
 [Default Applications]
 text/html=brave-origin.desktop
 application/xhtml+xml=brave-origin.desktop
 x-scheme-handler/http=brave-origin.desktop
 x-scheme-handler/https=brave-origin.desktop
+text/plain=org.kde.kate.desktop
+text/markdown=org.kde.kate.desktop
+text/x-readme=org.kde.kate.desktop
+text/x-log=org.kde.kate.desktop
+text/csv=org.kde.kate.desktop
+text/x-csrc=org.kde.kate.desktop
+text/x-chdr=org.kde.kate.desktop
+text/x-c++src=org.kde.kate.desktop
+text/x-c++hdr=org.kde.kate.desktop
+text/x-python=org.kde.kate.desktop
+text/x-python3=org.kde.kate.desktop
+text/rust=org.kde.kate.desktop
+text/x-go=org.kde.kate.desktop
+text/x-java=org.kde.kate.desktop
+text/javascript=org.kde.kate.desktop
+application/javascript=org.kde.kate.desktop
+application/typescript=org.kde.kate.desktop
+text/css=org.kde.kate.desktop
+text/x-cmake=org.kde.kate.desktop
+text/x-makefile=org.kde.kate.desktop
+text/x-patch=org.kde.kate.desktop
+text/x-diff=org.kde.kate.desktop
+application/json=org.kde.kate.desktop
+application/xml=org.kde.kate.desktop
+text/xml=org.kde.kate.desktop
+application/x-yaml=org.kde.kate.desktop
+application/yaml=org.kde.kate.desktop
+application/toml=org.kde.kate.desktop
+application/x-shellscript=org.kde.kate.desktop
+application/x-desktop=org.kde.kate.desktop
