@@ -103,25 +103,48 @@ unit is not enabled. `/etc/greenboot/greenboot.conf`: `GREENBOOT_MAX_BOOT_ATTEMP
 
 **Checks.** Image-owned, in `/usr/lib/greenboot/check/required.d` (greenboot
 reads it before `/etc/greenboot`, which users can change). Each logs one line
-(`journalctl -u greenboot-healthcheck.service`), has its own time limit, and
-runs only if the check applies: a headless boot, or a display manager other
-than plasmalogin, passes the login and Plasma checks.
+(`journalctl -u greenboot-healthcheck.service`) and has its own awake-time
+deadline. When in doubt a check **passes**, because a false failure reboots a
+healthy machine. Every check passes ("skipped") when:
+
+- there is no rollback deployment (greenboot's `bootc rollback` fails with one,
+  so a failure could only reboot in a loop: a fresh install);
+- login and Plasma: first-run setup is not done (`/etc/plasma-setup-done` is
+  missing, the wizard runs before the display manager, with no greeter), the
+  boot isn't graphical (`systemd.unit=`, `single`, `1`-`4`, `rescue`,
+  `emergency`), the default target isn't `graphical.target`, the display manager
+  isn't plasmalogin or it is masked, or at the end there is no `/dev/dri/card*`.
 
 | Check | Passes when | Waits | Limit |
 |---|---|---|---|
-| `10_atlasos_login.sh` | `plasmalogin.service` is active and the greeter (`/usr/libexec/plasma-login-greeter`) or a `plasmashell` (autologin) has run for 10 s | until 190 s after boot | 240 s |
-| `20_atlasos_plasma.sh` | with a user session: `plasmashell` and that user's `kwin_wayland` run for 10 s, and neither unit restarted twice or more (one crash is tolerated); without one: the greeter and a `kwin_wayland` run | until 240 s after boot | 300 s |
-| `30_atlasos_network.sh` | `NetworkManager.service` is active and `nmcli general status` answers; connectivity is not needed | until 90 s after boot | 120 s |
+| `10_atlasos_login.sh` | `plasmalogin.service` is active and the greeter (`/usr/libexec/plasma-login-greeter`) or a `plasmashell` (autologin) has run for 10 s | until 190 s awake | 240 s |
+| `20_atlasos_plasma.sh` | with a user session: `plasmashell` and that user's `kwin_wayland` run for 10 s, and neither unit restarted twice or more (one crash is tolerated); without one: the greeter and the greeter's `kwin_wayland` run for 10 s and `plasmalogin.service` hasn't restarted twice | until 240 s awake | 300 s |
+| `30_atlasos_network.sh` | `NetworkManager.service` is active and `nmcli general status` answers; connectivity is not needed | until 90 s awake | 120 s |
 
-A greeter that keeps exiting never reaches 10 s, so it fails the login check.
+Time is counted awake (`sleep` in a loop; `/proc/uptime` and `timeout(1)` count
+suspend), so a laptop that suspends in the window isn't failed. The `timeout`
+around each script is only a guard against a hung command: when it fires, or
+the script itself errors, the check passes. A greeter that keeps exiting never
+reaches 10 s, so it fails the login check. **Limit:** without autologin only the
+greeter is exercised, so a broken `plasmashell` or a session that crashes right
+after login is not caught (the checks run once, before anyone logs in).
 `greenboot-healthcheck.service` has no `After=` on `multi-user.target` or
 `graphical.target` (it is only `WantedBy=multi-user.target`, and
 `Before=boot-complete.target`), so waiting for the checks delays neither.
-`red.d/10_atlasos_red.sh` logs `atlasos-health: boot health check failed: <names>`
-to the journal; it and `green.d/10_atlasos_green.sh` call
-`/usr/libexec/atlas-system-helper record-event health-check-failed|passed` when
-the binary exists, and never fail (greenboot's reboot must not depend on them).
-Each check leaves its result in `/run/atlasos/health/<name>`, which red.d reads.
+A drop-in sets its `TimeoutStartSec=900`.
+
+`red.d/10_atlasos_red.sh` logs `atlasos-health: boot health check failed ...`
+to the journal on every failed boot. Only at the **last** failure (boot counter
+0, when the rollback happens) it also calls
+`/usr/libexec/atlas-system-helper record-event health-check-failed` and appends
+the image digest to `/var/lib/atlasos/bad-image-digests`;
+`update-stage-condition` then skips staging while the newest image on the
+registry has that digest, so a rolled-back update isn't downloaded again (a
+newer image has a new digest). `green.d/10_atlasos_green.sh` records
+`health-check-passed` once per deployment, on its first good boot
+(`/var/lib/atlasos/health-passed-digest`). The hooks never fail: greenboot's
+reboot must not depend on them. Each check leaves its result in
+`/run/atlasos/health/<name>`, which red.d reads.
 
 **How a rollback happens** (greenboot-rs source, bootupd 0.3.2, bootc 1.16.13):
 
@@ -141,6 +164,12 @@ Each check leaves its result in `/run/atlasos/health/<name>`, which red.d reads.
    `bootc rollback` itself to make it permanent. No AtlasOS script is needed.
 4. `atlas-system-helper record-boot` then sees the rollback in the boot history.
 
+Stale counter: if the user runs `bootc rollback` while `boot_counter` is set,
+`atlasos-grub-greenboot.service` unsets it at that shutdown (`ExecStop`, from
+`bootc status` `rollbackQueued`), or an older image without greenboot would let
+GRUB count it to 0 and boot the broken image. It can't help when the rollback is
+done some other way (power loss, a rollback made by an older image).
+
 Limits: the counter is only set by a failed health check, so a boot that never
 reaches `greenboot-healthcheck.service` (kernel panic, systemd stuck early) is
 not counted; only GRUB's own `fallback` handles an entry that fails to load.
@@ -155,7 +184,8 @@ into one `/boot/grub2/grub.cfg` ("Generated by bootupd / do not edit"), and
 `bootupctl update` only updates the EFI binaries, never `grub.cfg`. So the
 snippet reaches new installs only. For installs made before,
 `atlasos-grub-greenboot.service` (`/usr/libexec/atlasos/grub-greenboot`) runs at
-every boot: when `grub.cfg` has no `boot_counter` it puts the same snippet into
+every boot, after `ostree-remount` and `bootloader-update` and before greenboot:
+when `grub.cfg` has no `08_greenboot.cfg` section it puts the same snippet into
 `/boot/grub2/custom.cfg`, between `# BEGIN/# END atlasos-greenboot` markers
 and keeping anything else in the file. GRUB sources `custom.cfg` after
 `blscfg`, and bootupd never touches it. It writes nothing when the file is

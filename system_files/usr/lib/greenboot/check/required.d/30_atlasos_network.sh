@@ -6,6 +6,7 @@ export hc_name=network
 # shellcheck source=/dev/null
 . /usr/libexec/atlasos/health-lib
 hc_guard 120
+hc_skip_without_rollback
 
 case "$(systemctl is-enabled NetworkManager.service 2>/dev/null)" in
 enabled | enabled-runtime | alias | static) ;;
@@ -20,6 +21,6 @@ while :; do
 		hc_pass "NetworkManager.service active, nmcli answers"
 	fi
 	hc_expired && break
-	sleep 2
+	hc_sleep 2
 done
 hc_fail "NetworkManager.service is ${state:-unknown} or nmcli does not answer"

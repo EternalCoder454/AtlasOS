@@ -19,7 +19,7 @@ podman build --build-arg BASE=localhost/atlasos:latest \
 ```
 
 In the VM: `bootc switch` (or Atlas Updater) to the broken image and reboot,
-then watch `sudo grub2-editenv list` and `journalctl -b -u greenboot-healthcheck.service`
+then (each failed boot takes about 3 minutes, 4 boots, so allow 15 minutes) watch `sudo grub2-editenv list` and `journalctl -b -u greenboot-healthcheck.service`
 on the serial console. Expect `boot_counter` 3, 2, 1, 0 over four failed boots,
 then a boot of the previous image with `bootc status` showing the broken one as
 the rollback entry.

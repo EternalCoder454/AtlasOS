@@ -19,8 +19,10 @@ hc_report() { # status, message
 hc_pass() { hc_report ok "$1"; exit 0; }
 hc_fail() { hc_report FAILED "$1"; exit 1; }
 
-# Run the whole check again under timeout(1): greenboot waits for a script
-# with no limit of its own. The re-run is the one that reports.
+# Run the whole check again under timeout(1), in case a command hangs.
+# timeout(1) counts wall time, which includes suspend, so running out of it
+# proves nothing: a timeout or a crash of the check itself passes (a bad
+# update is judged by the check's own awake-time deadline, never by this).
 hc_guard() { # seconds
 	[ -z "${ATLAS_HC_INNER:-}" ] || return 0
 	local rc=0
@@ -28,39 +30,78 @@ hc_guard() { # seconds
 	case $rc in
 	0) exit 0 ;;
 	1) exit 1 ;;
-	124 | 137) hc_fail "timed out after $1 s" ;;
-	*) hc_fail "check crashed (status $rc)" ;;
+	124 | 137) hc_pass "did not finish within $1 s (suspend or a hung command); not counted as a failure" ;;
+	*) hc_pass "the check itself failed (status $rc); not counted as a failure" ;;
 	esac
 }
 
-# Whole seconds since boot.
+# Whole seconds since boot. Includes time spent suspended.
 hc_uptime() {
 	local up
 	read -r up _ </proc/uptime
 	echo "${up%.*}"
 }
 
-# Sets hc_deadline to a time in seconds since boot: $1, or 30 s from now when
-# greenboot started this late.
-hc_set_deadline() { # seconds since boot
-	local min=$(($(hc_uptime) + 30))
-	hc_deadline=$(($1 > min ? $1 : min))
+# The deadlines count awake time: hc_awake starts at the uptime and grows by
+# hc_sleep, whose sleep(1) clock stops during suspend. A laptop that suspends
+# in the window therefore doesn't run out of time.
+hc_awake=0
+hc_deadline=0
+hc_set_deadline() { # seconds since boot: this, or 30 s from now when started late
+	hc_awake=$(hc_uptime)
+	hc_deadline=$(($1 > hc_awake + 30 ? $1 : hc_awake + 30))
 }
-hc_expired() { [ "$(hc_uptime)" -ge "$hc_deadline" ]; }
+hc_sleep() {
+	sleep "$1"
+	hc_awake=$((hc_awake + $1))
+}
+hc_expired() { [ "$hc_awake" -ge "$hc_deadline" ]; }
 
-# Passes the check when the machine isn't meant to show a login screen: a
-# headless boot, or a display manager that isn't plasmalogin.
+# With no rollback image a failure could only reboot in a loop (greenboot's
+# `bootc rollback` fails with one deployment), so the check passes.
+hc_skip_without_rollback() {
+	local st
+	st=$(timeout 30 bootc status --json 2>/dev/null) ||
+		hc_pass "skipped, bootc status is unavailable"
+	if [ "$(jq -r '.status.rollback == null' <<<"$st" 2>/dev/null)" != false ]; then
+		hc_pass "skipped, there is no rollback deployment to fall back to"
+	fi
+}
+
+# Passes the check when a login screen isn't expected or can't be judged. When
+# in doubt a check passes: a false failure reboots a healthy machine.
 hc_skip_unless_plasmalogin() {
-	local unit
-	unit=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^systemd\.unit=//p' | tail -n1)
-	case ${unit:-graphical.target} in
-	graphical.target) ;;
-	*) hc_pass "skipped, this boot's target is $unit" ;;
-	esac
+	local a args
+	read -ra args </proc/cmdline
+	for a in "${args[@]}"; do
+		case $a in
+		systemd.unit=graphical.target | systemd.unit=graphical) ;;
+		systemd.unit=* | systemd.run=* | single | s | S | 1 | 2 | 3 | 4 | emergency | rescue)
+			hc_pass "skipped, this boot is not a graphical one ($a)"
+			;;
+		esac
+	done
 	[ "$(systemctl get-default 2>/dev/null)" = graphical.target ] ||
 		hc_pass "skipped, the default target is not graphical.target"
 	[ "$(systemctl show -p Id --value display-manager.service 2>/dev/null)" = plasmalogin.service ] ||
 		hc_pass "skipped, the display manager is not plasmalogin"
+	[ "$(systemctl show -p LoadState --value plasmalogin.service 2>/dev/null)" != masked ] ||
+		hc_pass "skipped, plasmalogin.service is masked"
+	# The first-run wizard runs before the display manager, with no greeter.
+	if [ -f /usr/lib/systemd/system/plasma-setup.service ] && [ ! -e /etc/plasma-setup-done ]; then
+		hc_pass "skipped, first-run setup (plasma-setup) has not finished"
+	fi
+	hc_skip_without_rollback
+}
+
+# A failed login or Plasma check, unless the machine has no display to show it
+# on (a headless box with graphical.target, where DRM may also appear late).
+hc_fail_graphical() {
+	# shellcheck disable=SC2144
+	if ! compgen -G '/dev/dri/card*' >/dev/null; then
+		hc_pass "skipped, there is no display device (/dev/dri/card*)"
+	fi
+	hc_fail "$1"
 }
 
 # A process only counts when it has lived 10 s: a crash-restart loop always

@@ -226,6 +226,7 @@ for f in /usr/lib/greenboot/check/required.d/*.sh /usr/lib/greenboot/red.d/*.sh 
 	[ -x "$f" ] && bash -n "$f"
 done
 [ "$(find /usr/lib/greenboot/check/required.d -name '*.sh' | wc -l)" -eq 3 ]
+[ -f /usr/lib/systemd/system/greenboot-healthcheck.service.d/atlasos.conf ]
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer

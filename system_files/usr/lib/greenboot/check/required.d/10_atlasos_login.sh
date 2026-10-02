@@ -23,6 +23,6 @@ while :; do
 		fi
 	fi
 	hc_expired && break
-	sleep 2
+	hc_sleep 2
 done
-hc_fail "no login screen or Plasma session within 180 s of boot (plasmalogin.service is ${state:-unknown}; a greeter that keeps exiting does not count)"
+hc_fail_graphical "no login screen or Plasma session within 180 s of boot (plasmalogin.service is ${state:-unknown}; a greeter that keeps exiting does not count)"
