@@ -1,0 +1,19 @@
+# A deliberately broken AtlasOS, for testing boot health checks and rollback.
+# It boots to a serial console, but the login greeter exits at once, so
+# plasmalogin never shows a login screen and /usr/lib/greenboot's login check
+# fails. Plasma's own restarts of the greeter don't help: a greeter has to run
+# for 10 s to count.
+#
+#   podman build --build-arg BASE=localhost/atlasos:latest \
+#       -f tests/update/broken/Containerfile -t localhost/atlasos:broken tests/update/broken
+ARG BASE=localhost/atlasos:update-a
+FROM ${BASE}
+
+LABEL org.opencontainers.image.version=44.20261099-broken
+
+RUN mv /usr/libexec/plasma-login-greeter /usr/libexec/plasma-login-greeter.real && \
+    printf '#!/bin/sh\necho "plasma-login-greeter: broken on purpose (AtlasOS test image)" >&2\nexit 1\n' \
+        >/usr/libexec/plasma-login-greeter && \
+    chmod 0755 /usr/libexec/plasma-login-greeter
+
+RUN bootc container lint
