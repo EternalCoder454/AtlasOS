@@ -34,6 +34,7 @@ it is reasoned from documentation or code, not tested.
 | `update-n` | 44.20261030 | Atlas Updater scheduled restart, Flatpak updates, history |
 | `update-o-kconf` | 44.20261032 | the kconf_update fix, the plural fix, and a test settings update (`tests/update/kconf`) |
 | `update-p` | 44.20261033 | O with only a newer version label |
+| `update-q` | 44.20261034 | Atlas Updater wording in KDE's style |
 | `broken` | 44.20261099-broken | a greeter and a plasmashell that exit at once (`tests/update/broken`), built on I and again on J |
 
 ## Results
@@ -248,6 +249,9 @@ that image boots healthy (green.d), and the warning with it.
 - AtlasOS's settings updates (`atlasos.upd`) never ran (see "What a user sees
   change").
 - The restart warning said "Restarting in 5 minute(s)".
+- Buttons and titles were in sentence case; from image Q (44.20261034) they
+  use Title Case like KDE's own apps ("Check for Updates", "Go Back"), so the
+  sentence-case names quoted above are the older wording.
 
 ## Known issues
 

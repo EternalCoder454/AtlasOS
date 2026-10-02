@@ -187,7 +187,7 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
         "--method org.freedesktop.Notifications.Notify 'AtlasOS check' 0 "
         "'dialog-information' 'Update ready' "
         "'AtlasOS 44 will finish installing the next time you restart.' "
-        "\"['restart', 'Restart now']\" '{}' 10000"
+        "\"['restart', 'Restart Now']\" '{}' 10000"
     )
     time.sleep(2)
     session_screenshot(con, password, USER, out / "check-5-notification.png")
