@@ -148,6 +148,26 @@ rpm -ql atlas-updater >/tmp/atlas-updater.files
 grep -q '/autostart/' /tmp/atlas-updater.files
 rm /tmp/atlas-updater.files
 
+### Boot health checks
+
+# greenboot (greenboot-rs, made for bootc): after an update it runs the checks
+# in /usr/lib/greenboot/check, reboots on failure, and rolls the update back
+# when the retries are used up. Not greenboot-default-health-checks: its
+# repository DNS check fails offline and would roll back good updates on
+# laptops without a network. The checks are AtlasOS's own, in system_files.
+"${dnf[@]}" install greenboot
+rpm -q greenboot
+if rpm -q greenboot-default-health-checks >/dev/null 2>&1; then
+	echo "build.sh: greenboot-default-health-checks must not be installed" >&2
+	exit 1
+fi
+# bootupd pastes each configs.d snippet into grub.cfg and writes its "### END"
+# marker right after it. This one has no final newline, so the marker would
+# land on its last line (save_env boot_success### END...) and break it.
+snippet=/usr/lib/bootupd/grub2-static/configs.d/08_greenboot.cfg
+[ -f "$snippet" ]
+[ -z "$(tail -c1 "$snippet")" ] || echo >>"$snippet"
+
 ### Services
 
 # dnf can't change an image-based system, so refreshing its metadata in the
@@ -186,6 +206,26 @@ systemctl enable atlas-record-boot.service
 [ "$(systemctl is-enabled atlas-record-boot.service)" = enabled ]
 [ "$(systemctl is-enabled atlas-system-helper.service 2>&1 || true)" != enabled ]
 [ -f /usr/share/dbus-1/system-services/net.eterneon.atlas.SystemHelper.service ]
+# greenboot's units. The package's scriptlets enable nothing while building.
+# The boot counter in GRUB reaches existing installs through
+# atlasos-grub-greenboot.service (see the README).
+systemctl enable greenboot-healthcheck.service greenboot-set-rollback-trigger.service
+systemctl enable atlasos-grub-greenboot.service
+for u in greenboot-healthcheck.service greenboot-set-rollback-trigger.service atlasos-grub-greenboot.service; do
+	[ "$(systemctl is-enabled "$u")" = enabled ] || {
+		echo "build.sh: $u must be enabled" >&2
+		exit 1
+	}
+done
+grep -qx 'GREENBOOT_MAX_BOOT_ATTEMPTS=3' /etc/greenboot/greenboot.conf
+[ -f "$snippet" ]
+[ -z "$(tail -c1 "$snippet")" ]
+# The AtlasOS checks are image-owned, in /usr/lib/greenboot (greenboot reads it
+# before /etc/greenboot); each must run, and each helper script must parse.
+for f in /usr/lib/greenboot/check/required.d/*.sh /usr/lib/greenboot/red.d/*.sh /usr/lib/greenboot/green.d/*.sh; do
+	[ -x "$f" ] && bash -n "$f"
+done
+[ "$(find /usr/lib/greenboot/check/required.d -name '*.sh' | wc -l)" -eq 3 ]
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer

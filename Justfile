@@ -129,7 +129,7 @@ check out=("build/bench/check-" + datetime("%Y%m%d-%H%M%S")):
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh scripts/*.sh system_files/usr/libexec/atlasos/*
+    shellcheck build_files/*.sh scripts/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
     shellcheck -s sh branding/render.sh
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py
 

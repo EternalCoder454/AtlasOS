@@ -1,0 +1,20 @@
+[Unit]
+Description=Add greenboot's boot counter to GRUB (installs made before it)
+Documentation=https://github.com/EternalCoder454/AtlasOS#boot-health-checks-and-rollback
+ConditionPathExists=/run/ostree-booted
+ConditionPathExists=/usr/lib/bootupd/grub2-static/configs.d/08_greenboot.cfg
+ConditionPathIsDirectory=/boot/grub2
+RequiresMountsFor=/boot
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/atlasos/grub-greenboot
+# Like bootloader-update.service: /boot is made writable in a private mount
+# namespace, so it stays read-only for everything else.
+MountFlags=slave
+PrivateNetwork=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

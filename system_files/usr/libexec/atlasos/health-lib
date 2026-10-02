@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Shared by AtlasOS's greenboot checks (/usr/lib/greenboot/check/required.d).
+# Sourced, never run on its own. A check sets hc_name, sources this, calls
+# hc_guard, and ends in hc_pass or hc_fail. Each leaves one line on stdout
+# (greenboot puts it in the journal of greenboot-healthcheck.service) and its
+# result in /run/atlasos/health/<name>, which red.d reads to name what failed.
+# Checks must not fail a boot for something that is not broken: offline,
+# a headless target and a replaced display manager all pass.
+
+hc_dir=/run/atlasos/health
+
+# shellcheck disable=SC2154 # hc_name is set by the check that sources this
+hc_report() { # status, message
+	mkdir -p "$hc_dir" 2>/dev/null || true
+	# greenboot runs scripts with `bash -C`: >| overwrites anyway.
+	printf '%s: %s\n' "$1" "$2" >|"$hc_dir/$hc_name" 2>/dev/null || true
+	echo "atlasos-health $hc_name: $1: $2"
+}
+hc_pass() { hc_report ok "$1"; exit 0; }
+hc_fail() { hc_report FAILED "$1"; exit 1; }
+
+# Run the whole check again under timeout(1): greenboot waits for a script
+# with no limit of its own. The re-run is the one that reports.
+hc_guard() { # seconds
+	[ -z "${ATLAS_HC_INNER:-}" ] || return 0
+	local rc=0
+	ATLAS_HC_INNER=1 timeout -k 5 "$1" bash "$0" || rc=$?
+	case $rc in
+	0) exit 0 ;;
+	1) exit 1 ;;
+	124 | 137) hc_fail "timed out after $1 s" ;;
+	*) hc_fail "check crashed (status $rc)" ;;
+	esac
+}
+
+# Whole seconds since boot.
+hc_uptime() {
+	local up
+	read -r up _ </proc/uptime
+	echo "${up%.*}"
+}
+
+# Sets hc_deadline to a time in seconds since boot: $1, or 30 s from now when
+# greenboot started this late.
+hc_set_deadline() { # seconds since boot
+	local min=$(($(hc_uptime) + 30))
+	hc_deadline=$(($1 > min ? $1 : min))
+}
+hc_expired() { [ "$(hc_uptime)" -ge "$hc_deadline" ]; }
+
+# Passes the check when the machine isn't meant to show a login screen: a
+# headless boot, or a display manager that isn't plasmalogin.
+hc_skip_unless_plasmalogin() {
+	local unit
+	unit=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^systemd\.unit=//p' | tail -n1)
+	case ${unit:-graphical.target} in
+	graphical.target) ;;
+	*) hc_pass "skipped, this boot's target is $unit" ;;
+	esac
+	[ "$(systemctl get-default 2>/dev/null)" = graphical.target ] ||
+		hc_pass "skipped, the default target is not graphical.target"
+	[ "$(systemctl show -p Id --value display-manager.service 2>/dev/null)" = plasmalogin.service ] ||
+		hc_pass "skipped, the display manager is not plasmalogin"
+}
+
+# A process only counts when it has lived 10 s: a crash-restart loop always
+# has a young process.
+hc_stable() { # pid
+	local t
+	t=$(ps -o etimes= -p "$1" 2>/dev/null | tr -d ' ')
+	[ -n "$t" ] && [ "$t" -ge 10 ]
+}
+
+# First pid among $@ that is stable, or nothing.
+hc_first_stable() {
+	local p
+	for p in "$@"; do
+		if hc_stable "$p"; then
+			echo "$p"
+			return 0
+		fi
+	done
+	return 1
+}
+
+hc_greeter_pids() { pgrep -f '^/usr/libexec/plasma-login-greeter' || true; }
+hc_plasmashell_pids() { pgrep -x plasmashell || true; }

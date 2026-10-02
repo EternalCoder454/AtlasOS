@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Plasma works. With a user session up, plasmashell and that user's
+# kwin_wayland are running for 10 s and neither has restarted twice or more
+# (one restart is tolerated: a single crash is not a bad update). Without
+# one, the greeter, a Plasma/QML app on its own kwin, counts.
+# Waits until 240 s after boot at most; limit 300 s.
+export hc_name=plasma
+# shellcheck source=/dev/null
+. /usr/libexec/atlasos/health-lib
+hc_guard 300
+hc_skip_unless_plasmalogin
+hc_set_deadline 240
+
+# Restart count of a unit in user $1's systemd; empty when it can't be read.
+restarts() { # uid, unit
+	timeout 10 systemctl --user -M "$1@.host" show -p NRestarts --value "$2" 2>/dev/null
+}
+
+why="Plasma is not up"
+while :; do
+	# shellcheck disable=SC2046
+	shell=$(hc_first_stable $(hc_plasmashell_pids)) || shell=
+	if [ -n "$shell" ]; then
+		uid=$(ps -o uid= -p "$shell" | tr -d ' ')
+		# shellcheck disable=SC2046
+		if kwin=$(hc_first_stable $(pgrep -x -u "$uid" kwin_wayland || true)); then
+			r1=$(restarts "$uid" plasma-plasmashell.service)
+			r2=$(restarts "$uid" plasma-kwin_wayland.service)
+			if [ "${r1:-0}" -ge 2 ] || [ "${r2:-0}" -ge 2 ]; then
+				hc_fail "Plasma keeps restarting (plasmashell ${r1:-?}, kwin_wayland ${r2:-?} restarts)"
+			fi
+			hc_pass "plasmashell (pid $shell) and kwin_wayland (pid $kwin) running, restarts ${r1:-?}/${r2:-?}"
+		fi
+		why="plasmashell runs but kwin_wayland of uid $uid is missing or too young"
+	elif ! pgrep -x plasmashell >/dev/null; then
+		# No user session: the greeter and its kwin.
+		# shellcheck disable=SC2046
+		if pid=$(hc_first_stable $(hc_greeter_pids)) && pgrep -x kwin_wayland >/dev/null; then
+			hc_pass "no user session; greeter (pid $pid) and kwin_wayland running"
+		fi
+		why="no stable greeter or no kwin_wayland"
+	fi
+	hc_expired && break
+	sleep 2
+done
+hc_fail "$why"
