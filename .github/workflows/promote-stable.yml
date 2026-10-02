@@ -1,0 +1,159 @@
+name: Promote stable
+
+# Weekly: the newest testing image becomes stable, so stable is always a build
+# that was in testing first. Nothing is rebuilt: skopeo copies the testing
+# image by digest to :stable, :latest (what existing installs track), :44 and
+# :44.YYYYMMDD. Then a git tag and a GitHub release with the changes since the
+# previous stable.
+on:
+  schedule:
+    - cron: "30 14 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-stable
+  cancel-in-progress: false
+
+env:
+  IMAGE_REGISTRY: ghcr.io/eternalcoder454
+  IMAGE_NAME: atlasos
+
+jobs:
+  promote:
+    name: Copy testing to stable
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      revision: ${{ steps.pick.outputs.revision }}
+      updater: ${{ steps.pick.outputs.updater }}
+      base: ${{ steps.pick.outputs.base }}
+    steps:
+      - name: Pick the testing image
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          creds="${GITHUB_ACTOR}:${GH_TOKEN}"
+          repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+
+          json=$(skopeo inspect --creds "$creds" "docker://${repo}:testing")
+          digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
+          version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
+          revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
+          [[ "$version" =~ ^44\.[0-9]{8}$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::testing has no usable revision label: '$revision'"; exit 1; }
+
+          # Already stable (a week with no new testing build): nothing to copy.
+          current=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:stable" 2>/dev/null || true)
+          copy=true
+          if [ "$current" = "$digest" ]; then
+            copy=false
+            echo "::notice::stable is already ${version}; nothing to copy."
+          fi
+
+          {
+            echo "digest=$digest"
+            echo "copy=$copy"
+            echo "version=$version"
+            echo "revision=$revision"
+            echo "updater=$(jq -r '.Labels["net.eterneon.atlas.updater.revision"] // ""' <<<"$json")"
+            echo "base=$(jq -r '.Labels["org.atlasos.base-image"] // ""' <<<"$json")"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Copy by digest
+        if: steps.pick.outputs.copy == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+          for t in stable latest 44 "${{ steps.pick.outputs.version }}"; do
+            skopeo copy --all --preserve-digests \
+              --src-creds "${GITHUB_ACTOR}:${GH_TOKEN}" --dest-creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+              "docker://${repo}@${{ steps.pick.outputs.digest }}" "docker://${repo}:${t}"
+          done
+          # The same digest must now sit behind every tag.
+          for t in stable latest 44 "${{ steps.pick.outputs.version }}"; do
+            got=$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" --format '{{.Digest}}' "docker://${repo}:${t}")
+            [ "$got" = "${{ steps.pick.outputs.digest }}" ] || { echo "::error::${t} is ${got}"; exit 1; }
+          done
+
+      # A signature belongs to a digest, not a tag, so the one made when the
+      # testing build was pushed already covers every promoted tag. Signing
+      # again here covers images that were pushed before signing was on.
+      - name: Check for a signing key
+        id: signing
+        if: steps.pick.outputs.copy == 'true'
+        env:
+          SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+        run: echo "enabled=$([ -n "$SIGNING_SECRET" ] && echo true || echo false)" >>"$GITHUB_OUTPUT"
+
+      - name: Install cosign
+        if: steps.signing.outputs.enabled == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      - name: Sign
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          cosign sign -y --new-bundle-format=false --use-signing-config=false \
+            --key env://COSIGN_PRIVATE_KEY \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.pick.outputs.digest }}"
+
+  release:
+    name: Tag and release
+    needs: promote
+    runs-on: ubuntu-26.04
+    # Only this job may write to the repository.
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout (full history and tags)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.promote.outputs.version }}
+          REVISION: ${{ needs.promote.outputs.revision }}
+          UPDATER: ${{ needs.promote.outputs.updater }}
+          BASE: ${{ needs.promote.outputs.base }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "::notice::Release ${VERSION} already exists."
+            exit 0
+          fi
+          git cat-file -e "${REVISION}^{commit}"
+
+          # The newest earlier stable tag (44.YYYYMMDD sorts by date), if any.
+          prev=$(git tag --list '44.*' | grep -E '^44\.[0-9]{8}$' | sort |
+            awk -v v="$VERSION" '$0 < v' | tail -n 1 || true)
+          # A previous tag that is not behind this build (history was rewritten)
+          # is no use as a range start.
+          if [ -n "$prev" ] && ! git merge-base --is-ancestor "$prev" "$REVISION"; then
+            echo "::warning::${prev} is not an ancestor of ${REVISION}; listing recent commits instead."
+            prev=""
+          fi
+
+          scripts/release-notes.sh "$VERSION" "$REVISION" "$prev" "$UPDATER" "$BASE" >notes.md
+
+          # --target makes the tag on the commit the image was built from.
+          gh release create "$VERSION" --target "$REVISION" \
+            --title "AtlasOS ${VERSION}" --notes-file notes.md --latest

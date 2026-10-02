@@ -8,6 +8,8 @@ on:
     branches: [main, beta]
   # Daily, to pick up Fedora's updates. Skipped when neither the base image
   # nor this repo changed since the last published build; see "Decide".
+  # The weekly stable release is promote-stable.yml, which copies the newest
+  # testing image instead of building again.
   schedule:
     - cron: "05 10 * * *"
   workflow_dispatch:
@@ -38,15 +40,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # main publishes :latest, beta publishes :beta. Pull requests build
-      # and lint but never push.
+      # main publishes :testing, beta publishes :beta. (:stable and :latest
+      # come from promote-stable.yml.) Pull requests build and lint but
+      # never push.
       - name: Decide
         id: decide
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           case "${GITHUB_REF_NAME}" in
-            main) tag="latest" ;;
+            main) tag="testing" ;;
             beta) tag="beta" ;;
             *) tag="pr" ;;
           esac
@@ -80,12 +83,14 @@ jobs:
             fi
           fi
 
+          date=$(date -u +%Y%m%d)
           {
             echo "tag=$tag"
             echo "push=$push"
             echo "base=$base"
             echo "skip=$skip"
-            echo "date=$(date -u +%Y%m%d)"
+            echo "date=$date"
+            echo "version=44.$date"
             echo "week=$(date -u +%G-W%V)"
           } >>"$GITHUB_OUTPUT"
 
@@ -118,7 +123,7 @@ jobs:
       - name: Build
         if: steps.decide.outputs.skip != 'true'
         env:
-          IMAGE_VERSION: 44.${{ steps.decide.outputs.date }}
+          IMAGE_VERSION: ${{ steps.decide.outputs.version }}
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
@@ -142,19 +147,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # latest -> latest, 44, 44.YYYYMMDD; beta -> beta, beta-44.YYYYMMDD
+      # testing -> testing, testing-44.YYYYMMDD; beta -> beta, beta-44.YYYYMMDD.
+      # The version is the one in the image's org.opencontainers.image.version
+      # label (set by `just build` from IMAGE_VERSION).
       - name: Push
         id: push
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
         run: |
           set -euo pipefail
           tag="${{ steps.decide.outputs.tag }}"
-          version="44.${{ steps.decide.outputs.date }}"
-          if [ "$tag" = latest ]; then
-            tags=(latest 44 "$version")
-          else
-            tags=("$tag" "$tag-$version")
-          fi
+          version="${{ steps.decide.outputs.version }}"
+          have=$(podman image inspect "localhost/${IMAGE_NAME}:${tag}" |
+            jq -r '.[0].Labels["org.opencontainers.image.version"]')
+          [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
+          tags=("$tag" "$tag-$version")
           for t in "${tags[@]}"; do
             podman push --digestfile=/tmp/digest "localhost/${IMAGE_NAME}:${tag}" \
               "${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
