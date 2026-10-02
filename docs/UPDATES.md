@@ -28,7 +28,9 @@ it is reasoned from documentation or code, not tested.
 | `update-g` | 44.20261022 | KCalc and a purple `[Colors:Header]` title bar (`tests/update/b`) |
 | `update-h` | 44.20261023 | Atlas Updater fixes (banners, channel, accessibility) |
 | `update-i` | 44.20261024 | Atlas Updater fixes (keyboard focus, crash report screens) |
-| `broken` | 44.20261099-broken | built on I: a greeter and a plasmashell that exit at once (`tests/update/broken`) |
+| `update-j` | 44.20261025 | the stale check-result fix (stager and Atlas Updater) |
+| `update-k`, `update-l` | 44.20261026, 44.20261027 | J with only a newer version label |
+| `broken` | 44.20261099-broken | a greeter and a plasmashell that exit at once (`tests/update/broken`), built on I and again on J |
 
 ## Results
 
@@ -117,8 +119,36 @@ deletes waiting ones.
   its checks on this VM and was kept: with autologin plasmalogin starts the
   session without a greeter, and the login check rightly counts a running
   `plasmashell`. The test image now breaks `plasmashell` too.
-- But after the rollback the stager staged the same broken image again: see
-  Known issues.
+- On image I the stager then staged the same broken image again, because it
+  read a stale check result (fixed in J, below).
+
+### After a rollback (image J)
+
+bootc records an `upgrade --check` result as the `cachedUpdate` of the commit
+the image's ostree ref points to: the image pulled last. After a rollback that
+is the rollback entry, and the booted entry keeps a stale `cachedUpdate` from
+an older check (bootc 1.16.13). Up to image I the stager and Atlas Updater read
+the booted entry's, so after a rollback they skipped newer images, or went
+ahead with a bad one. From J both take the result of the entry whose commit
+is the ref's head (`/ostree/repo/refs/heads/ostree/container/image`, readable
+without root), or that entry's own image when it has none.
+
+- Evidence (on I, the bug): after `bootc rollback` from the first broken image
+  and a new image published, `--check` found it, but `bootc status` had it as
+  `rollback.cachedUpdate`; `booted.cachedUpdate` still held the image the
+  machine went back from, and the stager skipped every run. After greenboot
+  rolled the second broken image back, the stale value matched neither the
+  rollback entry nor `bad-image-digests`, and the stager staged the broken
+  image again.
+- Evidence (J, going back): J staged K by itself and booted it; **Go back**
+  (`bootc rollback`) returned to J, and L was published. Booted J's
+  `cachedUpdate` was K (stale, the rollback image), the rollback entry held L.
+  Atlas Updater showed "AtlasOS 44.20261027 is available", and the stager
+  staged L.
+- Evidence (J, greenboot): the broken image built on J failed four boots and
+  was rolled back to J 14 minutes after the restart. Booted J's stale
+  `cachedUpdate` was again K; the stager skipped: "is the version this machine
+  went back from".
 
 ## Memory
 
@@ -143,34 +173,22 @@ deletes waiting ones.
 - Sent reports always highlighted Settings in the sidebar.
 - Settings said no crash server was set up after reports were turned off.
 - "Crash report sent" stayed on every page until dismissed.
+- After a rollback the stager and Atlas Updater read a stale check result
+  (see "After a rollback").
+- The broken test image only broke the greeter, so it passed on the autologin
+  VM; it now breaks plasmashell too.
 
 ## Known issues
 
-- **After a rollback, newer updates aren't staged in the background, and Atlas
-  Updater doesn't offer them** (evidence, image I, bootc 1.16.13). `bootc
-  upgrade --check` saves what it found on the commit the image's ostree ref
-  points to: the newest image pulled. After going back, that is the rollback
-  entry, not the booted one. In the VM, after `bootc rollback` from the first
-  broken image to I and publishing a new image, `--check` reported the new
-  digest, but `bootc status` had it as `rollback.cachedUpdate`, while
-  `booted.cachedUpdate` still held the digest of the image the machine went
-  back from. `update-stage-condition` reads `booted.cachedUpdate`, sees "the
-  version this machine went back from" and skips every run; Atlas Updater
-  (`atlas-core` `bootc.rs`, `view.rs`) reads the same field. The fix is to
-  take the cached update from the entry whose commit the image ref points to.
-  Worse, it can **re-stage a bad update**: after greenboot rolled the broken
-  image back, the booted entry's stale value matched neither the rollback
-  entry nor `bad-image-digests`, so the stager went ahead and staged the
-  broken image again (the next restart would have started another four failed
-  boots). It happens when the booted commit's cached update is from an older
-  check, as here after an earlier "Go back"; after a single bad update the
-  stale value happens to be the bad image and the stager skips it. Removing
-  the rollback deployment (`rpm-ostree cleanup -r`) works around the first
-  case, and that is how the staging tests above ran.
+- If no deployment holds the image ref's commit any more (for example after
+  `rpm-ostree cleanup -r`), the stager and Atlas Updater fall back to the
+  booted entry's `cachedUpdate`, which can be stale (inference, from the code).
+- After greenboot rolls a bad image back, Atlas Updater offers it as the
+  version this machine went back from, with **Download anyway**; it doesn't
+  say that the image failed its health checks.
 - `just mem` (and `boot`, `bench`, `check`) stop every VM the scripts made
   when they finish, `atlasos-updtest` included; don't run them during an
   update test.
-
 - Without autologin the health checks only exercise the greeter, so a Plasma
   session that crashes right after login isn't caught (inference, from how the
   checks work; see the README).
