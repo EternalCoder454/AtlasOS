@@ -87,6 +87,17 @@ it is reasoned from documentation or code, not tested.
   made, before the restart (it reads bootc's `spec.image`, which changes at
   once, rather than the booted image, which changes at the restart).
 
+- Evidence (ghcr.io, 2026-10-02): the first stable release. `build.yml`
+  (workflow_dispatch, AtlasOS 5271896, Atlas Updater 4a9e9a1) pushed
+  `testing` and `testing-44.20261002`; `promote-stable.yml` copied that digest
+  (`sha256:3c350ac1…`) to `stable`, `latest`, `44` and `44.20261002`, tagged
+  `44.20261002` on 5271896 and published the GitHub release, which the release
+  notes URL Atlas Updater uses returns. A VM switched to
+  `ghcr.io/eternalcoder454/atlasos:stable` booted it; Atlas Updater's check
+  against the registry said it was up to date. Switching to testing in the app
+  (admin password) staged `ghcr.io/eternalcoder454/atlasos:testing`, and after
+  the restart the VM booted it with Testing shown as the channel.
+
 ### Crash reports
 
 See [PRIVACY.md](PRIVACY.md). Evidence: off collects nothing; on, a crash is
@@ -203,9 +214,9 @@ that image boots healthy (green.d), and the warning with it.
 - If no deployment holds the image ref's commit any more (for example after
   `rpm-ostree cleanup -r`), the stager and Atlas Updater fall back to the
   booted entry's `cachedUpdate`, which can be stale (inference, from the code).
-- After greenboot rolls a bad image back, Atlas Updater offers it as the
-  version this machine went back from, with **Download anyway**; it doesn't
-  say that the image failed its health checks.
+- Images are pushed unsigned until the `SIGNING_SECRET` repository secret
+  holds a cosign key (README), so installs track them as
+  `ostree-unverified-registry`.
 - `just mem` (and `boot`, `bench`, `check`) stop every VM the scripts made
   when they finish, `atlasos-updtest` included; don't run them during an
   update test.
