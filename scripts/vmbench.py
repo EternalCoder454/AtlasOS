@@ -160,9 +160,9 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     ok("systemd-oomd active", "systemctl is-active systemd-oomd", r"^active")
 
     apps = [
-        ("Ghostty", "ghostty", "ghostty"),
-        ("Dolphin", "dolphin", "dolphin"),
-        ("Brave Origin", "brave-origin-stable --password-store=basic", "brave.com/brave-origin/brave"),
+        ("Ghostty", "ghostty", "(^|/)ghostty( |$)"),
+        ("Dolphin", "dolphin", "(^|/)dolphin( |$)"),
+        ("Brave Origin", "brave-origin-stable --password-store=basic", "brave.com/brave-origin/brave( |$)"),
     ]
     for i, (name, cmd, pattern) in enumerate(apps):
         unit = f"check-app-{i}"
@@ -171,11 +171,13 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
         ok(f"{name} opens", f"systemctl --user is-active {unit}; pgrep -u {USER} -f '{pattern}' | head -n 3",
            r"(?s)^active\n\d+")
         session_screenshot(con, password, USER, out / f"check-{i + 1}-{cmd.split()[0]}.png")
-        # Close it as a user would: SIGTERM to the app alone. Stopping the unit
-        # signals every process at once, which Brave (Chromium) answers with a
-        # crash dump.
-        con.run(f"kill -TERM $(systemctl --user show -p MainPID --value {unit}); sleep 8; "
-                f"systemctl --user stop {unit}; true")
+        # Close it as a user would: SIGTERM to the app's own first process
+        # (not a launcher script), then wait for it to exit. Stopping the
+        # unit signals every process at once, which Brave (Chromium) answers
+        # with a crash dump.
+        con.run(f"p=$(pgrep -o -u {USER} -f '{pattern}'); [ -n \"$p\" ] && kill -TERM $p; "
+                f"for i in $(seq 30); do pgrep -u {USER} -f '{pattern}' >/dev/null || break; sleep 1; done; "
+                f"systemctl --user stop {unit}; true", timeout=90)
     session_screenshot(con, password, USER, out / "check-0-desktop.png")
 
     # A notification, as an app sends one (D-Bus, so nothing extra needed).

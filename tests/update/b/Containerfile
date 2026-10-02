@@ -1,0 +1,14 @@
+# Version B of the update test: one new app (KCalc) and one changed Plasma
+# setting (the active window's title bar turns AtlasOS purple). KWin takes
+# title bar colours from the active colour scheme file, not from [WM] in
+# /etc/xdg/kdeglobals, so the change goes into the scheme file; the kdeglobals
+# copy is kept in step for apps that read it.
+ARG A=localhost/atlasos:update-a
+FROM ${A}
+RUN dnf -y install kcalc && dnf clean all && rm -rf /var/lib/dnf /var/cache/libdnf5/* /var/log/dnf5.log*
+RUN for f in /usr/share/color-schemes/AtlasOSLight.colors /etc/xdg/kdeglobals; do \
+        sed -i -e '/^\[WM\]$/,/^\[/{s/^activeBackground=.*/activeBackground=104,88,226/;s/^activeBlend=.*/activeBlend=104,88,226/;s/^activeForeground=.*/activeForeground=255,255,255/}' "$f" && \
+        grep -q '^activeBackground=104,88,226$' "$f" || exit 1; \
+    done
+LABEL org.opencontainers.image.version="44.20261009"
+RUN bootc container lint

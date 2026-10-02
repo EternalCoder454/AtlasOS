@@ -125,13 +125,23 @@ bench runs="3" out=("build/bench/all-" + datetime("%Y%m%d-%H%M%S")):
 check out=("build/bench/check-" + datetime("%Y%m%d-%H%M%S")):
     scripts/vm.sh bench check build/vm/updated/atlasos-bench.qcow2 1 {{ out }}
 
+# Publish a built image to the update test registry (build/vm/updtest) as a
+# channel, with optional release notes in Markdown.
+publish tag channel="stable" notes="":
+    scripts/vm.sh publish {{ tag }} {{ channel }} {{ notes }}
+
+# Boot a VM that tracks the update test registry's stable channel over
+# virtiofs, for testing Atlas Updater end to end.
+updtest:
+    scripts/vm.sh updtest
+
 # Check the Justfile's formatting and lint the scripts.
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh scripts/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
+    shellcheck build_files/*.sh scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
     shellcheck -s sh branding/render.sh
-    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py
+    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory

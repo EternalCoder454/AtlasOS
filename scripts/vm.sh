@@ -12,6 +12,10 @@
 #   vm.sh mem [disk]               stock Kinoite vs AtlasOS memory (`just mem-stock`)
 #   vm.sh bench <boot|mem|check|all> <disk> <runs> <out dir>
 #                                  measure or check boots (`just boot`, `mem`, `check`)
+#   vm.sh publish <tag> <stable|testing> [notes.md]
+#                                  put localhost/atlasos:<tag> in the stand-in registry
+#   vm.sh updtest                  build/vm/updated/atlasos-updtest.qcow2: a VM that
+#                                  tracks the stand-in registry's stable tag, left running
 #
 # Every VM is UEFI (OVMF) with 8 GB of RAM, 4 CPUs, a serial console, and
 # virtio video with 3D acceleration, so Plasma runs on the host GPU (virgl) as
@@ -235,6 +239,61 @@ install_stock() {
 	mv "$stock_disk.partial" "$stock_disk"
 }
 
+# Update tests. build/vm/updtest stands in for the registry: an OCI layout
+# (registry/) with stable and testing tags, and the GitHub-release JSON that
+# Atlas Updater shows as release notes (notes/<version>.json). The guest
+# can't reach the host's ports (libvirt's firewall zone), so the VM gets it
+# read-only over virtiofs at /var/mnt/atlasreg and tracks
+# oci:/var/mnt/atlasreg/registry:stable the way an install tracks ghcr.io.
+updtest_dir=build/vm/updtest
+
+publish() {
+	local tag=$1 channel=$2 notes=${3-} version
+	case $channel in
+	stable | testing) ;;
+	*)
+		echo "The channel is stable or testing: '$channel'" >&2
+		exit 1
+		;;
+	esac
+	version=$(podman image inspect --format '{{index .Labels "org.opencontainers.image.version"}}' "localhost/atlasos:$tag")
+	mkdir -p "$updtest_dir/registry" "$updtest_dir/notes"
+	echo ">> localhost/atlasos:$tag ($version) -> $channel"
+	skopeo copy --quiet "containers-storage:localhost/atlasos:$tag" "oci:$updtest_dir/registry:$channel"
+	if [ -n "$notes" ]; then
+		jq -n --arg v "$version" --rawfile body "$notes" \
+			'{tag_name: $v, name: ("AtlasOS " + $v), body: $body}' >"$updtest_dir/notes/$version.json"
+	fi
+	chmod -R a+rX "$updtest_dir"
+}
+
+updtest() {
+	local name=atlasos-updtest
+	local disk=$update_dir/$name.qcow2
+	[ -f build/atlasos.qcow2 ] || {
+		echo "No build/atlasos.qcow2 to start from. Run 'just qcow2' once." >&2
+		exit 1
+	}
+	[ -f "$updtest_dir/registry/index.json" ] || {
+		echo "Nothing published yet: scripts/vm.sh publish <tag> stable" >&2
+		exit 1
+	}
+	no_ollama_model
+	stop "$name"
+	mkdir -p "$update_dir"
+	reachable "$updtest_dir/registry/index.json"
+	rm -f "$disk"
+	qemu-img create -q -f qcow2 -F qcow2 -b "$(realpath build/atlasos.qcow2)" "$disk"
+	virt-install --name "$name" --import \
+		--disk "path=$disk,bus=virtio" "${common[@]}" \
+		--memorybacking source.type=memfd,access.mode=shared \
+		--filesystem "source.dir=$(realpath "$updtest_dir"),target.dir=atlasreg,driver.type=virtiofs,readonly=yes" >/dev/null
+	echo ">> Switching $name to the stand-in registry's stable tag (several minutes)"
+	uv run --quiet scripts/vmswitch.py "$name" "$update_dir/$name.log" build/vm-password \
+		--settle --track /var/mnt/atlasreg/registry:stable
+	echo ">> $name is running the stable tag, logged in to Plasma"
+}
+
 password_file() {
 	[ -s build/vm-password ] ||
 		(umask 077 && openssl rand -hex 12 >build/vm-password)
@@ -243,7 +302,7 @@ password_file() {
 # On Ctrl-C or a failure, don't leave an 8 GB VM running.
 stop_all() {
 	local vm
-	for vm in kinoite-stock-install kinoite-stock atlasos atlasos-bench; do
+	for vm in kinoite-stock-install kinoite-stock atlasos atlasos-bench atlasos-updtest; do
 		(stop "$vm") || true
 	done
 }
@@ -328,6 +387,11 @@ install-stock)
 	;;
 mem) mem "${2:-build/atlasos.qcow2}" ;;
 bench) bench "$2" "$3" "$4" "$5" ;;
+publish) publish "$2" "$3" "${4-}" ;;
+updtest)
+	trap '(stop atlasos-updtest) || true' ERR INT TERM
+	updtest
+	;;
 *)
 	sed -n '2,15p' "$0"
 	exit 2

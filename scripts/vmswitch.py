@@ -15,6 +15,11 @@ Its origin is then the share, which is gone: `bootc upgrade` won't work in it.
 --settle readies the disk for measurements (scripts/vmbench.py): it logs in
 to Plasma by itself (test disks only), and the new image boots once, through
 to Plasma, before the power-off, so first-boot work isn't measured later.
+
+--track REF is for update tests (vm.sh updtest): the share ("atlasreg") is
+mounted for good at /var/mnt/atlasreg through /etc/fstab, the VM switches to
+oci:REF (a tag in the stand-in registry there), so `bootc upgrade` and the
+updater keep working against it, and the VM is left running at Plasma.
 """
 
 import argparse
@@ -42,20 +47,28 @@ def main() -> None:
     ap.add_argument("log", type=pathlib.Path)
     ap.add_argument("password_file", type=pathlib.Path)
     ap.add_argument("--settle", action="store_true")
+    ap.add_argument("--track", metavar="REF")
     a = ap.parse_args()
 
     password = a.password_file.read_text().strip()
     con = Console(a.domain, a.log)
     con.login(password, timeout=900)
     con.sudo("dmesg -n 1", password)
-    out = con.sudo(
-        "mkdir -p /run/atlasos-image && "
-        "mount -t virtiofs atlasos-image /run/atlasos-image && "
-        "bootc switch --transport oci /run/atlasos-image/image && "
-        "umount /run/atlasos-image && echo switched-ok",
-        password,
-        timeout=1800,
-    )
+    if a.track:
+        switch = (
+            "mkdir -p /var/mnt/atlasreg && "
+            "echo \"atlasreg /var/mnt/atlasreg virtiofs ro,nofail 0 0\" >>/etc/fstab && "
+            "mount /var/mnt/atlasreg && "
+            f"bootc switch --transport oci {a.track} && echo switched-ok"
+        )
+    else:
+        switch = (
+            "mkdir -p /run/atlasos-image && "
+            "mount -t virtiofs atlasos-image /run/atlasos-image && "
+            "bootc switch --transport oci /run/atlasos-image/image && "
+            "umount /run/atlasos-image && echo switched-ok"
+        )
+    out = con.sudo(switch, password, timeout=1800)
     print(out)
     if "switched-ok" not in out:
         sys.exit("bootc switch failed; see " + str(a.log))
@@ -76,6 +89,8 @@ def main() -> None:
             time.sleep(2)
         time.sleep(60)
         print(con.run("rpm-ostree status --booted | head -n 4"))
+    if a.track:
+        return
     power(con, password, "poweroff")
 
 
