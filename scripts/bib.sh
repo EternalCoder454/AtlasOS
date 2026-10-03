@@ -13,6 +13,7 @@ bib_image=quay.io/centos-bootc/bootc-image-builder:latest
 
 cd "$(dirname "$0")/.."
 mkdir -p build/bib
+extra_mounts=()
 
 podman image exists "$image" || {
 	echo "No local image $image. Run 'just build' first." >&2
@@ -35,6 +36,16 @@ qcow2)
 iso)
 	cp disk_config/iso.toml build/bib/config.toml
 	output=bootiso/install.iso
+	# The installer's package list is looked up by os-release ID-VERSION_ID,
+	# and bootc-image-builder has none for "atlasos" (it ignores ID_LIKE).
+	# Lend it the newest Fedora list it ships, under AtlasOS's name.
+	version=$(podman run --rm --entrypoint cat "$image" /usr/lib/os-release |
+		sed -n 's/^VERSION_ID=//p')
+	podman pull -q "$bib_image" >/dev/null
+	podman run --rm --entrypoint sh "$bib_image" -c \
+		'cat "$(ls /usr/share/bootc-image-builder/defs/fedora-*.yaml | sort -V | tail -1)"' \
+		>build/bib/def.yaml
+	extra_mounts=(-v "$PWD/build/bib/def.yaml:/usr/share/bootc-image-builder/defs/atlasos-$version.yaml:ro")
 	;;
 *)
 	echo "usage: $0 qcow2|iso <image>" >&2
@@ -61,6 +72,7 @@ sudo podman run --rm --privileged --pull=newer \
 	-v "$PWD/build/bib/config.toml:/config.toml:ro" \
 	-v "$PWD/build/bib/out:/output" \
 	-v /var/lib/containers/storage:/var/lib/containers/storage \
+	"${extra_mounts[@]}" \
 	"$bib_image" \
 	--type "$type" --rootfs btrfs --use-librepo=True \
 	"$image"
