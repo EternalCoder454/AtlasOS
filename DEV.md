@@ -426,6 +426,7 @@ the build context `atlas-monitor`: `../AtlasOS Monitor` or
 | `just vm-update` | Without sudo: the qcow2 updated to the latest `just build`, as `build/vm/updated/atlasos-latest.qcow2` |
 | `just mem [disk]` | Stock Kinoite vs AtlasOS memory and services, 8 GB VMs |
 | `just check` | Lint the Justfile and scripts |
+| `just sbom [tag] [dir]` | SBOM and vulnerability report of the built image into `build/sbom` (syft, grype) |
 
 Everything generated goes in `build/`, which is gitignored: images, VM disks,
 the dnf cache, reports.
@@ -483,9 +484,31 @@ as the `atlas-monitor` one.
 - dnf's downloads are cached between runs, keyed by ISO week (on the VPS,
   kept on its disk with Podman's layer cache and the Rust build cache).
 - Images are rechunked before pushing, so updates download only what changed.
-- Signing turns on when the `SIGNING_SECRET` repository secret is set:
-  generate a key pair with `cosign generate-key-pair` (leave the password
-  empty, or store it in a `COSIGN_PASSWORD` secret), store `cosign.key`'s
-  contents in `SIGNING_SECRET`, and commit `cosign.pub`. A signature belongs
-  to a digest, so one signature covers every tag of a promoted image; the
-  promote workflow signs it again if the key is set.
+- Images are signed with cosign. The private key is `secrets/cosign.key`
+  here (gitignored, no password) and the `SIGNING_SECRET` repository secret
+  in CI; the public half is `cosign.pub`, which the image ships as
+  `/etc/pki/containers/atlasos.pub`. With `cosign.pub` in the repo, a push
+  build fails before pushing when the secret is empty or holds a key that
+  isn't `cosign.pub`'s, and after signing CI verifies the signature against
+  `cosign.pub` once more. A
+  signature belongs to a digest, so one signature covers every tag of a
+  promoted image; the promote workflow signs it again.
+- The image accepts `ghcr.io/eternalcoder454/atlasos` and `atlasos-nvidia`
+  only with that signature (`/etc/containers/policy.json`, written by
+  build.sh, and `/etc/containers/registries.d/atlasos.yaml`); bootc,
+  rpm-ostree and Podman all check it, from the first signed image an install
+  runs, even with an `ostree-unverified-registry` origin (VM-checked: a
+  plain `bootc upgrade` refused a bad signature). `update-stage` then records
+  it in the origin: one `bootc switch --enforce-container-sigpolicy`
+  (`rpm-ostree rebase ostree-image-signed:...` with local packages) to the
+  same image. Never push an unsigned image to these repositories: every
+  install on a signed image refuses it.
+  To change the key: `cosign generate-key-pair` (the cosign container
+  works: `ghcr.io/sigstore/cosign/cosign`), ship the new public key as a
+  second file in the policy's `keyPaths` (build.sh) in images still signed
+  with the old key, and switch `cosign.pub` and the secret only once
+  installs have had that for a while.
+- Every build also makes an SBOM and a vulnerability report (`just sbom`:
+  syft and grype from their pinned container images), kept as the run's
+  `sbom-<tag>` artifact; for a pushed image the SBOM is also a signed
+  attestation on the registry (`cosign download attestation`). Report only.

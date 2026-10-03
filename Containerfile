@@ -87,7 +87,7 @@ FROM scratch AS ctx-version
 COPY build_files/version.sh /
 
 FROM scratch AS ctx
-COPY build_files/build.sh build_files/cleanup.sh build_files/icon-recolor.py /
+COPY build_files/build.sh build_files/cleanup.sh build_files/icon-recolor.py cosign.pub /
 COPY system_files /system_files
 COPY branding/cursors /cursors
 COPY branding/icon-theme /icon-theme

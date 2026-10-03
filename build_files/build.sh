@@ -50,6 +50,40 @@ for p in plasma-discover-notifier plasma-discover-rpm-ostree PackageKit; do
 done
 grep -qx 'UseUnattendedUpdates=false' /etc/xdg/PlasmaDiscoverUpdates
 
+# Image signatures. CI signs every AtlasOS image with cosign (the key pair's
+# public half is cosign.pub in the repo); bootc, rpm-ostree and Podman accept
+# ghcr.io/eternalcoder454/atlasos and atlasos-nvidia only with a signature
+# from it, found as a sigstore attachment beside the image
+# (/etc/containers/registries.d/atlasos.yaml). That holds for every pull,
+# whatever an install's origin says; the update stager also records it in
+# the origin (libexec/atlasos/update-stage). Every other image is accepted as
+# before:
+# bootc --enforce-container-sigpolicy wants a default that rejects, so each
+# transport accepts anything instead. Built on Fedora's policy, whose own
+# entries stay. keyPaths takes a list: a new key goes in beside the old one
+# (DEV.md) before images are signed with it.
+install -Dpm0644 /ctx/cosign.pub /etc/pki/containers/atlasos.pub
+policy=/etc/containers/policy.json
+jq --arg key /etc/pki/containers/atlasos.pub '
+	{type: "sigstoreSigned", keyPaths: [$key], signedIdentity: {type: "matchRepository"}} as $signed
+	| .default = [{type: "reject"}]
+	| reduce ("docker", "docker-archive", "docker-daemon", "oci", "oci-archive",
+		"dir", "containers-storage", "sif", "tarball") as $t
+		(.; .transports[$t][""] //= [{type: "insecureAcceptAnything"}])
+	| .transports.docker["ghcr.io/eternalcoder454/atlasos"] = [$signed]
+	| .transports.docker["ghcr.io/eternalcoder454/atlasos-nvidia"] = [$signed]
+' "$policy" >"$policy.new"
+mv "$policy.new" "$policy"
+chmod 0644 "$policy"
+jq -e '.transports.docker[""][0].type == "insecureAcceptAnything"
+	and .transports.docker["ghcr.io/eternalcoder454/atlasos"][0].type == "sigstoreSigned"' "$policy" >/dev/null
+grep -q 'use-sigstore-attachments: true' /etc/containers/registries.d/atlasos.yaml
+
+# `atlas`, the command menu: the file it runs has to parse.
+just --justfile /usr/share/atlasos/atlas.just --list >/dev/null
+[ -x /usr/bin/atlas ]
+[ -x /usr/lib/systemd/user-environment-generators/20-atlasos-hybrid-gpu ]
+
 # The kernel sizes the inotify watch limit by RAM; this raises it to 524288
 # where it is lower (IDEs and file watchers run out), and never lowers it.
 systemctl enable atlasos-inotify-watches.service

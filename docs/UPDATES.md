@@ -258,9 +258,10 @@ that image boots healthy (green.d), and the warning with it.
 - If no deployment holds the image ref's commit any more (for example after
   `rpm-ostree cleanup -r`), the stager and Atlas Updater fall back to the
   booted entry's `cachedUpdate`, which can be stale (inference, from the code).
-- Images are pushed unsigned until the `SIGNING_SECRET` repository secret
-  holds a cosign key (README), so installs track them as
-  `ostree-unverified-registry`.
+- Installs made before the images were signed show their origin as
+  `ostree-unverified-registry` until the background stager's next run
+  switches it to `ostree-image-signed` (DEV.md). Signatures are checked
+  either way, from the first signed image an install runs.
 - `just mem` (and `boot`, `bench`, `check`) stop every VM the scripts made
   when they finish, `atlasos-updtest` included; don't run them during an
   update test.

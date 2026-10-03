@@ -2,6 +2,9 @@ image_name := "atlasos"
 image := "localhost/" + image_name
 # The rechunker (see `rechunk`).
 chunkah := "quay.io/coreos/chunkah@sha256:0da1fa543fafe92468ad667d00580aea544a384198f668f1499675c241642e11"
+# The SBOM generator and vulnerability scanner (see `sbom`).
+syft := "ghcr.io/anchore/syft:v1.54.0@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c"
+grype := "ghcr.io/anchore/grype:v0.120.0@sha256:5c88961f4130e830542d441c7ed6c78baa28e799163abac53d2be4923fb5ab7d"
 
 [private]
 default:
@@ -125,6 +128,45 @@ rechunk tag="latest" name=image_name oci="":
         rm -rf "$oci"
     fi
 
+# What the built image contains and its known vulnerabilities, into a
+# directory: sbom.spdx.json (SPDX, from syft) and vulnerabilities.json and
+# vulnerabilities.txt (grype, matched against that SBOM). Both run from their
+# own container images with the image mounted, not copied. CI attaches the
+# SBOM to the signed image. Reports only: findings don't fail it. grype has
+# no Fedora data, so it checks the Go and Python modules built into programs,
+# not the RPMs themselves: those get their fixes from Fedora's updates, which
+# the daily build picks up.
+[group('Build')]
+sbom tag="latest" out="build/sbom" name=image_name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    img="localhost/{{ name }}:{{ tag }}"
+    mkdir -p "{{ out }}"
+    out=$(realpath "{{ out }}")
+    # Packages only: listing every file made the SBOM 100 MB (22 MB without).
+    podman run --rm --pull=missing --security-opt label=disable --user 0 \
+        -e SYFT_FILE_METADATA_SELECTION=none \
+        -e SYFT_RELATIONSHIPS_PACKAGE_FILE_OWNERSHIP=false \
+        --mount=type=image,src="$img",target=/rootfs \
+        --mount=type=bind,src="$out",target=/out,rw \
+        {{ syft }} scan dir:/rootfs --quiet \
+        --source-name "{{ name }}" --source-version "{{ tag }}" \
+        -o spdx-json=/out/sbom.spdx.json
+    # grype's vulnerability database (about 1 GB unpacked) is downloaded each
+    # time into a directory beside the output, which goes afterwards (not
+    # /tmp, which can be a small tmpfs). Matched as Fedora 44, which syft
+    # can't tell from os-release (ID=atlasos).
+    db=$(mktemp -d "$(dirname "$out")/grype-db.XXXXXX")
+    trap 'rm -rf "$db"' EXIT
+    podman run --rm --pull=missing --security-opt label=disable --user 0 \
+        --mount=type=bind,src="$out",target=/out,rw \
+        --mount=type=bind,src="$db",target=/db,rw \
+        -e GRYPE_DB_CACHE_DIR=/db \
+        {{ grype }} sbom:/out/sbom.spdx.json --quiet --distro fedora:44 \
+        -o json=/out/vulnerabilities.json -o table=/out/vulnerabilities.txt
+    jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("\(.[0]): \(length)") | .[]' \
+        "$out/vulnerabilities.json"
+
 # Make a VM disk (build/atlasos.qcow2) with bootc-image-builder. Needs sudo.
 [group('Disk images')]
 qcow2 tag="latest":
@@ -207,7 +249,8 @@ updtest:
 lint:
     just --unstable --fmt --check
     shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
-    shellcheck -s sh branding/render.sh
+    shellcheck -s sh branding/render.sh system_files/usr/bin/atlas system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
+    just --unstable --fmt --check --justfile system_files/usr/share/atlasos/atlas.just
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py
 
 # Stop the test VMs and remove everything in build/: disk images, the stock

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Battery life on laptops with an NVIDIA graphics card beside the built-in one.
+# Since Plasma 6.7, KWin opens every GPU's render node through Vulkan at
+# login, and with NVIDIA's driver that keeps the NVIDIA card awake for the
+# whole session instead of letting it power off (KDE bugs 521814 and 521914,
+# open). KWin draws with OpenGL either way; KWIN_DISABLE_VULKAN=1 stops it
+# opening the cards it doesn't draw on. Only on such laptops (a battery, two
+# or more cards, one of them NVIDIA): nothing changes elsewhere.
+# Runs before 30-systemd-environment-d-generator, so a user's own
+# ~/.config/environment.d can set KWIN_DISABLE_VULKAN=0 to undo it.
+ls /sys/class/power_supply/BAT* >/dev/null 2>&1 || exit 0
+cards=0
+nvidia=0
+for d in /sys/class/drm/card[0-9]*; do
+	case ${d##*/} in *-*) continue ;; esac # connectors (card1-DP-1)
+	[ -r "$d/device/vendor" ] || continue
+	cards=$((cards + 1))
+	[ "$(cat "$d/device/vendor")" = 0x10de ] && nvidia=1
+done
+if [ "$nvidia" = 1 ] && [ "$cards" -ge 2 ]; then
+	echo KWIN_DISABLE_VULKAN=1
+fi
+exit 0

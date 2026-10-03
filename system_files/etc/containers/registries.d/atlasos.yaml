@@ -1,0 +1,6 @@
+# AtlasOS images carry their cosign signatures as sigstore attachments in the
+# same repository (the sha256-<digest>.sig tags). /etc/containers/policy.json
+# requires one for ghcr.io/eternalcoder454/atlasos and atlasos-nvidia.
+docker:
+  ghcr.io/eternalcoder454:
+    use-sigstore-attachments: true

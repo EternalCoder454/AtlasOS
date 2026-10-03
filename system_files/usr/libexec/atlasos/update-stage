@@ -5,8 +5,44 @@
 # removed base packages), which bootc refuses to upgrade and shows as
 # "incompatible", `rpm-ostree upgrade`, which keeps the changes and also
 # updates the added packages. Atlas Updater does the same.
+#
+# AtlasOS images are signed, and /etc/containers/policy.json (see build.sh)
+# makes every pull of them check the signature, whatever an install's origin
+# says. An install whose origin still says unverified (every install made
+# before the images were signed, and `bootc switch` without
+# --enforce-container-sigpolicy) gets it recorded here: the same image,
+# switched to with --enforce-container-sigpolicy and staged like an upgrade,
+# so bootc status shows the check. If the switch
+# fails (a network error), this run updates as before and the next one tries
+# again.
+ours='ghcr.io/eternalcoder454/atlasos ghcr.io/eternalcoder454/atlasos-nvidia'
+is_ours() {
+	for r in $ours; do
+		case $1 in "$r:"* | "$r@"*) return 0 ;; esac
+	done
+	return 1
+}
+key=/etc/pki/containers/atlasos.pub
+
 if timeout 30 bootc status --json 2>/dev/null |
 	jq -e '[.status.booted, .status.staged] | any(.incompatible? == true)' >/dev/null 2>&1; then
+	origin=$(timeout 30 rpm-ostree status --json 2>/dev/null |
+		jq -r '.deployments[0]["container-image-reference"] // empty' 2>/dev/null)
+	image=${origin#ostree-unverified-registry:}
+	if [ -f "$key" ] && [ "$image" != "$origin" ] && is_ours "$image"; then
+		echo "moving to signature-checked updates for $image"
+		rpm-ostree rebase "ostree-image-signed:docker://$image" && exit 0
+		echo "could not move to signature-checked updates; updating as before"
+	fi
 	exec rpm-ostree upgrade
+fi
+
+spec=$(timeout 30 bootc status --json 2>/dev/null |
+	jq -r '.spec.image | select(. != null and .signature == null
+		and (.transport // "registry") == "registry") | .image' 2>/dev/null)
+if [ -f "$key" ] && [ -n "$spec" ] && is_ours "$spec"; then
+	echo "moving to signature-checked updates for $spec"
+	bootc switch --quiet --enforce-container-sigpolicy "$spec" && exit 0
+	echo "could not move to signature-checked updates; updating as before"
 fi
 exec bootc upgrade --quiet

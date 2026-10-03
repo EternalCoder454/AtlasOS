@@ -59,6 +59,9 @@ rolls itself back.
   Python, Go and friends.
 - git, gh, just, jq, ripgrep, fd, btop, gdb, strace and perf, already there.
 - Kate as the default editor, and file watch limits raised for big projects.
+- `atlas`, a command menu for the rest: Homebrew, Docker tools on Podman,
+  JetBrains Toolbox, the update channel. Where each kind of software goes:
+  [Installing software](docs/INSTALLING-SOFTWARE.md).
 
 **Less stuff, on purpose**
 - No Akonadi, no Baloo indexer, no KDE Connect, no pile of apps you'll never
@@ -138,8 +141,9 @@ A few honest notes:
 
 - There's no installer ISO to download yet. You can build one yourself with
   `just iso` (see [DEV.md](DEV.md)).
-- The images aren't signed yet, so bootc tracks them as unverified until
-  they are.
+- The images are signed, and AtlasOS only installs updates that carry the
+  signature. A computer that installed AtlasOS before that starts checking
+  by itself with its first signed version.
 - This is a personal project run by one person. It works well for me every
   day, but it's young, so keep backups like you would anyway.
 

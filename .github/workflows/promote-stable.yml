@@ -34,6 +34,13 @@ jobs:
       updater: ${{ steps.pick.outputs.updater }}
       base: ${{ steps.pick.outputs.base }}
     steps:
+      # For cosign.pub, which every promoted image must verify against.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          sparse-checkout: cosign.pub
+          sparse-checkout-cone-mode: false
+
       - name: Pick the testing image
         id: pick
         env:
@@ -68,6 +75,46 @@ jobs:
             echo "base=$(jq -r '.Labels["org.atlasos.base-image"] // ""' <<<"$json")"
           } >>"$GITHUB_OUTPUT"
 
+      # A signature belongs to a digest, not a tag, so the one made when the
+      # testing build was pushed already covers every promoted tag. Signing
+      # again (the same digest, so harmless) covers images pushed before
+      # signing was on. Then it must verify against cosign.pub before any
+      # stable tag moves: installs accept only signed images (build.sh).
+      - name: Check for a signing key
+        id: signing
+        if: steps.pick.outputs.copy == 'true'
+        env:
+          SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+        run: |
+          if [ -n "$SIGNING_SECRET" ]; then
+            echo "enabled=true" >>"$GITHUB_OUTPUT"
+          elif [ -f cosign.pub ]; then
+            echo "::error::cosign.pub is in the repo but the SIGNING_SECRET secret is empty; not promoting."
+            exit 1
+          else
+            echo "enabled=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Install cosign
+        if: steps.signing.outputs.enabled == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      - name: Sign
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          ref="${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.pick.outputs.digest }}"
+          cosign sign -y --new-bundle-format=false --use-signing-config=false \
+            --key env://COSIGN_PRIVATE_KEY "$ref"
+          cosign verify --insecure-ignore-tlog=true --key cosign.pub "$ref" >/dev/null
+
       - name: Copy by digest
         if: steps.pick.outputs.copy == 'true'
         env:
@@ -86,34 +133,6 @@ jobs:
             [ "$got" = "${{ steps.pick.outputs.digest }}" ] || { echo "::error::${t} is ${got}"; exit 1; }
           done
 
-      # A signature belongs to a digest, not a tag, so the one made when the
-      # testing build was pushed already covers every promoted tag. Signing
-      # again here covers images that were pushed before signing was on.
-      - name: Check for a signing key
-        id: signing
-        if: steps.pick.outputs.copy == 'true'
-        env:
-          SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
-        run: echo "enabled=$([ -n "$SIGNING_SECRET" ] && echo true || echo false)" >>"$GITHUB_OUTPUT"
-
-      - name: Install cosign
-        if: steps.signing.outputs.enabled == 'true'
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          cosign-release: "v3.1.2"
-
-      - name: Sign
-        if: steps.signing.outputs.enabled == 'true'
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
-          cosign sign -y --new-bundle-format=false --use-signing-config=false \
-            --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.pick.outputs.digest }}"
-
   # The same for atlasos-nvidia, whose testing image the build workflow makes
   # from each atlasos testing image. Its signature, like atlasos's, was made
   # when testing was pushed.
@@ -127,9 +146,22 @@ jobs:
     env:
       NVIDIA_IMAGE: atlasos-nvidia
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          sparse-checkout: cosign.pub
+          sparse-checkout-cone-mode: false
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
       - name: Copy by digest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           PROMOTED_VERSION: ${{ needs.promote.outputs.version }}
           PROMOTED_REVISION: ${{ needs.promote.outputs.revision }}
         run: |
@@ -156,6 +188,15 @@ jobs:
           if [ "$current" = "$digest" ]; then
             echo "::notice::stable is already ${version}; nothing to copy."
             exit 0
+          fi
+          # Signed and verified before any stable tag moves, as for atlasos.
+          if [ -n "$COSIGN_PRIVATE_KEY" ]; then
+            echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+            cosign sign -y --new-bundle-format=false --use-signing-config=false \
+              --key env://COSIGN_PRIVATE_KEY "${repo}@${digest}"
+          fi
+          if [ -f cosign.pub ]; then
+            cosign verify --insecure-ignore-tlog=true --key cosign.pub "${repo}@${digest}" >/dev/null
           fi
           for t in stable latest 44 "$version"; do
             skopeo copy --all --preserve-digests --src-creds "$creds" --dest-creds "$creds" \
