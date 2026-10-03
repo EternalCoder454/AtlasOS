@@ -15,15 +15,17 @@ RUN sh /branding/render.sh /branding /out
 # The Atlas apps (Atlas Updater and atlas-core), built into RPMs in a Fedora 44
 # container, the release the image is based on. The source is the build
 # context named "atlas-updater" (`podman build --build-context
-# atlas-updater=<path>`; `just build` and CI pass it). Cargo's registry and
-# dnf's downloads are cache mounts, so they survive between builds without
-# ending up in an image layer.
+# atlas-updater=<path>`; `just build` and CI pass it). Cargo's downloads and
+# build output (ATLAS_BUILD_CACHE, see build-rpm.sh there) and dnf's downloads
+# are cache mounts, so they survive between builds without ending up in an
+# image layer. Only a machine that keeps its Podman storage benefits: the VPS
+# runner and local builds (see CI.md).
 FROM registry.fedoraproject.org/fedora:44 AS atlas-apps
 COPY --from=atlas-updater / /src
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    /src/packaging/build-rpm.sh /out
+    ATLAS_BUILD_CACHE=/var/cache/atlas-build /src/packaging/build-rpm.sh /out
 
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.

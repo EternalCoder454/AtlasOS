@@ -10,8 +10,11 @@ default:
 build tag="latest" *args:
     #!/usr/bin/env bash
     set -euo pipefail
-    # dnf's downloads are kept here between builds (gitignored, never in the image).
-    mkdir -p build/cache/dnf
+    # dnf's downloads are kept here between builds (gitignored, never in the
+    # image). The VPS runner sets ATLAS_DNF_CACHE to a directory outside the
+    # checkout, which actions/checkout cleans.
+    dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
+    mkdir -p "$dnf_cache"
     # CI passes IMAGE_VERSION so the image and its pushed tag carry the same date.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
     # The Atlas apps' source (Atlas Updater and atlas-core): a named build
@@ -21,7 +24,7 @@ build tag="latest" *args:
     [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
     podman build --pull=newer \
         --build-context atlas-updater="$updater" \
-        --volume "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" \
+        --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
         --label org.opencontainers.image.version="$version" \
         --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
@@ -43,9 +46,10 @@ build-nvidia tag="latest" *args:
     set -euo pipefail
     key="${NVIDIA_SIGNING_KEY:-secrets/nvidia-signing.key}"
     [ -s "$key" ] || { echo "No module signing key at $key (see DEV.md, NVIDIA)" >&2; exit 1; }
-    mkdir -p build/cache/dnf
+    dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
+    mkdir -p "$dnf_cache"
     podman build \
-        --volume "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" \
+        --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --secret id=nvidia-signing-key,src="$key" \
         --build-arg BASE_IMAGE="{{ image }}:{{ tag }}" \
         --label org.opencontainers.image.title="AtlasOS (NVIDIA)" \
@@ -162,7 +166,7 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
     shellcheck -s sh branding/render.sh
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py
 

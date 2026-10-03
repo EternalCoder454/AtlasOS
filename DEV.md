@@ -445,8 +445,11 @@ can't `bootc upgrade` afterwards, since its image source was the share.
 
 ## CI
 
-`.github/workflows/build.yml` runs on pushes to `main` and `beta`, on pull
-requests (build only), daily, and by hand. It checks out
+`.github/workflows/build.yml` runs on pushes to `main` and `beta`, on tags
+and pull requests (build only), daily, and by hand. Builds of `main` and tags
+run on the self-hosted runner on the VPS while it is online, everything else
+on GitHub's runners; [CI.md](CI.md) has the routing, the caches and build
+times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out
 `EternalCoder454/atlasos-updater` (`main`) as the `atlas-updater` build context
 (if that repository is private, put a token that can read it in the
 `ATLAS_UPDATER_TOKEN` secret).
@@ -466,7 +469,8 @@ requests (build only), daily, and by hand. It checks out
   `NVIDIA_SIGNING_KEY` secret (the contents of `secrets/nvidia-signing.key`);
   without it the job only leaves a notice. Pull requests skip it.
   `promote-stable.yml` promotes `atlasos-nvidia:testing` the same way.
-- dnf's downloads are cached between runs, keyed by ISO week.
+- dnf's downloads are cached between runs, keyed by ISO week (on the VPS,
+  kept on its disk with Podman's layer cache and the Rust build cache).
 - Images are rechunked before pushing, so updates download only what changed.
 - Signing turns on when the `SIGNING_SECRET` repository secret is set:
   generate a key pair with `cosign generate-key-pair` (leave the password
