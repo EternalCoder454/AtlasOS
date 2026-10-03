@@ -62,12 +62,16 @@ build-nvidia tag="latest" *args:
 # Split the built image into up to 127 layers by package (rpm-ostree's
 # chunker), so an update downloads only the parts that changed. CI does this
 # before pushing; local test builds don't need it.
+# With an oci directory, the result goes there (as oci:<dir>:<tag>) instead of
+# replacing the image: CI pushes it from there with skopeo. That skips copying
+# it back into Podman's storage, which unpacks every layer (minutes, and 8 GB
+# more disk), and the push recompressing them all.
 [group('Build')]
-rechunk tag="latest" name=image_name:
+rechunk tag="latest" name=image_name oci="":
     #!/usr/bin/env bash
     set -euo pipefail
     img="localhost/{{ name }}:{{ tag }}"
-    graphroot="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
+    oci="{{ oci }}"
     # The chunker writes a fresh image config, so carry the labels over (the
     # daily CI run reads two of them to decide whether to rebuild).
     list=$(podman image inspect "$img" |
@@ -75,16 +79,31 @@ rechunk tag="latest" name=image_name:
     [ -n "$list" ] || { echo "$img has no labels to carry over" >&2; exit 1; }
     labels=()
     while IFS= read -r l; do labels+=(--label "$l"); done <<<"$list"
+    if [ -n "$oci" ]; then
+        # An empty layout: the chunker looks for a previous image there first.
+        rm -rf "$oci"
+        mkdir -p "$oci/blobs/sha256"
+        echo '{"imageLayoutVersion":"1.0.0"}' >"$oci/oci-layout"
+        echo '{"schemaVersion":2,"manifests":[]}' >"$oci/index.json"
+        mounts=(--mount=type=bind,src="$(realpath "$oci")",target=/out,rw)
+        output="oci:/out:{{ tag }}"
+    else
+        graphroot="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
+        mounts=(
+            --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw
+            --mount=type=tmpfs,target=/run/rpm-ostree-storage
+        )
+        output="containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]$img"
+    fi
     podman run --rm --pull=never --privileged \
         --mount=type=image,src="$img",target=/rpm-ostree \
-        --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw \
-        --mount=type=tmpfs,target=/run/rpm-ostree-storage \
+        "${mounts[@]}" \
         --entrypoint /usr/bin/rpm-ostree \
         "$img" \
         compose build-chunked-oci \
         --max-layers 127 --format-version=2 --bootc "${labels[@]}" \
         --rootfs /rpm-ostree \
-        --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]$img"
+        --output "$output"
 
 # Make a VM disk (build/atlasos.qcow2) with bootc-image-builder. Needs sudo.
 [group('Disk images')]

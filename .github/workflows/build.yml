@@ -194,7 +194,7 @@ jobs:
         run: just lint
 
       # The runner's disk is too small for a 7 GB image, its rechunked copy
-      # and Podman's working space without clearing the preinstalled SDKs.
+      # (3 GB, compressed) and Podman's working space without clearing the preinstalled SDKs.
       # (Not on the VPS, whose disk keeps the caches.)
       - name: Maximize build space
         if: steps.decide.outputs.skip != 'true' && needs.runner.outputs.kind == 'hosted'
@@ -231,10 +231,12 @@ jobs:
           # nothing has downloaded for a month before it is saved.
           find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
 
-      # Smaller updates for users. Only for images that get pushed.
+      # Smaller updates for users. Only for images that get pushed. Into an
+      # OCI directory in the job's temporary directory, which the runner
+      # empties after the job; Push uploads it from there as it is.
       - name: Rechunk
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
-        run: just rechunk "${{ steps.decide.outputs.tag }}"
+        run: just rechunk "${{ steps.decide.outputs.tag }}" "${IMAGE_NAME}" "$RUNNER_TEMP/rechunked"
 
       - name: Log in to ghcr.io
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
@@ -262,13 +264,16 @@ jobs:
           set -euo pipefail
           tag="${{ steps.decide.outputs.tag }}"
           version="${{ steps.decide.outputs.version }}"
-          have=$(podman image inspect "localhost/${IMAGE_NAME}:${tag}" |
-            jq -r '.[0].Labels["org.opencontainers.image.version"]')
+          src="oci:$RUNNER_TEMP/rechunked:${tag}"
+          have=$(skopeo inspect --config "$src" |
+            jq -r '.config.Labels["org.opencontainers.image.version"]')
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
+          # The layers go up as the chunker compressed them, and the registry
+          # already has every one that didn't change.
           tags=("$tag" "$tag-$version")
           for t in "${tags[@]}"; do
-            podman push --digestfile="$RUNNER_TEMP/digest" "localhost/${IMAGE_NAME}:${tag}" \
-              "${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
+            skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest" \
+              "$src" "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
           done
           echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
 
@@ -374,7 +379,7 @@ jobs:
 
       - name: Rechunk
         if: steps.key.outputs.enabled == 'true'
-        run: just rechunk "${{ needs.build.outputs.tag }}" "${NVIDIA_IMAGE}"
+        run: just rechunk "${{ needs.build.outputs.tag }}" "${NVIDIA_IMAGE}" "$RUNNER_TEMP/rechunked"
 
       - name: Push
         id: push
@@ -383,12 +388,14 @@ jobs:
           set -euo pipefail
           tag="${{ needs.build.outputs.tag }}"
           version="${{ needs.build.outputs.version }}"
-          have=$(podman image inspect "localhost/${NVIDIA_IMAGE}:${tag}" |
-            jq -r '.[0].Labels["org.opencontainers.image.version"]')
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          src="oci:$RUNNER_TEMP/rechunked:${tag}"
+          have=$(skopeo inspect --config "$src" |
+            jq -r '.config.Labels["org.opencontainers.image.version"]')
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
           for t in "$tag" "$tag-$version"; do
-            podman push --digestfile="$RUNNER_TEMP/digest" "localhost/${NVIDIA_IMAGE}:${tag}" \
-              "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}:${t}"
+            skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest" \
+              "$src" "docker://${IMAGE_REGISTRY}/${NVIDIA_IMAGE}:${t}"
           done
           echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
 

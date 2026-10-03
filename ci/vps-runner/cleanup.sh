@@ -6,9 +6,9 @@
 #   atlas-runner-cleanup list        what after-job would remove, and sizes
 #
 # after-job removes what the next build can't reuse and keeps what it can:
-#   - AtlasOS's own images (the final stage, its rechunked copy, NVIDIA): every
-#     build makes new ones, and they are in the registry by now. They are the
-#     ones labelled org.atlasos.base-image.
+#   - AtlasOS's own images (the final stage, NVIDIA): every build makes new
+#     ones, and they are in the registry by now. They are the ones labelled
+#     org.atlasos.base-image.
 #   - Base images a newer pull replaced (yesterday's Kinoite, a fedora:44 that
 #     lost its tag), with every cached build step made on top of them.
 #   - Podman's build cache mounts (the Rust build cache) and dnf's downloads,

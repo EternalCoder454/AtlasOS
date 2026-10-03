@@ -140,16 +140,18 @@ and then (`RUNNER_VERSION` and `RUNNER_SHA256` in the Containerfile).
 Measured in the runner container (a local test of two full builds): what
 stays between builds is about 20 GB: 14 GB of images and cached build steps
 (Kinoite, Fedora and every Containerfile stage), 5 GB of Rust and CMake build
-cache, 1.3 GB of dnf downloads. A build adds about 20 GB at its peak, while
-rechunking: the new image, its rechunked copy, and the rechunker's work. The
-NVIDIA job is about the same. On a day Fedora publishes a new Kinoite, add
-7 GB until the old one is removed after the job. The 50 GB disk holds 49 GB.
+cache, 1.3 GB of dnf downloads. A build adds the most while rechunking: the
+new image, the rechunker's work (an OSTree repository the size of the image),
+and its result, a 3 GB OCI directory in the job's temporary directory, which
+the runner empties after the job. The NVIDIA job is about the same. On a day
+Fedora publishes a new Kinoite, add 7 GB until the old one is removed after
+the job. The 50 GB disk holds 49 GB.
 
 [cleanup.sh](cleanup.sh) (`atlas-runner-cleanup` in the image) runs after
 every job, and before the next in case one was cut short. It removes:
 
-- the images the build made (the image, its rechunked copy, the NVIDIA
-  image: all labelled `org.atlasos.base-image`). They are in the registry.
+- the images the build made (the image and the NVIDIA image, both labelled
+  `org.atlasos.base-image`). They are in the registry.
 - base images a newer pull replaced (yesterday's Kinoite, a `fedora:44` that
   lost its tag to a newer one), with every cached build step made on them.
 - Podman's build cache mounts (the Rust build cache) past 8 GB, and dnf's
