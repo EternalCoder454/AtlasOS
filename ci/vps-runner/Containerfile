@@ -9,7 +9,7 @@ FROM quay.io/podman/stable:v5.8.7@sha256:c70aa78a604fafa95076aae36bdc91d1173d2bf
 # The runner's .NET dependencies, and what build.yml and the Justfile use.
 RUN dnf -y install --setopt=install_weak_deps=False \
         findutils git-core gzip hostname jq just krb5-libs libicu lttng-ust python3 \
-        openssl-libs procps-ng ShellCheck skopeo tar util-linux zlib \
+        openssl-libs procps-ng rsync ShellCheck skopeo tar util-linux zlib \
     && dnf clean all
 
 ARG RUNNER_VERSION=2.337.0
