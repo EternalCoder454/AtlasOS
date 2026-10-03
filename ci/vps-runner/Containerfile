@@ -32,9 +32,14 @@ COPY --chmod=0755 hooks/ /opt/atlas-hooks/
 
 # ATLAS_DNF_CACHE: `just build` keeps dnf's downloads there instead of in the
 # checkout, which actions/checkout cleans before every job.
+# RUNNER_MANUALLY_TRAP_SIG: run.sh passes the stop signal on to the runner,
+# which then closes its session with GitHub. Without it the runner is killed
+# with the session open, and a job queued in the minutes until GitHub drops it
+# waits there forever.
 ENV ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/atlas-hooks/job-started.sh \
     ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/opt/atlas-hooks/job-completed.sh \
-    ATLAS_DNF_CACHE=/cache/dnf
+    ATLAS_DNF_CACHE=/cache/dnf \
+    RUNNER_MANUALLY_TRAP_SIG=1
 
 # Starts as container root (the unprivileged atlas-runner account on the
 # host), fixes the volumes' ownership, then runs everything as "podman".
