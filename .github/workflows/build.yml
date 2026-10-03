@@ -105,6 +105,15 @@ jobs:
           path: atlas-updater
           token: ${{ secrets.ATLAS_UPDATER_TOKEN || github.token }}
 
+      # Atlas Monitor's source (main), the atlas-monitor build context. The
+      # repository is public.
+      - name: Checkout Atlas Monitor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-monitor
+          ref: main
+          path: atlas-monitor
+
       # main publishes :testing, beta publishes :beta. (:stable and :latest
       # come from promote-stable.yml.) Pull requests and tags build and
       # lint but never push.
@@ -137,6 +146,7 @@ jobs:
           # this same Kinoite. That saves a whole build most days.
           skip=false
           updater=$(git -C atlas-updater rev-parse HEAD)
+          monitor=$(git -C atlas-monitor rev-parse HEAD)
           if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
             # No published image yet (or the registry is down) means build.
             labels='{}'
@@ -146,6 +156,7 @@ jobs:
             fi
             if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
                [ "$(jq -r '."net.eterneon.atlas.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
             fi
@@ -174,6 +185,7 @@ jobs:
             echo "push=$push"
             echo "base=$base"
             echo "updater=$updater"
+            echo "monitor=$monitor"
             echo "skip=$skip"
             echo "date=$date"
             echo "version=44.$date"
@@ -216,11 +228,14 @@ jobs:
           IMAGE_VERSION: ${{ steps.decide.outputs.version }}
           # `just build` passes this as the atlas-updater build context.
           ATLAS_UPDATER_SRC: ${{ github.workspace }}/atlas-updater
+          # and this as the atlas-monitor one.
+          ATLAS_MONITOR_SRC: ${{ github.workspace }}/atlas-monitor
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
             --label net.eterneon.atlas.updater.revision="${{ steps.decide.outputs.updater }}" \
+            --label net.eterneon.atlas.monitor.revision="${{ steps.decide.outputs.monitor }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages

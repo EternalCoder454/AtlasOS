@@ -24,22 +24,31 @@ build tag="latest" *args:
     # checkout of EternalCoder454/atlasos-updater.
     updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
     [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
+    # Atlas Monitor's source: the build context named "atlas-monitor". CI
+    # points it at a checkout of EternalCoder454/atlasos-monitor.
+    monitor="${ATLAS_MONITOR_SRC:-../AtlasOS Monitor}"
+    [ -d "$monitor/packaging" ] || { echo "Atlas Monitor source not found at '$monitor' (set ATLAS_MONITOR_SRC)" >&2; exit 1; }
     # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
     # in: a local checkout's target/ is many GB, and podman would copy all of
     # it each build and rebuild the RPMs whenever a cargo build touched it.
-    src=build/updater-src
-    rm -rf "$src"
-    mkdir -p "$src"
-    git -C "$updater" ls-files -z --cached --others --exclude-standard |
-        rsync -a --from0 --files-from=- --ignore-missing-args "$updater/" "$src/"
+    copy_source() { # checkout, destination
+        rm -rf "$2"
+        mkdir -p "$2"
+        git -C "$1" ls-files -z --cached --others --exclude-standard |
+            rsync -a --from0 --files-from=- --ignore-missing-args "$1/" "$2/"
+    }
+    copy_source "$updater" build/updater-src
+    copy_source "$monitor" build/monitor-src
     podman build --pull=newer \
-        --build-context atlas-updater="$src" \
+        --build-context atlas-updater=build/updater-src \
+        --build-context atlas-monitor=build/monitor-src \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
         --label org.opencontainers.image.version="$version" \
         --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
         --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \

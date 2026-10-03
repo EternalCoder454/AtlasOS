@@ -9,12 +9,18 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 ### Atlas apps
 
 # Atlas Updater and atlas-core, built by the atlas-apps stage of the
-# Containerfile (bound in at /atlas-rpms; nothing is copied into the image).
-# They are required parts of the system: the build fails without them, and
-# atlas-core ships /etc/dnf/protected.d/atlas.conf so dnf won't remove them.
-"${dnf[@]}" install /atlas-rpms/*.rpm
-rpm -q atlas-core atlas-updater
+# Containerfile (bound in at /atlas-rpms), and Atlas Monitor, built by the
+# monitor-app stage (at /atlas-monitor-rpms); nothing is copied into the
+# image. They are required parts of the system: the build fails without them,
+# and their protected.d files (atlas.conf from atlas-core, atlas-monitor.conf)
+# stop dnf removing them.
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm
+rpm -q atlas-core atlas-updater atlas-monitor
 [ -f /etc/dnf/protected.d/atlas.conf ]
+[ -f /etc/dnf/protected.d/atlas-monitor.conf ]
+# Atlas Monitor takes Plasma System Monitor's shortcuts (Ctrl+Shift+Esc,
+# Ctrl+Esc); packages.sh removes that app.
+[ -f /usr/share/kglobalaccel/net.eterneon.atlas.monitor.desktop ]
 # The updater autostarts in the tray at login (users can turn that off in
 # System Settings; the background staging timer doesn't depend on it).
 rpm -ql atlas-updater >/tmp/atlas-updater.files

@@ -31,6 +31,20 @@ RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     ATLAS_BUILD_CACHE=/var/cache/atlas-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Monitor, built the same way from the build context named
+# "atlas-monitor" (EternalCoder454/atlasos-monitor). A stage of its own, so a
+# change to one app doesn't rebuild the other. Cargo's crate downloads are a
+# cache mount (CARGO_HOME, see the spec there). Its build fetches the
+# atlas-core crate and Atlas.Ui from atlasos-updater at the commit its
+# Cargo.toml pins, so it needs the network.
+FROM registry.fedoraproject.org/fedora:44 AS monitor-app
+COPY --from=atlas-monitor --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-monitor-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    CARGO_HOME=/var/cache/atlas-monitor-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
@@ -96,6 +110,7 @@ RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
 
 RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
+    --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 

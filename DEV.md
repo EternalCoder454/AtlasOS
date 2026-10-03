@@ -45,11 +45,11 @@ label is the AtlasOS commit the image was built from, and
   since the previous stable tag, grouped by what they touch.
   `scripts/release-notes.sh` writes them; the first stable lists the newest
   commits.
-- **Atlas apps are system components.** `atlas-core` and `atlas-updater` are
-  RPMs built into the image under `/usr`, so Discover (its backends here are
-  Flatpak, fwupd, KNewStuff and rpm-ostree, no PackageKit) has no way to
+- **Atlas apps are system components.** `atlas-core`, `atlas-updater` and
+  `atlas-monitor` are RPMs built into the image under `/usr`, so Discover (its
+  backends here are Flatpak and fwupd, no PackageKit) has no way to
   uninstall them, and `/etc/dnf/protected.d/atlas.conf` (from `atlas-core`)
-  stops dnf removing them. The build fails without them. Root can still run
+  and `atlas-monitor.conf` stop dnf removing them. The build fails without them. Root can still run
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
   a system timer and keeps working.
@@ -411,7 +411,9 @@ The Atlas apps are built from a second repository, passed to `podman build` as
 the named build context `atlas-updater`. `just build` uses `../Atlas Updater`
 (next to this repo), or `$ATLAS_UPDATER_SRC`; it needs
 `packaging/build-rpm.sh` there. Its commit goes in the
-`net.eterneon.atlas.updater.revision` label.
+`net.eterneon.atlas.updater.revision` label. Atlas Monitor comes from a third,
+the build context `atlas-monitor`: `../AtlasOS Monitor` or
+`$ATLAS_MONITOR_SRC`, with its commit in `net.eterneon.atlas.monitor.revision`.
 
 | Command | Does |
 |---|---|
@@ -458,7 +460,8 @@ on GitHub's runners; [CI.md](CI.md) has the routing, the caches and build
 times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out
 `EternalCoder454/atlasos-updater` (`main`) as the `atlas-updater` build context
 (if that repository is private, put a token that can read it in the
-`ATLAS_UPDATER_TOKEN` secret).
+`ATLAS_UPDATER_TOKEN` secret), and `EternalCoder454/atlasos-monitor` (`main`)
+as the `atlas-monitor` one.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default
