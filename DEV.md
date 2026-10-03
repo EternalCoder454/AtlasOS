@@ -106,8 +106,8 @@ Fedora's package, built for bootc) checks every boot and rolls a bad update
 back. `greenboot-healthcheck.service` and `greenboot-set-rollback-trigger.service`
 are enabled; `greenboot-default-health-checks` is **not** installed (its
 repository DNS check fails offline and would roll back good updates on a
-laptop without a network). `build.sh` fails if that package is present or a
-unit is not enabled. `/etc/greenboot/greenboot.conf`: `GREENBOOT_MAX_BOOT_ATTEMPTS=3`.
+laptop without a network). `packages.sh` fails if that package is present,
+`build.sh` if a unit is not enabled. `/etc/greenboot/greenboot.conf`: `GREENBOOT_MAX_BOOT_ATTEMPTS=3`.
 
 **Checks.** Image-owned, in `/usr/lib/greenboot/check/required.d` (greenboot
 reads it before `/etc/greenboot`, which users can change). Each logs one line
@@ -201,7 +201,7 @@ and keeping anything else in the file. GRUB sources `custom.cfg` after
 `blscfg`, and bootupd never touches it. It writes nothing when the file is
 already right, removes its block again when `grub.cfg` has the snippet (or the
 counter would count twice), and leaves a `grub.cfg` that is not bootupd's
-alone. `build.sh` also adds the final newline the RPM's snippet lacks: bootupd
+alone. `packages.sh` also adds the final newline the RPM's snippet lacks: bootupd
 writes its `### END` marker right after it, which would join `save_env boot_success`
 to the marker.
 
@@ -304,7 +304,7 @@ was destroyed, so closing Dolphin crashed its thumbnail workers, one coredump
 each ([KDE bug 518400](https://bugs.kde.org/show_bug.cgi?id=518400)). The
 Containerfile's `kio` stage downloads the source RPM of exactly the version in
 the base image from Koji, adds the patch, builds with release `.atlas1`, and
-`build.sh` installs those RPMs over Kinoite's. The build fails if the patch
+`packages.sh` installs those RPMs over Kinoite's. The build fails if the patch
 stops applying; drop the stage once Fedora ships the fix.
 
 ## First-run setup
@@ -378,8 +378,11 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 
 | Path | What it is |
 |---|---|
-| `Containerfile` | The image: stages for branding, the Atlas apps, the patched KIO and the restyled wizard (RPMs), then Kinoite plus `build_files/build.sh` |
-| `build_files/build.sh` | Package removals, the Atlas apps, services, branding, initramfs |
+| `Containerfile` | The image: stages for branding, the Atlas apps, the patched KIO and the restyled wizard (RPMs), then Kinoite plus the scripts below, one build step each so a change reruns only its step and those after it |
+| `build_files/packages.sh` | Package removals and additions, the patched KIO and wizard, greenboot |
+| `build_files/apps.sh` | The Atlas apps |
+| `build_files/build.sh` | Services, settings, branding, initramfs |
+| `build_files/version.sh` | The image's version in os-release (last: it changes daily) |
 | `build_files/kio/` | The KIO crash fix: rebuilds Fedora's `kf6-kio` with one patch |
 | `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `atlasos-nvidia` image |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |

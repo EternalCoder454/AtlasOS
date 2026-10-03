@@ -26,6 +26,7 @@ build tag="latest" *args:
         --build-context atlas-updater="$updater" \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
+        --build-arg PACKAGES_DATE="$(date -u +%F)" \
         --label org.opencontainers.image.version="$version" \
         --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
         --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \

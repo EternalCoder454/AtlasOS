@@ -36,17 +36,17 @@ Process sizes are `ps_mem` medians (private + shared), before → after.
 
 | Change | Where | Measured |
 |---|---|---|
-| Removed Xwayland Video Bridge: it ran all the time so X11 apps could share Wayland windows; apps share the screen through the portal now | `build.sh` | −29.9 MiB (xwaylandvideobridge) |
-| power-profiles-daemon in place of TuneD and its PPD bridge: the same three power profiles in Plasma and powerdevil | `build.sh` | −51.2 MiB (tuned 27.0 + tuned-ppd 24.2) for +1.0 MiB |
-| Removed kunifiedpush: KDE's push-notification service starts with every session, and no app here uses it | `build.sh` | −4.6 MiB, −1 user service |
+| Removed Xwayland Video Bridge: it ran all the time so X11 apps could share Wayland windows; apps share the screen through the portal now | `packages.sh` | −29.9 MiB (xwaylandvideobridge) |
+| power-profiles-daemon in place of TuneD and its PPD bridge: the same three power profiles in Plasma and powerdevil | `packages.sh` | −51.2 MiB (tuned 27.0 + tuned-ppd 24.2) for +1.0 MiB |
+| Removed kunifiedpush: KDE's push-notification service starts with every session, and no app here uses it | `packages.sh` | −4.6 MiB, −1 user service |
 | gssproxy only starts with a Kerberos keytab (`nfs-client.target` pulled it in at every boot) | `gssproxy.service.d/atlasos.conf` | −2.2 MiB, −1 system service |
 | kded modules off: Baloo's search module (no Baloo here) and the Plasma Browser Integration reminder | `/etc/xdg/kded5rc` | too small to measure at idle; two fewer modules in kded6 |
 | KRunner plugins off: file search (no Baloo index, it only started an idle helper), Konsole profiles (Ghostty is the terminal), AppStream (loads the whole catalogue on the first search) | `/etc/xdg/krunnerrc` | nothing at idle (KRunner isn't running); the first search no longer loads AppStream |
 | zram with zstd instead of lzo-rle: about a third more fits in the same RAM, for a little more CPU | `zram-generator.conf.d/atlasos.conf` | `just check` confirms zstd |
 | Swap tuning for zram: `vm.swappiness=180`, `vm.page-cluster=0`, `vm.watermark_boost_factor=0` | `sysctl.d/60-atlasos-zram.conf` | no idle cost; helps under memory pressure |
-| Removed what the Phase 1 removals left behind: Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's and Partition Manager's libraries, the Plasma handbook, Konqueror's bookmark editor, PySide6, sos | `build.sh` | disk only (nothing ran) |
+| Removed what the Phase 1 removals left behind: Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's and Partition Manager's libraries, the Plasma handbook, Konqueror's bookmark editor, PySide6, sos | `packages.sh` | disk only (nothing ran) |
 | Package docs (READMEs, changelogs, KDE handbooks) deleted; licenses and man pages kept | `build.sh` | −140 MB of image |
-| Weak dependencies stay off for everything AtlasOS installs (`install_weak_deps=False`) | `build.sh` | already the case; checked |
+| Weak dependencies stay off for everything AtlasOS installs (`install_weak_deps=False`) | `packages.sh` | already the case; checked |
 | Closing Dolphin no longer crashes its thumbnail workers: KIO's SIGTERM handler wrote to a destroyed worker ([KDE bug 518400](https://bugs.kde.org/show_bug.cgi?id=518400)); patched KIO until Fedora ships the fix | `build_files/kio/` | 0 coredumps (was 1 per Dolphin close); the stability gate no longer needs its exception |
 
 Desktop effects: nothing was turned off. Every effect that is on is one

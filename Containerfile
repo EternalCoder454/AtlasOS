@@ -54,8 +54,20 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
 
 # Build scripts and config files, mounted into the build rather than copied
 # into the image.
+# Each RUN step below sees only its own inputs, so Podman reruns a step (and
+# those after it) only when one of them changed: a change to system_files
+# doesn't reinstall the packages.
+FROM scratch AS ctx-packages
+COPY build_files/packages.sh build_files/cleanup.sh /
+
+FROM scratch AS ctx-apps
+COPY build_files/apps.sh build_files/cleanup.sh /
+
+FROM scratch AS ctx-version
+COPY build_files/version.sh /
+
 FROM scratch AS ctx
-COPY build_files /
+COPY build_files/build.sh build_files/cleanup.sh /
 COPY system_files /system_files
 COPY branding/cursors /cursors
 COPY branding/icon-theme /icon-theme
@@ -63,17 +75,37 @@ COPY branding/icon-theme /icon-theme
 FROM ${BASE_IMAGE}
 
 ARG BASE_IMAGE
-ARG IMAGE_VERSION=dev
-LABEL org.atlasos.base-image="${BASE_IMAGE}"
 
 # /var/cache/libdnf5 is bound in from the host by `just build` and CI, which
 # keep it between builds. Without that bind, dnf just downloads as usual.
-RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
-    --mount=type=bind,from=branding,source=/out,target=/branding \
-    --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
+# PACKAGES_DATE (today, from `just build`) reruns the packages step once a
+# day even when nothing else changed, so updates from Fedora and the
+# third-party repos (Brave above all) never wait for a new base image.
+ARG PACKAGES_DATE=
+RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     --mount=type=bind,from=kio,source=/out,target=/kio-rpms \
     --mount=type=bind,from=plasma-setup,source=/out,target=/plasma-setup-rpms \
     --mount=type=tmpfs,dst=/tmp \
-    IMAGE_VERSION="${IMAGE_VERSION}" /ctx/build.sh
+    PACKAGES_DATE="${PACKAGES_DATE}" /ctx/packages.sh
+
+RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
+    --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/apps.sh
+
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=bind,from=branding,source=/out,target=/branding \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/build.sh
+
+# The version changes every day: declared only here, so it reruns only this.
+ARG IMAGE_VERSION=dev
+RUN --mount=type=bind,from=ctx-version,source=/,target=/ctx \
+    IMAGE_VERSION="${IMAGE_VERSION}" /ctx/version.sh
 
 RUN bootc container lint
+
+# Last, so only the finished image has it: the VPS runner's cleanup removes
+# the images with this label after every job (ci/vps-runner/cleanup.sh), and
+# the build steps above, which would otherwise inherit it, are its cache.
+LABEL org.atlasos.base-image="${BASE_IMAGE}"
