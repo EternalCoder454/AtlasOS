@@ -22,7 +22,7 @@ set -uo pipefail
 storage=/home/podman/.local/share/containers
 build_cache_gb=${ATLAS_RUNNER_BUILD_CACHE_GB:-8}
 dnf_cache_gb=${ATLAS_RUNNER_DNF_CACHE_GB:-3}
-min_free_gb=${ATLAS_RUNNER_MIN_FREE_GB:-26}
+min_free_gb=${ATLAS_RUNNER_MIN_FREE_GB:-16}
 
 log() { echo "cleanup: $*"; }
 free_gb() { df -P --block-size=1G "$storage" | awk 'NR == 2 { print $4 }'; }

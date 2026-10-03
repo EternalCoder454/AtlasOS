@@ -384,6 +384,7 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `build_files/build.sh` | Services, settings, branding, initramfs |
 | `build_files/version.sh` | The image's version in os-release (last: it changes daily) |
 | `build_files/kio/` | The KIO crash fix: rebuilds Fedora's `kf6-kio` with one patch |
+| `build_files/drop-build-deps.sh` | Runs a builder stage's build, then removes its build dependencies |
 | `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `atlasos-nvidia` image |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |
 | `system_files/` | Files copied as-is into the image (`/etc`, `/usr`), including the two Global Themes, their colour schemes, the menu bar and dock layout, the two launchers and the wizard's launcher page |
@@ -467,10 +468,12 @@ times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It check
   `44.YYYYMMDD`; then the release job (the only one with `contents: write`)
   creates the tag and the release. Nothing happens if `stable` already has
   that digest, and an existing release is left as it is.
-- The `nvidia` job builds `atlasos-nvidia` from the image just pushed (by
-  digest), rechunks, pushes it with the same tags and signs it. It needs the
-  `NVIDIA_SIGNING_KEY` secret (the contents of `secrets/nvidia-signing.key`);
-  without it the job only leaves a notice. Pull requests skip it.
+- After pushing, the build job builds `atlasos-nvidia` on the image it just
+  built (the local copy, which has the same files and labels as the pushed
+  one and shares its cached layers), rechunks, pushes it with the same tags
+  and signs it. It needs the `NVIDIA_SIGNING_KEY` secret (the contents of
+  `secrets/nvidia-signing.key`); without it the job only leaves a notice.
+  Pull requests skip it.
   `promote-stable.yml` promotes `atlasos-nvidia:testing` the same way.
 - dnf's downloads are cached between runs, keyed by ISO week (on the VPS,
   kept on its disk with Podman's layer cache and the Rust build cache).

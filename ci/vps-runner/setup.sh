@@ -293,7 +293,7 @@ write_runner_env() {
 # Settings for the AtlasOS runner container, read at every start
 # (sudo ci/vps-runner/setup.sh restart). setup.sh doesn't overwrite this file.
 # Cleanup limits (cleanup.sh), in GB:
-#ATLAS_RUNNER_MIN_FREE_GB=26
+#ATLAS_RUNNER_MIN_FREE_GB=16
 #ATLAS_RUNNER_BUILD_CACHE_GB=8
 #ATLAS_RUNNER_DNF_CACHE_GB=3
 ENV

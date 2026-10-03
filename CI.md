@@ -15,8 +15,8 @@ sends the build to one of two places:
 | Push to `beta`, manual run on another branch | GitHub-hosted |
 
 "VPS" is the self-hosted runner labelled `atlasos-vps` on `eterneon-vps`;
-[ci/vps-runner](ci/vps-runner/README.md) sets it up. The build and NVIDIA jobs
-name the runner they got: "Build and push (vps)" or "Build and push (hosted)".
+[ci/vps-runner](ci/vps-runner/README.md) sets it up. The build job names
+the runner it got: "Build and push (vps)" or "Build and push (hosted)".
 
 `promote-stable.yml` (the weekly stable release) stays on GitHub's runners. It
 builds nothing: skopeo copies the newest `testing` image to `stable` by
@@ -82,12 +82,12 @@ only redo what they changed.
 The Rust cache needs `packaging/build-rpm.sh` with `ATLAS_BUILD_CACHE`
 support in atlasos-updater; with an older one the build still works, uncached.
 
-The runner has a 50 GB disk; the caches take about 20 GB of it and a build
-about 20 GB more at its peak. After every job (and before the next) its
+The runner has a 50 GB disk; a build from empty caches peaks at about 30 GB
+over the runner's own 12, and a build that reuses them needs much less. After every job (and before the next) its
 cleanup removes the images the build made, which are in the registry by
 then, and base images a newer pull replaced, with the build steps cached on
 them. It clears the Rust cache past 8 GB and dnf's past 3 GB, and when less
-than 26 GB is free (what a build needs) it gives up more, cheapest first:
+than 16 GB is free (what a build needs) it gives up more, cheapest first:
 the Rust cache, dnf's downloads, every image.
 [ci/vps-runner](ci/vps-runner/README.md#disk) has the details.
 

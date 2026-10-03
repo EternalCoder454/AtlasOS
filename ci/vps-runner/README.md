@@ -137,15 +137,19 @@ and then (`RUNNER_VERSION` and `RUNNER_SHA256` in the Containerfile).
 
 ## Disk
 
-Measured in the runner container (a local test of two full builds): what
-stays between builds is about 20 GB: 14 GB of images and cached build steps
-(Kinoite, Fedora and every Containerfile stage), 5 GB of Rust and CMake build
-cache, 1.3 GB of dnf downloads. A build adds the most while rechunking: the
-new image, the rechunker's work (an OSTree repository the size of the image),
-and its result, a 3 GB OCI directory in the job's temporary directory, which
-the runner empties after the job. The NVIDIA job is about the same. On a day
-Fedora publishes a new Kinoite, add 7 GB until the old one is removed after
-the job. The 50 GB disk holds 49 GB.
+Measured on the VPS (2026-10-03): a build from empty caches took the disk
+from 12 GB used (the runner image and its checkouts) to 42 GB at its peak,
+while rechunking. What stays is Kinoite, Fedora, every cached build step,
+the Rust and CMake build cache (5 GB) and dnf's downloads (1 GB); the
+builder stages remove their build dependencies before their layer is saved
+([drop-build-deps.sh](../../build_files/drop-build-deps.sh)), which keeps
+about 6 GB out of it. Rechunking needs a few GB: the chunker's work and its
+result, a 3 GB OCI directory in the job's temporary directory, which the
+runner empties after the job. atlasos-nvidia is built in the same job, on the
+layers already there. (As a job of its own it downloaded the rechunked image,
+9 GB that shares no layers with the cache, and the cache never survived.) On
+a day Fedora publishes a new Kinoite, add 7 GB until the old one is removed
+after the job. The 50 GB disk holds 49 GB.
 
 [cleanup.sh](cleanup.sh) (`atlas-runner-cleanup` in the image) runs after
 every job, and before the next in case one was cut short. It removes:
@@ -157,9 +161,9 @@ every job, and before the next in case one was cut short. It removes:
 - Podman's build cache mounts (the Rust build cache) past 8 GB, and dnf's
   downloads past 3 GB (packages unused for 30 days go sooner).
 
-Then, while less than 26 GB is free (what a build needs), it clears more,
+Then, while less than 16 GB is free (what a build needs), it clears more,
 cheapest to rebuild first: the build cache mounts, then dnf's downloads, then
-every image. A job doesn't start with less than 26 GB free even after that.
+every image. A job doesn't start with less than 16 GB free even after that.
 
 The limits are in `/etc/atlas-runner/runner.env` (`ATLAS_RUNNER_MIN_FREE_GB`,
 `ATLAS_RUNNER_BUILD_CACHE_GB`, `ATLAS_RUNNER_DNF_CACHE_GB`); `setup.sh`

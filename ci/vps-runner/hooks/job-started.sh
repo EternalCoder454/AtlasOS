@@ -35,7 +35,7 @@ set +f
 
 # Clear what an interrupted job left behind and make room for the build
 # (atlas-runner-cleanup gives up caches until ATLAS_RUNNER_MIN_FREE_GB is free).
-min=${ATLAS_RUNNER_MIN_FREE_GB:-26}
+min=${ATLAS_RUNNER_MIN_FREE_GB:-16}
 free_gb() { df -P --block-size=1G /home/podman/.local/share/containers | awk 'NR == 2 { print $4 }'; }
 atlas-runner-cleanup after-job || true
 if [ "$(free_gb)" -lt "$min" ]; then
