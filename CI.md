@@ -20,7 +20,11 @@ the runner it got: "Build and push (vps)" or "Build and push (hosted)".
 
 `promote-stable.yml` (the weekly stable release) stays on GitHub's runners. It
 builds nothing: skopeo copies the newest `testing` image to `stable` by
-digest, so it has nothing to cache.
+digest, so it has nothing to cache. Then it calls `iso.yml` for each image
+it promoted, which builds the live installer ISO on GitHub's runners (the VPS
+runner's firewall keeps it off the VPS itself) and uploads it to
+https://atlasos.eterneon.net/; [ci/iso-hosting](ci/iso-hosting/README.md)
+covers that side.
 
 ### Fallback
 

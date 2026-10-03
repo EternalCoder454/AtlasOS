@@ -420,13 +420,25 @@ the build context `atlas-monitor`: `../AtlasOS Monitor` or
 | `just build` | Build `localhost/atlasos:latest` with rootless Podman |
 | `just build-nvidia` | Build `localhost/atlasos-nvidia:latest` on top of it (needs the module signing key) |
 | `just qcow2` | VM disk `build/atlasos.qcow2` (bootc-image-builder; **sudo**) |
-| `just iso` | Installer `build/atlasos.iso` (bootc-image-builder; **sudo**) |
+| `just iso` | Live installer ISO `build/atlasos.iso` of the published `:stable`, made with AtlasOS Installer (see below) |
+| `just iso-local` | The same from the local `just build` |
+| `just iso-anaconda` | The old Anaconda installer ISO `build/atlasos.iso` (bootc-image-builder; **sudo**) |
 | `just vm` | Boot the qcow2 in libvirt: UEFI, serial console |
 | `just vm-stop` | Stop it |
 | `just vm-update` | Without sudo: the qcow2 updated to the latest `just build`, as `build/vm/updated/atlasos-latest.qcow2` |
 | `just mem [disk]` | Stock Kinoite vs AtlasOS memory and services, 8 GB VMs |
 | `just check` | Lint the Justfile and scripts |
 | `just sbom [tag] [dir]` | SBOM and vulnerability report of the built image into `build/sbom` (syft, grype) |
+
+`just iso` runs `iso/make-iso.sh` from the AtlasOS Installer repository,
+`../AtlasOS Installer` or `$ATLAS_INSTALLER_SRC`, without root. It builds
+the installer in that repository's dev container and boots into it
+full-screen. Give it a tag and a name to change the image, such as
+`just iso latest atlasos-nvidia`. The image goes on the ISO, and is
+installed, as `ghcr.io/eternalcoder454/<name>:stable`, which the installed
+system then follows. A published image is embedded with ghcr.io's own
+layers, so the first update downloads only what changed; a `just iso-local`
+image matches nothing there, so its first update downloads all of it.
 
 Everything generated goes in `build/`, which is gitignored: images, VM disks,
 the dnf cache, reports.

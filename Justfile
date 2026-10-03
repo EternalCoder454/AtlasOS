@@ -172,9 +172,25 @@ sbom tag="latest" out="build/sbom" name=image_name:
 qcow2 tag="latest":
     scripts/bib.sh qcow2 "{{ image }}:{{ tag }}"
 
-# Make an installer ISO (build/atlasos.iso) with bootc-image-builder. Needs sudo.
+# The live installer ISO, made with AtlasOS Installer (../AtlasOS Installer,
+# or the folder in ATLAS_INSTALLER_SRC). No root.
+# Live installer ISO build/<name>.iso of ghcr.io/eternalcoder454/<name>:<tag>
 [group('Disk images')]
-iso tag="latest":
+iso tag="stable" name=image_name:
+    "${ATLAS_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" -o "build/{{ name }}.iso" {{ name }} {{ tag }}
+
+# The same, to try a build before it's published. Its first update downloads
+# the whole image, since its layers match nothing on ghcr.io.
+# Live installer ISO build/<name>.iso of the local build localhost/<name>:<tag>
+[group('Disk images')]
+iso-local tag="latest" name=image_name:
+    "${ATLAS_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" --local -o "build/{{ name }}.iso" {{ name }} {{ tag }}
+
+# Kept until the live installer passes its test matrix.
+# Anaconda installer ISO build/atlasos.iso (bootc-image-builder). Needs sudo.
+[group('Disk images')]
+iso-anaconda tag="latest":
+    rm -f build/atlasos.iso.image
     scripts/bib.sh iso "{{ image }}:{{ tag }}"
 
 # Boot build/atlasos.qcow2 in libvirt (UEFI, serial console). The disk itself

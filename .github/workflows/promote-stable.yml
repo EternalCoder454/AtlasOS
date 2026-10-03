@@ -4,7 +4,7 @@ name: Promote stable
 # that was in testing first. Nothing is rebuilt: skopeo copies the testing
 # image by digest to :stable, :latest (what existing installs track), :44 and
 # :44.YYYYMMDD. Then a git tag and a GitHub release with the changes since the
-# previous stable.
+# previous stable, and the live installer ISOs (iso.yml).
 on:
   schedule:
     - cron: "30 14 * * 6"
@@ -206,6 +206,24 @@ jobs:
             got=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:${t}")
             [ "$got" = "$digest" ] || { echo "::error::${t} is ${got}"; exit 1; }
           done
+
+  # The live installer ISOs of what just became stable (iso.yml), uploaded
+  # to atlasos.eterneon.net. Each skips itself when its version is already up.
+  iso:
+    name: ISO
+    needs: promote
+    uses: ./.github/workflows/iso.yml
+    with:
+      image: atlasos
+    secrets: inherit
+
+  iso-nvidia:
+    name: ISO (NVIDIA)
+    needs: promote-nvidia
+    uses: ./.github/workflows/iso.yml
+    with:
+      image: atlasos-nvidia
+    secrets: inherit
 
   release:
     name: Tag and release

@@ -1,0 +1,196 @@
+name: Live ISO
+
+# The live installer ISO of a published stable image, made with AtlasOS
+# Installer's iso/make-iso.sh, and uploaded to https://atlasos.eterneon.net/
+# (the VPS, ci/iso-hosting). promote-stable.yml calls it for each image whose
+# stable tags it moved; run it by hand to rebuild one.
+#
+# On the VPS each image keeps one version: <image>-44.YYYYMMDD.iso, its
+# .sha256, and <image>.json, which names the current version for the site's
+# download buttons. The new ISO and checksum take their place together once
+# both are up, then <image>.json moves to them, then the old version goes
+# (see "Upload"). The ISOs are only served through the site's signed links;
+# the .json and .sha256 files are public, under /dl/.
+on:
+  workflow_call:
+    inputs:
+      image:
+        type: string
+        required: true
+      force:
+        type: boolean
+        default: false
+      upload:
+        type: boolean
+        default: true
+      installer_ref:
+        type: string
+        default: main
+  workflow_dispatch:
+    inputs:
+      image:
+        type: choice
+        options: [atlasos, atlasos-nvidia]
+        default: atlasos
+      force:
+        description: Build even if this version's ISO is already up
+        type: boolean
+        default: false
+      upload:
+        description: Upload it (off, it's kept as a workflow artifact for 3 days)
+        type: boolean
+        default: true
+      installer_ref:
+        description: AtlasOS Installer branch, tag or commit to build with
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iso-${{ inputs.image }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_REGISTRY: ghcr.io/eternalcoder454
+  DOWNLOAD_HOST: atlasos.eterneon.net
+  UPLOAD_USER: atlas-iso
+
+jobs:
+  iso:
+    name: ISO (${{ inputs.image }})
+    runs-on: ubuntu-26.04
+    timeout-minutes: 180
+    steps:
+      # The version the stable tag points to now. The build uses that
+      # version's own tag, which never moves, so the ISO holds exactly this.
+      - name: Pick the version
+        id: pick
+        env:
+          IMAGE: ${{ inputs.image }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          [[ "$IMAGE" =~ ^atlasos(-nvidia)?$ ]] || { echo "::error::Unknown image '$IMAGE'"; exit 1; }
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          version=$(skopeo inspect "docker://${IMAGE_REGISTRY}/${IMAGE}:stable" |
+            jq -r '.Labels["org.opencontainers.image.version"] // ""')
+          [[ "$version" =~ ^44\.[0-9]{8}$ ]] || { echo "::error::${IMAGE}:stable has no usable version label: '$version'"; exit 1; }
+          iso="${IMAGE}-${version}.iso"
+          skip=false
+          current=$(curl -fsS "https://${DOWNLOAD_HOST}/dl/${IMAGE}.json" 2>/dev/null | jq -r '.version // ""' || true)
+          if [ "$FORCE" != true ] && [ "$current" = "$version" ]; then
+            skip=true
+            echo "::notice::${iso} is already up; nothing to build."
+          fi
+          {
+            echo "version=$version"
+            echo "iso=$iso"
+            echo "skip=$skip"
+          } >>"$GITHUB_OUTPUT"
+
+      # About 35 GB at the peak: the image, its blobs, the live image, the
+      # installer's build container, the squashfs and the ISO.
+      - name: Maximize build space
+        if: steps.pick.outputs.skip != 'true'
+        uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
+
+      - name: Checkout AtlasOS Installer
+        if: steps.pick.outputs.skip != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-installer
+          ref: ${{ inputs.installer_ref }}
+          path: installer
+          persist-credentials: false
+
+      - name: Build
+        if: steps.pick.outputs.skip != 'true'
+        env:
+          IMAGE: ${{ inputs.image }}
+          VERSION: ${{ steps.pick.outputs.version }}
+          ISO: ${{ steps.pick.outputs.iso }}
+        run: |
+          set -euo pipefail
+          command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          podman --version
+          df -h / "$RUNNER_TEMP"
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          installer/iso/make-iso.sh -o "$RUNNER_TEMP/$ISO" "$IMAGE" "$VERSION"
+          mv "$RUNNER_TEMP/$ISO" "$out/"
+          cd "$out"
+          sha256sum "$ISO" >"$ISO.sha256"
+          jq -n --arg image "$IMAGE" --arg version "$VERSION" --arg file "$ISO" \
+            --argjson size "$(stat -c %s "$ISO")" --arg sha256 "$(cut -d' ' -f1 "$ISO.sha256")" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{image: $image, version: $version, file: $file, size: $size, sha256: $sha256, date: $date}' \
+            >"$IMAGE.json"
+          cat "$IMAGE.json"
+          ls -la
+          df -h /
+
+      - name: Keep it as an artifact
+        if: steps.pick.outputs.skip != 'true' && !inputs.upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.pick.outputs.iso }}
+          path: ${{ runner.temp }}/out/
+          compression-level: 0
+          retention-days: 3
+
+      # ISO_UPLOAD_KEY is an SSH key the VPS lets do one thing: rsync into its
+      # ISO folder (rrsync). ISO_UPLOAD_KNOWN_HOSTS is the VPS's host key line.
+      - name: Upload
+        if: steps.pick.outputs.skip != 'true' && inputs.upload
+        env:
+          IMAGE: ${{ inputs.image }}
+          ISO: ${{ steps.pick.outputs.iso }}
+          ISO_UPLOAD_KEY: ${{ secrets.ISO_UPLOAD_KEY }}
+          ISO_UPLOAD_KNOWN_HOSTS: ${{ secrets.ISO_UPLOAD_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [ -n "$ISO_UPLOAD_KEY" ] && [ -n "$ISO_UPLOAD_KNOWN_HOSTS" ] ||
+            { echo "::error::ISO_UPLOAD_KEY or ISO_UPLOAD_KNOWN_HOSTS is not set."; exit 1; }
+          ssh_dir="$RUNNER_TEMP/ssh"
+          trap 'rm -rf "$ssh_dir"' EXIT
+          install -d -m 700 "$ssh_dir"
+          printf '%s\n' "$ISO_UPLOAD_KEY" >"$ssh_dir/key"
+          printf '%s\n' "$ISO_UPLOAD_KNOWN_HOSTS" >"$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key"
+          up() {
+            rsync -rlt --chmod=D755,F644 "$@" \
+              -e "ssh -i $ssh_dir/key -o UserKnownHostsFile=$ssh_dir/known_hosts -o IdentitiesOnly=yes -o BatchMode=yes" \
+              "$RUNNER_TEMP/out/" "${UPLOAD_USER}@${DOWNLOAD_HOST}:"
+          }
+          # Only this image's files are in scope; every other file on the VPS
+          # is left alone. In three steps, so the old version stays
+          # downloadable until the new one is all there:
+          # 1. The new ISO and checksum, which go into place together once
+          #    both are up (--delay-updates; only regular files wait).
+          up --partial-dir=.partial --delay-updates --include="/${IMAGE}-44.*" --exclude='*'
+          # 2. <image>.json, now that the version it names is there.
+          up --include="/${IMAGE}.json" --exclude='*'
+          # 3. The older versions, which aren't in the source. Nothing is
+          #    sent: the new files are already up.
+          up --delete --include="/${IMAGE}-44.*" --exclude='*'
+
+      - name: Check the download
+        if: steps.pick.outputs.skip != 'true' && inputs.upload
+        env:
+          IMAGE: ${{ inputs.image }}
+          ISO: ${{ steps.pick.outputs.iso }}
+        run: |
+          set -euo pipefail
+          size=$(stat -c %s "$RUNNER_TEMP/out/$ISO")
+          # What the site's download buttons now offer, and the checksum.
+          curl -fsS "https://${DOWNLOAD_HOST}/dl/${IMAGE}.json" | jq -S . >"$RUNNER_TEMP/served.json"
+          jq -S . "$RUNNER_TEMP/out/$IMAGE.json" | diff - "$RUNNER_TEMP/served.json"
+          curl -fsS "https://${DOWNLOAD_HOST}/dl/${ISO}.sha256" | diff - "$RUNNER_TEMP/out/$ISO.sha256"
+          {
+            echo "### ${ISO}"
+            echo
+            echo "- ${ISO} ($(numfmt --to=iec "$size")), on https://${DOWNLOAD_HOST}/"
+            echo "- SHA-256 \`$(cut -d' ' -f1 "$RUNNER_TEMP/out/$ISO.sha256")\`"
+          } >>"$GITHUB_STEP_SUMMARY"

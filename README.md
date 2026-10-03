@@ -140,7 +140,9 @@ you're on AtlasOS. Your files in `/home` stay as they are.
 A few honest notes:
 
 - There's no installer ISO to download yet. You can build one yourself with
-  `just iso` (see [DEV.md](DEV.md)).
+  `just iso`, which needs the
+  [AtlasOS Installer](https://github.com/EternalCoder454/atlasos-installer)
+  source beside this repository (see [DEV.md](DEV.md)).
 - The images are signed, and AtlasOS only installs updates that carry the
   signature. A computer that installed AtlasOS before that starts checking
   by itself with its first signed version.

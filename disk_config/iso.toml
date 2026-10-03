@@ -1,4 +1,4 @@
-# bootc-image-builder config for `just iso`, the Anaconda installer.
+# bootc-image-builder config for `just iso-anaconda`, the Anaconda installer.
 # After installing from the embedded payload, the system is pointed at the
 # published image so `bootc upgrade` follows ghcr.io from then on.
 
