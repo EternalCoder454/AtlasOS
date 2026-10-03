@@ -117,7 +117,9 @@ for t in bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer; do
 	}
 done
 [ "$(systemctl is-enabled atlasos-update-stage.timer)" = enabled ]
-grep -qx 'ExecStart=/usr/bin/bootc upgrade --quiet' /usr/lib/systemd/system/atlasos-update-stage.service
+grep -qx 'ExecStart=/usr/libexec/atlasos/update-stage' /usr/lib/systemd/system/atlasos-update-stage.service
+# rpm-ostree upgrades (and the stager checks) a system with local rpm-ostree changes
+rpm -q rpm-ostree skopeo >/dev/null
 
 # Icons and logos rendered from branding/ (see branding/render.sh)
 cp -a /branding/icons/. /usr/share/icons/

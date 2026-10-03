@@ -27,7 +27,9 @@ label is the AtlasOS commit the image was built from, and
 ## Updates
 
 - **Staging:** `atlasos-update-stage.timer` runs `bootc upgrade --quiet`
-  (`atlasos-update-stage.service`) about an hour after boot and every 6 hours
+  (`atlasos-update-stage.service`; `rpm-ostree upgrade` on a system with
+  packages added by `rpm-ostree install`, which bootc refuses to upgrade, so
+  they are kept) about an hour after boot and every 6 hours
   after that, with a random delay of up to 30 minutes. It downloads and stages
   the new image and never reboots; a staged update is used at the next
   shutdown or reboot. It runs at idle CPU and disk priority, only on an

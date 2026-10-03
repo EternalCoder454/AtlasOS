@@ -23,33 +23,64 @@ case $metered in
 	;;
 esac
 
-# `upgrade --check` fetches only the manifest and records it as a cachedUpdate,
-# with the digest bootc itself would deploy (for a multi-arch image, this
-# machine's entry), the same digest bootc status shows for a deployment and
-# the red.d script records. ostree-ext keeps it on the commit the image's ref
-# (ostree/container/image/...) points to: the image pulled last. After a
-# rollback that is the rollback entry, and the booted entry keeps a stale
-# cachedUpdate from an older check (bootc 1.16). So the newest image is the
-# cachedUpdate of the entry holding the ref's commit, or, with none (nothing
-# newer on the registry), that entry's own image. If no entry holds it, the
-# booted entry's cachedUpdate as before.
-timeout 300 bootc upgrade --check >/dev/null 2>&1 || exit 0
 status=$(timeout 30 bootc status --json 2>/dev/null) || exit 0
-heads=$(find /ostree/repo/refs/heads/ostree/container/image -type f -exec cat {} + 2>/dev/null |
-	jq -Rn '[inputs | select(length > 0)]' 2>/dev/null) || heads='[]'
-latest=$(printf '%s' "$status" | jq -r --argjson heads "${heads:-[]}" '
-	def same($a; $b): $a.image == $b.image and ($a.transport // "registry") == ($b.transport // "registry");
-	.spec.image as $spec
-	| [.status.staged, .status.booted, .status.rollback
-	   | select(. != null and .image != null)
-	   | select(.ostree.checksum as $c | any($heads[]; . == $c))
-	   | select($spec == null or same(.image.image; $spec))]
-	| if length > 0 then (.[0].cachedUpdate // .[0].image).imageDigest
-	  else null end
-	// empty' 2>/dev/null) || latest=
-[ -n "$latest" ] || latest=$(printf '%s' "$status" | jq -r '.status.booted.cachedUpdate.imageDigest // empty' 2>/dev/null)
+if printf '%s' "$status" |
+	jq -e '[.status.booted, .status.staged] | any(.incompatible? == true)' >/dev/null 2>&1; then
+	# Local rpm-ostree changes (see update-stage): bootc can't check, and shows
+	# no images. The newest image is the registry's for the image rpm-ostree
+	# follows (its first deployment's origin, as skopeo names it: the staged
+	# one, else the one a queued rollback goes to, else the booted one); the
+	# rollback is the deployment that is neither booted nor staged.
+	rpm=$(timeout 30 rpm-ostree status --json 2>/dev/null) || exit 0
+	origin=$(printf '%s' "$rpm" | jq -r '.deployments[0]["container-image-reference"] // empty' 2>/dev/null)
+	case $origin in
+	ostree-unverified-registry:*) ref=docker://${origin#*:} ;;
+	ostree-unverified-image:* | ostree-image-signed:*) ref=${origin#*:} ;;
+	ostree-remote-registry:*)
+		ref=${origin#*:}
+		ref=docker://${ref#*:}
+		;;
+	ostree-remote-image:*)
+		ref=${origin#*:}
+		ref=${ref#*:}
+		;;
+	*) exit 0 ;;
+	esac
+	case $ref in
+	docker://* | oci:* | oci-archive:* | containers-storage:* | docker-daemon:*) ;;
+	*) exit 0 ;;
+	esac
+	latest=$(timeout 300 skopeo inspect --format '{{.Digest}}' -- "$ref" 2>/dev/null) || exit 0
+	rollback=$(printf '%s' "$rpm" | jq -r '[.deployments[] | select((.booted | not) and (.staged | not))][0]["container-image-reference-digest"] // empty' 2>/dev/null)
+else
+	# `upgrade --check` fetches only the manifest and records it as a cachedUpdate,
+	# with the digest bootc itself would deploy (for a multi-arch image, this
+	# machine's entry), the same digest bootc status shows for a deployment and
+	# the red.d script records. ostree-ext keeps it on the commit the image's ref
+	# (ostree/container/image/...) points to: the image pulled last. After a
+	# rollback that is the rollback entry, and the booted entry keeps a stale
+	# cachedUpdate from an older check (bootc 1.16). So the newest image is the
+	# cachedUpdate of the entry holding the ref's commit, or, with none (nothing
+	# newer on the registry), that entry's own image. If no entry holds it, the
+	# booted entry's cachedUpdate as before.
+	timeout 300 bootc upgrade --check >/dev/null 2>&1 || exit 0
+	status=$(timeout 30 bootc status --json 2>/dev/null) || exit 0
+	heads=$(find /ostree/repo/refs/heads/ostree/container/image -type f -exec cat {} + 2>/dev/null |
+		jq -Rn '[inputs | select(length > 0)]' 2>/dev/null) || heads='[]'
+	latest=$(printf '%s' "$status" | jq -r --argjson heads "${heads:-[]}" '
+		def same($a; $b): $a.image == $b.image and ($a.transport // "registry") == ($b.transport // "registry");
+		.spec.image as $spec
+		| [.status.staged, .status.booted, .status.rollback
+		   | select(. != null and .image != null)
+		   | select(.ostree.checksum as $c | any($heads[]; . == $c))
+		   | select($spec == null or same(.image.image; $spec))]
+		| if length > 0 then (.[0].cachedUpdate // .[0].image).imageDigest
+		  else null end
+		// empty' 2>/dev/null) || latest=
+	[ -n "$latest" ] || latest=$(printf '%s' "$status" | jq -r '.status.booted.cachedUpdate.imageDigest // empty' 2>/dev/null)
+	rollback=$(printf '%s' "$status" | jq -r '.status.rollback.image.imageDigest // empty' 2>/dev/null)
+fi
 [ -n "$latest" ] || exit 0
-rollback=$(printf '%s' "$status" | jq -r '.status.rollback.image.imageDigest // empty' 2>/dev/null)
 if [ "$latest" = "$rollback" ]; then
 	echo "$latest is the version this machine went back from; waiting for a newer image"
 	exit 1
