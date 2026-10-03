@@ -80,6 +80,10 @@ rechunk tag="latest" name=image_name oci="":
     labels=()
     while IFS= read -r l; do labels+=(--label "$l"); done <<<"$list"
     if [ -n "$oci" ]; then
+        # It is emptied, and goes into a --mount option.
+        case "$oci" in
+        / | *,*) echo "rechunk: no OCI directory at '$oci'" >&2; exit 1 ;;
+        esac
         # An empty layout: the chunker looks for a previous image there first.
         rm -rf "$oci"
         mkdir -p "$oci/blobs/sha256"

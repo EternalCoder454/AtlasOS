@@ -194,7 +194,8 @@ jobs:
         run: just lint
 
       # The runner's disk is too small for a 7 GB image, its rechunked copy
-      # (3 GB, compressed) and Podman's working space without clearing the preinstalled SDKs.
+      # (3 GB, compressed) and Podman's working space without clearing the
+      # preinstalled SDKs.
       # (Not on the VPS, whose disk keeps the caches.)
       - name: Maximize build space
         if: steps.decide.outputs.skip != 'true' && needs.runner.outputs.kind == 'hosted'
@@ -236,7 +237,7 @@ jobs:
       # empties after the job; Push uploads it from there as it is.
       - name: Rechunk
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
-        run: just rechunk "${{ steps.decide.outputs.tag }}" "${IMAGE_NAME}" "$RUNNER_TEMP/rechunked"
+        run: just rechunk "${{ steps.decide.outputs.tag }}" "${IMAGE_NAME}" "${RUNNER_TEMP:?}/rechunked"
 
       - name: Log in to ghcr.io
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
@@ -379,7 +380,7 @@ jobs:
 
       - name: Rechunk
         if: steps.key.outputs.enabled == 'true'
-        run: just rechunk "${{ needs.build.outputs.tag }}" "${NVIDIA_IMAGE}" "$RUNNER_TEMP/rechunked"
+        run: just rechunk "${{ needs.build.outputs.tag }}" "${NVIDIA_IMAGE}" "${RUNNER_TEMP:?}/rechunked"
 
       - name: Push
         id: push
