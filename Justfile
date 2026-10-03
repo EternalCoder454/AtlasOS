@@ -20,7 +20,8 @@ build tag="latest" *args:
     # checkout, which actions/checkout cleans.
     dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
     mkdir -p "$dnf_cache"
-    # CI passes IMAGE_VERSION so the image and its pushed tag carry the same date.
+    # CI passes IMAGE_VERSION (44.YYYYMMDD-N) so the image and its pushed tag
+    # carry the same version; a local build is the plain 44.YYYYMMDD.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
     # The Atlas apps' source (Atlas Updater and atlas-core): a named build
     # context, so the Containerfile can build their RPMs. CI points it at a

@@ -55,7 +55,7 @@ jobs:
           digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
-          [[ "$version" =~ ^44\.[0-9]{8}$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
+          [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
           [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::testing has no usable revision label: '$revision'"; exit 1; }
 
           # Already stable (a week with no new testing build): nothing to copy.
@@ -175,7 +175,7 @@ jobs:
           fi
           digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
-          [[ "$version" =~ ^44\.[0-9]{8}$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
+          [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
           # Only the NVIDIA build of the atlasos image just promoted: an older
           # one (its build failed since) would ship a stable without the
           # release's changes.
@@ -247,15 +247,42 @@ jobs:
           BASE: ${{ needs.promote.outputs.base }}
         run: |
           set -euo pipefail
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "::notice::Release ${VERSION} already exists."
+          # A testing build's release is a pre-release under the same version
+          # (its notes are written by hand): promoting it keeps the notes,
+          # moves the tag to the commit the stable image came from and makes
+          # it the latest release.
+          # Only "not found" means there is no release; any other error stops
+          # here rather than creating a second one.
+          if prerelease=$(gh release view "$VERSION" --json isPrerelease -q .isPrerelease 2>"$RUNNER_TEMP/view.err"); then
+            if [ "$prerelease" = "true" ]; then
+              # Move the tag, or make it if the pre-release has none.
+              gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/${VERSION}" \
+                -f sha="$REVISION" -F force=true >/dev/null ||
+                gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+                  -f ref="refs/tags/${VERSION}" -f sha="$REVISION" >/dev/null
+              gh release edit "$VERSION" --prerelease=false --latest
+              echo "::notice::Promoted pre-release ${VERSION} to stable."
+            else
+              echo "::notice::Release ${VERSION} already exists."
+            fi
             exit 0
+          elif ! grep -qi 'not found' "$RUNNER_TEMP/view.err"; then
+            cat "$RUNNER_TEMP/view.err" >&2
+            exit 1
           fi
           git cat-file -e "${REVISION}^{commit}"
 
-          # The newest earlier stable tag (44.YYYYMMDD sorts by date), if any.
-          prev=$(git tag --list '44.*' | grep -E '^44\.[0-9]{8}$' | sort |
-            awk -v v="$VERSION" '$0 < v' | tail -n 1 || true)
+          # The newest earlier stable release, if any. Testing builds' releases
+          # are pre-releases with tags of the same form, so the list comes
+          # from the releases, not the tags. 44.YYYYMMDD-N (or the older plain
+          # 44.YYYYMMDD) in version order, so -10 comes after -2.
+          # (Listed first, so a failed request stops the job instead of
+          # publishing "first release" notes.)
+          stable=$(gh release list --exclude-pre-releases --exclude-drafts --limit 1000 \
+            --json tagName -q '.[].tagName')
+          prev=$({ grep -E '^44\.[0-9]{8}(-[0-9]+)?$' <<<"$stable" |
+              grep -vxF "$VERSION"; echo "$VERSION"; } | sort -V |
+            grep -B1 -xF "$VERSION" | grep -vxF "$VERSION" || true)
           # A previous tag that is not behind this build (history was rewritten)
           # is no use as a range start.
           if [ -n "$prev" ] && ! git merge-base --is-ancestor "$prev" "$REVISION"; then

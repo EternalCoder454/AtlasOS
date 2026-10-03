@@ -11,15 +11,15 @@ image. Images: `ghcr.io/eternalcoder454/atlasos`
 
 | Tag | Channel | Built from |
 |---|---|---|
-| `testing`, `testing-44.YYYYMMDD` | Testing: built daily and on every push | `main` |
-| `stable`, `latest`, `44`, `44.YYYYMMDD` | Stable: weekly | the newest testing image, copied by digest (never rebuilt) |
-| `beta`, `beta-44.YYYYMMDD` | Beta | `beta` |
+| `testing`, `testing-44.YYYYMMDD-N` | Testing: built daily and on every push | `main` |
+| `stable`, `latest`, `44`, `44.YYYYMMDD-N` | Stable: weekly | the newest testing image, copied by digest (never rebuilt) |
+| `beta`, `beta-44.YYYYMMDD-N` | Beta | `beta` |
 
 `ghcr.io/eternalcoder454/atlasos-nvidia` has the same tags: each AtlasOS
 image plus NVIDIA's driver (see NVIDIA below).
 
-`latest` is `stable`. The version `44.YYYYMMDD` (the build's UTC date) is the
-same in the image's `org.opencontainers.image.version` label, in
+`latest` is `stable`. The version `44.YYYYMMDD-N` (the build's UTC date, and
+N its number that day across all channels, from 1) is the same in the image's `org.opencontainers.image.version` label, in
 `/etc/os-release` and in the tags. The `org.opencontainers.image.revision`
 label is the AtlasOS commit the image was built from, and
 `net.eterneon.atlas.updater.revision` the Atlas Updater commit.
@@ -40,11 +40,13 @@ label is the AtlasOS commit the image was built from, and
 - **Notifier:** [Atlas Updater](https://github.com/EternalCoder454/atlasos-updater)
   shows what is staged and offers the restart. Discover's notifier is removed
   and its unattended updates are off; the build checks both.
-- **Release notes:** every stable build gets a git tag `44.YYYYMMDD` on the
-  commit it was built from and a GitHub release with that tag: the commits
-  since the previous stable tag, grouped by what they touch.
-  `scripts/release-notes.sh` writes them; the first stable lists the newest
-  commits.
+- **Release notes:** the GitHub releases are the changelog Atlas Updater
+  shows. Each testing build gets a pre-release tagged with its version, with
+  notes written by hand. Promoting it to stable moves the tag to the commit
+  the image came from and makes it the latest release, notes kept. A stable
+  build with no pre-release gets the commits since the previous stable
+  release, grouped by what they touch (`scripts/release-notes.sh`; the first
+  stable lists the newest commits). Older releases are plain `44.YYYYMMDD`.
 - **Atlas apps are system components.** `atlas-core`, `atlas-updater` and
   `atlas-monitor` are RPMs built into the image under `/usr`, so Discover (its
   backends here are Flatpak and fwupd, no PackageKit) has no way to
@@ -483,9 +485,10 @@ as the `atlas-monitor` one.
   GitHub pauses schedules in repos with no activity for 60 days.
 - `promote-stable.yml` runs weekly (Saturday) and by hand: `skopeo copy --all`
   of the `testing` image, by digest, to `stable`, `latest`, `44` and
-  `44.YYYYMMDD`; then the release job (the only one with `contents: write`)
-  creates the tag and the release. Nothing happens if `stable` already has
-  that digest, and an existing release is left as it is.
+  `44.YYYYMMDD-N`; then the release job (the only one with `contents: write`)
+  creates the tag and the release, or promotes the testing build's
+  pre-release. Nothing happens if `stable` already has that digest, and an
+  existing stable release is left as it is.
 - After pushing, the build job builds `atlasos-nvidia` on the image it just
   built (the local copy, which has the same files and labels as the pushed
   one and shares its cached layers), rechunks, pushes it with the same tags

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The image's version (IMAGE_VERSION, such as 44.20261003) into os-release, in
+# The image's version (IMAGE_VERSION, such as 44.20261003-1) into os-release, in
 # the Containerfile's last step: the version changes every day, and anything
 # after the step that takes it is rebuilt whenever it does. build.sh wrote
 # "dev" in its place.

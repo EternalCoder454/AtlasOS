@@ -5,8 +5,9 @@ on:
     branches: [main, beta]
     paths-ignore: ["**.md"]
     # Tags build and lint (on the VPS runner) but publish nothing: :stable
-    # comes from promote-stable.yml.
-    tags: ["*"]
+    # comes from promote-stable.yml. Version tags (44.YYYYMMDD-N) belong to
+    # the changelog's releases and build nothing.
+    tags: ["*", "!44.*"]
   pull_request:
     branches: [main, beta]
   # Daily, to pick up Fedora's updates. Skipped when neither the base image
@@ -179,7 +180,27 @@ jobs:
             [ "$skip" = false ] || echo "::notice::Nothing new since the last ${tag} build; skipping."
           fi
 
+          # Builds are numbered within their UTC day: 44.YYYYMMDD-1, -2, ...
+          # The next number is one past the highest any channel pushed today
+          # (testing-, beta- and the stable tags all end in the version), so
+          # every image has its own version and its own changelog entry.
+          # Push checks again that no other channel took the number meanwhile.
           date=$(date -u +%Y%m%d)
+          version=""
+          if [ "$skip" != true ]; then
+            tags=""
+            if out=$(skopeo list-tags --creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+              "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" 2>"$RUNNER_TEMP/list-tags.err"); then
+              tags=$(jq -r '.Tags[]?' <<<"$out")
+            # A repository with no image yet has no tags; anything else is an
+            # error when this build publishes.
+            elif [ "$push" = true ] && ! grep -qiE 'name unknown|not found' "$RUNNER_TEMP/list-tags.err"; then
+              echo "::error::Can't list ${IMAGE_NAME}'s tags to number this build: $(cat "$RUNNER_TEMP/list-tags.err")"
+              exit 1
+            fi
+            n=$(grep -oE "44\.${date}-[0-9]+$" <<<"$tags" | sed 's/.*-//' | sort -n | tail -n 1 || true)
+            version="44.${date}-$(( ${n:-0} + 1 ))"
+          fi
           {
             echo "tag=$tag"
             echo "push=$push"
@@ -188,7 +209,7 @@ jobs:
             echo "monitor=$monitor"
             echo "skip=$skip"
             echo "date=$date"
-            echo "version=44.$date"
+            echo "version=$version"
             echo "week=$(date -u +%G-W%V)"
           } >>"$GITHUB_OUTPUT"
 
@@ -309,7 +330,7 @@ jobs:
           printf '%s' "$TOKEN" | podman login --authfile "$RUNNER_TEMP/auth/config.json" \
             --username "$GITHUB_ACTOR" --password-stdin ghcr.io
 
-      # testing -> testing, testing-44.YYYYMMDD; beta -> beta, beta-44.YYYYMMDD.
+      # testing -> testing, testing-44.YYYYMMDD-N; beta -> beta, beta-44.YYYYMMDD-N.
       # The version is the one in the image's org.opencontainers.image.version
       # label (set by `just build` from IMAGE_VERSION).
       - name: Push
@@ -323,6 +344,14 @@ jobs:
           have=$(skopeo inspect --config "$src" |
             jq -r '.config.Labels["org.opencontainers.image.version"]')
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
+          # A build on another channel (main and beta run side by side) may
+          # have taken this number since Decide: two images must never share a
+          # version, so this one stops and the next run takes a new number.
+          existing=$(skopeo list-tags "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" | jq -r '.Tags[]?')
+          if grep -qE "(^|-)${version//./\\.}$" <<<"$existing"; then
+            echo "::error::Version ${version} was taken while this build ran; run it again."
+            exit 1
+          fi
           # The layers go up as the chunker compressed them, and the registry
           # already has every one that didn't change.
           tags=("$tag" "$tag-$version")
