@@ -42,6 +42,18 @@ build tag="latest" *args:
     }
     copy_source "$updater" build/updater-src
     copy_source "$monitor" build/monitor-src
+    # The Kinoite it is built on: the Containerfile's default, or the
+    # BASE_IMAGE build argument (CI passes a digest).
+    base=$(sed -n 's/^ARG BASE_IMAGE=//p' Containerfile)
+    for arg in {{ args }}; do
+        case "$arg" in BASE_IMAGE=* | --build-arg=BASE_IMAGE=*) base="${arg#*BASE_IMAGE=}" ;; esac
+    done
+    # Labels given here go on the finished image only, in a step of their own:
+    # the image under it is the same on every build where nothing changed, and
+    # `just build-nvidia` builds on that one. org.atlasos.base-image also marks
+    # the images the VPS runner's cleanup removes after every job
+    # (ci/vps-runner/cleanup.sh), so it must stay off the build steps, which
+    # are its cache.
     podman build --pull=newer \
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
@@ -56,6 +68,7 @@ build tag="latest" *args:
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \
         --label containers.bootc=1 \
+        --label org.atlasos.base-image="$base" \
         {{ args }} \
         --tag "{{ image }}:{{ tag }}" .
 
@@ -71,10 +84,32 @@ build-nvidia tag="latest" *args:
     [ -s "$key" ] || { echo "No module signing key at $key (see DEV.md, NVIDIA)" >&2; exit 1; }
     dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
     mkdir -p "$dnf_cache"
+    # Built on the image under AtlasOS's labels (see `build`), not on AtlasOS
+    # itself: the labels carry the commit and date, so building on them would
+    # rerun the driver step every time. A pulled image has no such parent.
+    img="{{ image }}:{{ tag }}"
+    base=$(podman image inspect --format '{{{{.Parent}}' "$img")
+    if [ -z "$base" ]; then
+        echo "build-nvidia: $img has no parent image; building on it (the driver step won't be cached)" >&2
+        base="$img"
+    fi
+    # The labels go on this image too, the same way: each one AtlasOS has and
+    # its parent doesn't, as --label arguments. Without them CI's push refuses
+    # the image (no version label), so a failure here stops the build.
+    json=$(podman image inspect "$img" "$base")
+    mapfile -d '' -t labels < <(jq -j '
+        (.[0].Config.Labels // {}) as $img | (.[1].Config.Labels // {}) as $base |
+        $img | to_entries[] | select($base[.key] != .value) |
+        "--label\u0000\(.key)=\(.value)\u0000"' <<<"$json")
+    if [ "$base" != "$img" ] && [ ${#labels[@]} -eq 0 ]; then
+        echo "build-nvidia: no labels to copy from $img" >&2
+        exit 1
+    fi
     podman build \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --secret id=nvidia-signing-key,src="$key" \
-        --build-arg BASE_IMAGE="{{ image }}:{{ tag }}" \
+        --build-arg BASE_IMAGE="$base" \
+        "${labels[@]}" \
         --label org.opencontainers.image.title="AtlasOS (NVIDIA)" \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop with NVIDIA's driver" \
         {{ args }} \

@@ -157,7 +157,8 @@ after the job. The 50 GB disk holds 49 GB.
 every job, and before the next in case one was cut short. It removes:
 
 - the images the build made (the image and the NVIDIA image, both labelled
-  `org.atlasos.base-image`). They are in the registry.
+  `org.atlasos.base-image`). They are in the registry. The label is on the
+  finished images only, so the build steps under them stay as cache.
 - base images a newer pull replaced (yesterday's Kinoite, a `fedora:44` that
   lost its tag to a newer one), with every cached build step made on them.
 - Podman's build cache mounts (the Rust build cache) past 8 GB, and dnf's

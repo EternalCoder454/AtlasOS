@@ -157,8 +157,11 @@ The VPS runs, oldest first:
 ### What to expect on the VPS
 
 A build where nothing changed takes about 8 minutes for both images: rechunking
-(2 minutes each), NVIDIA's driver step (2 minutes, rerun on every build because
-the image under it carries the date and commit) and the pushes. A change to
+(2 minutes each) and the pushes. NVIDIA's driver step (2 minutes) reruns when
+the AtlasOS image under it changes, which is at least once a day (the package
+update and the version); a second build the same day with nothing else new
+reuses it. Before, it reran on every build, because it was built on the image
+with the commit's labels (not yet measured since). A change to
 Atlas Updater adds about 6 minutes with the old build flags (its stage, with
 the Rust cache) and should add about 3 with the new ones (not yet measured on
 the VPS), the daily package update about 2. A new Kinoite or a cleared cache

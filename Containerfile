@@ -1,7 +1,8 @@
 # AtlasOS: a minimal Fedora Kinoite 44 desktop, built as a bootc image.
 
 # The base. CI passes the digest it resolved, so the image records exactly
-# which Kinoite it was built on (the org.atlasos.base-image label below).
+# which Kinoite it was built on (the org.atlasos.base-image label, which
+# `just build` adds).
 ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:44
 
 # Logos, icons and wallpapers, rendered from branding/. A separate
@@ -94,8 +95,6 @@ COPY branding/icon-theme /icon-theme
 
 FROM ${BASE_IMAGE}
 
-ARG BASE_IMAGE
-
 # /var/cache/libdnf5 is bound in from the host by `just build` and CI, which
 # keep it between builds. Without that bind, dnf just downloads as usual.
 # PACKAGES_DATE (today, from `just build`) reruns the packages step once a
@@ -125,8 +124,3 @@ RUN --mount=type=bind,from=ctx-version,source=/,target=/ctx \
     IMAGE_VERSION="${IMAGE_VERSION}" /ctx/version.sh
 
 RUN bootc container lint
-
-# Last, so only the finished image has it: the VPS runner's cleanup removes
-# the images with this label after every job (ci/vps-runner/cleanup.sh), and
-# the build steps above, which would otherwise inherit it, are its cache.
-LABEL org.atlasos.base-image="${BASE_IMAGE}"
