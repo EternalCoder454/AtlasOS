@@ -18,9 +18,7 @@ nvr=$(cat /kio-nvr)
 ver=${nvr%-*}
 rel=${nvr##*-}
 
-# tsflags= undoes the container image's nodocs: building the API docs (part
-# of Fedora's build) reads Qt's doc templates from /usr/share/doc.
-dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False --setopt=tsflags=)
+dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 "${dnf[@]}" install rpm-build 'dnf5-command(builddep)'
 
 # Koji keeps every build, so this works even after Fedora's repos move on.
@@ -39,8 +37,27 @@ sed -i -E 's/^(Release:\s*[0-9]+%\{\?dist\})$/\1.atlas1/' "$spec"
 sed -i '0,/^%description/s//Patch9001: kio-clear-worker-on-destroy.patch\n\n%description/' "$spec"
 grep -q '^Patch9001:' "$spec"
 
+# Without the API docs (the qch-doc and html packages, which the image
+# doesn't have): Fedora's KF6 build macros generate them with qdoc after the
+# build, minutes on a small runner. The packages go from the spec with every
+# doc file listed (-devel, not in the image either, has their indexes), and
+# the build and install macros lose their doc targets.
+awk '
+	/^%(package|files|description)[[:space:]]+(qch-doc|html)$/ { skip = 1; next }
+	/^%(package|description|files|prep|changelog)([[:space:]]|$)/ { skip = 0 }
+	/%\{_qt6_docdir\}/ { next }
+	!skip
+' "$spec" >"$spec.new"
+mv "$spec.new" "$spec"
+if grep -qE '^%(package|files)[[:space:]]+(qch-doc|html)$|%\{_qt6_docdir\}' "$spec"; then
+	echo "kio/build-rpm.sh: the API doc packages are still in the spec" >&2
+	exit 1
+fi
 "${dnf[@]}" builddep "$spec"
-rpmbuild -bb --nocheck "$spec"
+rpmbuild -bb --nocheck \
+	--define 'cmake_build_kf6 %cmake_build' \
+	--define 'cmake_install_kf6 %cmake_install' \
+	"$spec"
 
 mkdir -p "$out"
 find "$top/RPMS" -name 'kf6-kio-*.rpm' ! -name '*-debug*' ! -name '*-devel-*' -exec cp {} "$out/" \;
