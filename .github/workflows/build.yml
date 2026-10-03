@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, beta]
     paths-ignore: ["**.md"]
+    # Tags build and lint (on the VPS runner) but publish nothing: :stable
+    # comes from promote-stable.yml.
+    tags: ["*"]
   pull_request:
     branches: [main, beta]
   # Daily, to pick up Fedora's updates. Skipped when neither the base image
@@ -30,9 +33,59 @@ env:
   BASE_IMAGE: quay.io/fedora/fedora-kinoite:44
 
 jobs:
-  build:
-    name: Build and push
+  # Where the builds run (CI.md): the VPS runner (the self-hosted runner
+  # labelled atlasos-vps) for pushes to main, the daily schedule, manual runs on
+  # main and tags; GitHub's runners for pull requests and beta. When the VPS
+  # runner is offline, or its status can't be read, GitHub's runners build
+  # everything.
+  runner:
+    name: Pick a runner
     runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      labels: ${{ steps.pick.outputs.labels }}
+      kind: ${{ steps.pick.outputs.kind }}
+    steps:
+      - name: Pick
+        id: pick
+        env:
+          # A fine-grained token for this repository with "Administration:
+          # read" (listing runners needs it; GITHUB_TOKEN can't have it).
+          GH_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+        run: |
+          kind=hosted
+          case "${GITHUB_EVENT_NAME}:${GITHUB_REF}" in
+            push:refs/heads/main | schedule:refs/heads/main | workflow_dispatch:refs/heads/main | push:refs/tags/*)
+              if [ -z "$GH_TOKEN" ]; then
+                echo "::notice::No RUNNER_STATUS_TOKEN secret, so the VPS runner can't be checked; building on GitHub's runner."
+              elif status=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runners" \
+                --jq '[.runners[] | select(any(.labels[]; .name == "atlasos-vps")) | .status] | if index("online") then "online" else "offline" end' 2>"$RUNNER_TEMP/gh.err"); then
+                if [ "$status" = online ]; then
+                  kind=vps
+                else
+                  echo "::notice::The VPS runner is offline; building on GitHub's runner."
+                fi
+              else
+                echo "::warning::Couldn't read the VPS runner's status ($(tr '\n' ' ' <"$RUNNER_TEMP/gh.err")); building on GitHub's runner."
+              fi
+              ;;
+          esac
+          if [ "$kind" = vps ]; then
+            labels='["self-hosted","atlasos-vps"]'
+          else
+            labels='"ubuntu-26.04"'
+          fi
+          echo "Runner: $kind"
+          {
+            echo "kind=$kind"
+            echo "labels=$labels"
+          } >>"$GITHUB_OUTPUT"
+
+  build:
+    # The runner kind in the name is what scripts/ci-times.sh sorts by.
+    name: Build and push (${{ needs.runner.outputs.kind }})
+    needs: runner
+    runs-on: ${{ fromJSON(needs.runner.outputs.labels) }}
     permissions:
       contents: read
       packages: write
@@ -58,17 +111,18 @@ jobs:
           token: ${{ secrets.ATLAS_UPDATER_TOKEN || github.token }}
 
       # main publishes :testing, beta publishes :beta. (:stable and :latest
-      # come from promote-stable.yml.) Pull requests build and lint but
-      # never push.
+      # come from promote-stable.yml.) Pull requests and tags build and
+      # lint but never push.
       - name: Decide
         id: decide
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NVIDIA_KEY_SET: ${{ secrets.NVIDIA_SIGNING_KEY != '' }}
         run: |
-          case "${GITHUB_REF_NAME}" in
-            main) tag="testing" ;;
-            beta) tag="beta" ;;
+          # The full ref: a tag named "main" must not publish :testing.
+          case "${GITHUB_REF}" in
+            refs/heads/main) tag="testing" ;;
+            refs/heads/beta) tag="beta" ;;
             *) tag="pr" ;;
           esac
           push=false
@@ -141,16 +195,19 @@ jobs:
 
       # The runner's disk is too small for a 7 GB image, its rechunked copy
       # and Podman's working space without clearing the preinstalled SDKs.
+      # (Not on the VPS, whose disk keeps the caches.)
       - name: Maximize build space
-        if: steps.decide.outputs.skip != 'true'
+        if: steps.decide.outputs.skip != 'true' && needs.runner.outputs.kind == 'hosted'
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
       # dnf's metadata and packages, bound into the build at /var/cache/libdnf5
       # by `just build`. Keyed by the week, so it follows Fedora's updates: a
       # new week starts from the last one's and saves once. (A key that never
       # changes is an exact hit forever, is never saved again, and goes stale.)
+      # The VPS keeps its own in ATLAS_DNF_CACHE, with Podman's layer cache and
+      # the Rust build cache.
       - name: Cache dnf downloads
-        if: steps.decide.outputs.skip != 'true'
+        if: steps.decide.outputs.skip != 'true' && needs.runner.outputs.kind == 'hosted'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/cache/dnf
@@ -172,7 +229,7 @@ jobs:
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages
           # nothing has downloaded for a month before it is saved.
-          find build/cache/dnf -name '*.rpm' -mtime +30 -delete
+          find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
 
       # Smaller updates for users. Only for images that get pushed.
       - name: Rechunk
@@ -181,11 +238,19 @@ jobs:
 
       - name: Log in to ghcr.io
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # In this job's temporary directory, which the runner empties after
+          # every job, so no credentials stay behind on the VPS runner. Podman
+          # and skopeo read REGISTRY_AUTH_FILE, cosign reads DOCKER_CONFIG.
+          mkdir -p "$RUNNER_TEMP/auth"
+          {
+            echo "REGISTRY_AUTH_FILE=$RUNNER_TEMP/auth/config.json"
+            echo "DOCKER_CONFIG=$RUNNER_TEMP/auth"
+          } >>"$GITHUB_ENV"
+          printf '%s' "$TOKEN" | podman login --authfile "$RUNNER_TEMP/auth/config.json" \
+            --username "$GITHUB_ACTOR" --password-stdin ghcr.io
 
       # testing -> testing, testing-44.YYYYMMDD; beta -> beta, beta-44.YYYYMMDD.
       # The version is the one in the image's org.opencontainers.image.version
@@ -202,10 +267,10 @@ jobs:
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
           tags=("$tag" "$tag-$version")
           for t in "${tags[@]}"; do
-            podman push --digestfile=/tmp/digest "localhost/${IMAGE_NAME}:${tag}" \
+            podman push --digestfile="$RUNNER_TEMP/digest" "localhost/${IMAGE_NAME}:${tag}" \
               "${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
           done
-          echo "digest=$(cat /tmp/digest)" >>"$GITHUB_OUTPUT"
+          echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
 
       # Signing starts once the SIGNING_SECRET repository secret holds a cosign
       # private key (see the README). Until then images are pushed unsigned.
@@ -241,10 +306,10 @@ jobs:
   # secret (see DEV.md); without it this job only leaves a notice. Pull
   # requests don't build it: it starts from the pushed image.
   nvidia:
-    name: Build and push (NVIDIA)
-    needs: build
+    name: Build and push NVIDIA (${{ needs.runner.outputs.kind }})
+    needs: [runner, build]
     if: needs.build.outputs.pushed == 'true'
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJSON(needs.runner.outputs.labels) }}
     permissions:
       contents: read
       packages: write
@@ -272,16 +337,24 @@ jobs:
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Maximize build space
-        if: steps.key.outputs.enabled == 'true'
+        if: steps.key.outputs.enabled == 'true' && needs.runner.outputs.kind == 'hosted'
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
       - name: Log in to ghcr.io
         if: steps.key.outputs.enabled == 'true'
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # In this job's temporary directory, which the runner empties after
+          # every job, so no credentials stay behind on the VPS runner. Podman
+          # and skopeo read REGISTRY_AUTH_FILE, cosign reads DOCKER_CONFIG.
+          mkdir -p "$RUNNER_TEMP/auth"
+          {
+            echo "REGISTRY_AUTH_FILE=$RUNNER_TEMP/auth/config.json"
+            echo "DOCKER_CONFIG=$RUNNER_TEMP/auth"
+          } >>"$GITHUB_ENV"
+          printf '%s' "$TOKEN" | podman login --authfile "$RUNNER_TEMP/auth/config.json" \
+            --username "$GITHUB_ACTOR" --password-stdin ghcr.io
 
       # Exactly the image the build job pushed, by digest. Its labels (version,
       # revision, base image) carry over to the NVIDIA image.
@@ -314,10 +387,10 @@ jobs:
             jq -r '.[0].Labels["org.opencontainers.image.version"]')
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
           for t in "$tag" "$tag-$version"; do
-            podman push --digestfile=/tmp/digest "localhost/${NVIDIA_IMAGE}:${tag}" \
+            podman push --digestfile="$RUNNER_TEMP/digest" "localhost/${NVIDIA_IMAGE}:${tag}" \
               "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}:${t}"
           done
-          echo "digest=$(cat /tmp/digest)" >>"$GITHUB_OUTPUT"
+          echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
 
       - name: Check for a signing key
         id: signing

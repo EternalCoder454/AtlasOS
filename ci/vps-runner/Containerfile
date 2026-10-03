@@ -1,0 +1,43 @@
+# The AtlasOS self-hosted GitHub Actions runner (see README.md here).
+#
+# Podman's own image, set up for rootless Podman inside a rootless container,
+# plus the GitHub Actions runner and the tools the workflows call. The runner
+# runs as the image's unprivileged "podman" user; the host side is the
+# atlas-runner account, which has no sudo and no Docker access.
+FROM quay.io/podman/stable:v5.8.7@sha256:c70aa78a604fafa95076aae36bdc91d1173d2bff05e2749bf7d79c88c248acc0
+
+# The runner's .NET dependencies, and what build.yml and the Justfile use.
+RUN dnf -y install --setopt=install_weak_deps=False \
+        findutils git-core gzip hostname jq just krb5-libs libicu lttng-ust python3 \
+        openssl-libs procps-ng ShellCheck skopeo tar util-linux zlib \
+    && dnf clean all
+
+ARG RUNNER_VERSION=2.337.0
+ARG RUNNER_SHA256=70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613
+# Owned by the runner user, so the runner can update itself when GitHub
+# requires a newer version. A restart goes back to this version and updates
+# again; rebuild the image (setup.sh image) to skip that.
+RUN mkdir /opt/actions-runner \
+    && curl -fsSL -o /tmp/runner.tar.gz \
+        "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
+    && echo "${RUNNER_SHA256}  /tmp/runner.tar.gz" | sha256sum -c - \
+    && tar -C /opt/actions-runner -xzf /tmp/runner.tar.gz \
+    && rm /tmp/runner.tar.gz \
+    && chown -R podman:podman /opt/actions-runner
+
+# Root-owned, so a job (which runs as "podman") can't change them.
+COPY --chmod=0755 entrypoint.sh /usr/local/bin/atlas-runner
+COPY --chmod=0755 cleanup.sh /usr/local/bin/atlas-runner-cleanup
+COPY --chmod=0755 hooks/ /opt/atlas-hooks/
+
+# ATLAS_DNF_CACHE: `just build` keeps dnf's downloads there instead of in the
+# checkout, which actions/checkout cleans before every job.
+ENV ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/atlas-hooks/job-started.sh \
+    ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/opt/atlas-hooks/job-completed.sh \
+    ATLAS_DNF_CACHE=/cache/dnf
+
+# Starts as container root (the unprivileged atlas-runner account on the
+# host), fixes the volumes' ownership, then runs everything as "podman".
+USER root
+ENTRYPOINT ["/usr/local/bin/atlas-runner"]
+CMD ["run"]
