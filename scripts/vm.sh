@@ -60,7 +60,7 @@ common=(
 t480=()
 t480_quota=45000
 [ -z "${T480-}" ] || t480=(--cputune
-	vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6)
+	"vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6")
 
 exists() { virsh dominfo "$1" >/dev/null 2>&1; }
 
