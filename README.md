@@ -125,9 +125,13 @@ Why these numbers:
 
 ## Installing
 
-AtlasOS is installed by switching an existing Fedora Atomic system over to
-it. Install [Fedora Kinoite 44](https://fedoraproject.org/atomic-desktops/kinoite/)
-(or another Fedora Atomic desktop), then run:
+Download the ISO from [atlasos.eterneon.net](https://atlasos.eterneon.net/#download),
+write it to a USB stick of 8 GB or more (Fedora Media Writer does it), and
+boot from it: the installer starts by itself. There's an NVIDIA ISO for
+GeForce GTX 16 / RTX 20 series cards and newer.
+
+Already on [Fedora Kinoite 44](https://fedoraproject.org/atomic-desktops/kinoite/)
+or another Fedora Atomic desktop? Switch it over instead:
 
 ```bash
 sudo bootc switch ghcr.io/eternalcoder454/atlasos:stable
@@ -139,8 +143,8 @@ you're on AtlasOS. Your files in `/home` stay as they are.
 
 A few honest notes:
 
-- There's no installer ISO to download yet. You can build one yourself with
-  `just iso`, which needs the
+- The ISOs are built from each weekly stable release. You can build one
+  yourself with `just iso`, which needs the
   [AtlasOS Installer](https://github.com/EternalCoder454/atlasos-installer)
   source beside this repository (see [DEV.md](DEV.md)).
 - The images are signed, and AtlasOS only installs updates that carry the
