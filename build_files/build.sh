@@ -37,12 +37,12 @@ unreadable=$(find /ctx/system_files ! -type l ! -perm -o=r)
 }
 cp -a /ctx/system_files/. /
 
-# Atlas Updater is the only update notifier. Discover's (plasma-discover-notifier,
-# removed by packages.sh) and every other background updater stay out, and Discover
-# never updates on its own.
+# Atlas Updater is the only update notifier and the only OS updater.
+# Discover's notifier and OS backend (removed by packages.sh) and every other
+# background updater stay out, and Discover never updates on its own.
 [ ! -e /usr/libexec/DiscoverNotifier ]
 [ -z "$(find /etc/xdg/autostart /usr/share/applications -iname '*discover*notifier*' -print -quit)" ]
-for p in plasma-discover-notifier PackageKit; do
+for p in plasma-discover-notifier plasma-discover-rpm-ostree PackageKit; do
 	if rpm -q "$p" >/dev/null 2>&1; then
 		echo "build.sh: $p must not be installed" >&2
 		exit 1
@@ -150,6 +150,16 @@ tar -xJf /ctx/icon-theme/Dracula.tar.xz -C /usr/share/icons --no-same-owner --no
 grep -q '^Inherits=' /usr/share/icons/Dracula/index.theme
 sed -i 's/^Inherits=.*/Inherits=breeze-dark,hicolor/' /usr/share/icons/Dracula/index.theme
 [ -f /usr/share/icons/Dracula/scalable/places/folder.svg ]
+# Its one-colour icons follow the colour scheme, as Breeze's do, instead of
+# staying Dracula's near-white on AtlasOS Light (see icon-recolor.py).
+python3 /ctx/icon-recolor.py /usr/share/icons/Dracula symbolic 16 22 24 32
+grep -q 'ColorScheme-Text' "$(readlink -f /usr/share/icons/Dracula/symbolic/categories/applications-graphics-symbolic.svg)"
+# Apps AtlasOS ships whose own icons are in other styles (Brave's under the
+# name brave-origin, Ghostty's a photo-like screen): Dracula's for them too.
+for alias in brave-origin:brave-browser com.mitchellh.ghostty:utilities-terminal; do
+	[ -e "/usr/share/icons/Dracula/scalable/apps/${alias#*:}.svg" ]
+	ln -sfn "${alias#*:}.svg" "/usr/share/icons/Dracula/scalable/apps/${alias%%:*}.svg"
+done
 install -Dm644 /ctx/icon-theme/LICENSE /usr/share/licenses/dracula-icons/LICENSE
 # Every user must be able to read them (tar keeps the archive's modes).
 if find /usr/share/icons/Dracula /usr/share/icons/Bibata-Modern-* ! -type l ! -perm -o=r | grep .; then

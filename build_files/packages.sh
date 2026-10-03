@@ -29,6 +29,12 @@ remove=(
 	# Discover's tray notifier, which checks for and applies updates in the
 	# background. Discover itself stays as the Flatpak front end.
 	plasma-discover-notifier
+	# Discover's OS updates: a second updater beside Atlas Updater. Its check
+	# (rpm-ostree's) never sees a new AtlasOS image, and its "new major
+	# version" offer rewrites the image tag (atlasos:stable to atlasos:45),
+	# which would take the machine off its channel. Atlas Updater handles the
+	# OS; Discover keeps apps (Flatpak) and firmware (fwupd).
+	plasma-discover-rpm-ostree
 	# KDE Connect starts a daemon in every session.
 	kde-connect
 	kde-connect-libs
