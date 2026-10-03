@@ -94,24 +94,38 @@ the Rust cache, dnf's downloads, every image.
 ## Build times
 
 `scripts/ci-times.sh [runs]` prints these tables from the GitHub API (the last
-40 successful runs by default). Re-run it and paste the output here once the
-VPS has built a few times.
+40 successful runs by default). Re-run it and paste the output here.
 
 "Build step" is `just build`; "Rechunk" and "Push" only run when an image is
 published; pull requests and tags ("build only") skip them.
 
 ### Measured
 
-As of 2026-10-02, GitHub-hosted runners (ubuntu-26.04: 4 CPUs, 16 GB):
+As of 2026-10-03. GitHub-hosted runners are ubuntu-26.04 (4 CPUs, 16 GB);
+the VPS has 4 CPUs and 7.6 GB. The medians mix very different VPS runs (see
+below the tables), so read the runs themselves.
 
 | Runner | Image | Work | Jobs | Job (median) | Build step | Rechunk | Push |
 |---|---|---|---:|---:|---:|---:|---:|
-| GitHub-hosted | atlasos | build + publish | 5 | 22m 5s | 13m 22s | 5m 56s | 1m 10s |
-| GitHub-hosted | atlasos | build only | 2 | 23m 6s | 21m 38s | – | – |
-| GitHub-hosted | atlasos-nvidia | build + publish | 1 | 13m 51s | 6m 0s | 6m 25s | 0m 50s |
+| GitHub-hosted | atlasos | build + publish | 6 | 22m 34s | 13m 54s | 5m 57s | 1m 9s |
+| VPS | atlasos | build + publish | 4 | 35m 19s | 25m 47s | 8m 10s | 2m 21s |
+| GitHub-hosted | atlasos | build only | 3 | 31m 0s | 29m 41s | – | – |
+| GitHub-hosted | atlasos-nvidia | build + publish | 2 | 14m 55s | 6m 16s | 6m 35s | 0m 56s |
+| VPS | atlasos-nvidia | build + publish | 4 | 16m 17s | 5m 59s | 8m 48s | 1m 45s |
 
 | Date | Run | Runner | Image | Job | Build step | Rechunk | Push |
 |---|---|---|---|---:|---:|---:|---:|
+| 2026-10-03 | 37136001901 | VPS | atlasos-nvidia | 6m 39s | 1m 53s | 1m 58s | 2m 48s |
+| 2026-10-03 | 37136001901 | VPS | atlasos | 6m 28s | 0m 12s | 2m 6s | 3m 57s |
+| 2026-10-03 | 37130390547 | VPS | atlasos-nvidia | 11m 42s | 1m 52s | 9m 7s | 0m 43s |
+| 2026-10-03 | 37130390547 | VPS | atlasos | 20m 16s | 10m 52s | 8m 27s | 0m 45s |
+| 2026-10-03 | 37104350309 | VPS | atlasos-nvidia | 20m 53s | 10m 51s | 8m 56s | 0m 37s |
+| 2026-10-03 | 37104350309 | VPS | atlasos | 50m 23s | 40m 43s | 8m 19s | 0m 36s |
+| 2026-10-03 | 37103067656 | VPS | atlasos-nvidia | 24m 45s | 10m 5s | 8m 41s | 5m 35s |
+| 2026-10-03 | 37103067656 | VPS | atlasos | 53m 49s | 40m 51s | 8m 2s | 4m 17s |
+| 2026-10-03 | 37095610573 | GitHub-hosted | atlasos | 34m 22s | 33m 22s | – | – |
+| 2026-10-03 | 37089158901 | GitHub-hosted | atlasos-nvidia | 15m 59s | 6m 33s | 6m 46s | 1m 2s |
+| 2026-10-03 | 37089158901 | GitHub-hosted | atlasos | 40m 17s | 32m 22s | 5m 59s | 1m 5s |
 | 2026-10-02 | 37076981806 | GitHub-hosted | atlasos | 31m 0s | 29m 41s | – | – |
 | 2026-10-02 | 37076799895 | GitHub-hosted | atlasos-nvidia | 13m 51s | 6m 0s | 6m 25s | 0m 50s |
 | 2026-10-02 | 37076799895 | GitHub-hosted | atlasos | 40m 14s | 32m 12s | 6m 0s | 1m 7s |
@@ -121,26 +135,28 @@ As of 2026-10-02, GitHub-hosted runners (ubuntu-26.04: 4 CPUs, 16 GB):
 | 2026-10-02 | 37016232908 | GitHub-hosted | atlasos | 23m 4s | 14m 26s | 5m 49s | 1m 35s |
 | 2026-10-02 | 36971654710 | GitHub-hosted | atlasos | 15m 13s | 13m 36s | – | – |
 
-VPS (4 CPUs, 7.6 GB): no builds yet. The runner is installed but not yet
-registered; see [ci/vps-runner](ci/vps-runner/README.md#install).
+The VPS runs, oldest first:
+
+- 37103067656 and 37104350309: every cache empty (the cleanup then cleared
+  them after each job). KIO and the Rust apps compile from scratch.
+- 37130390547: the caches kept. Only the Rust apps (Atlas Updater had
+  changed, 6 minutes) and the steps after the packages step reran.
+- 37136001901: the first with chunkah (see `just rechunk`), nothing to
+  rebuild. Rechunking went from about 8.5 minutes per image to 2. Its pushes
+  are slow because every layer was new to the registry; they take under a
+  minute once the layers are there. Both images in 13m 12s.
 
 ### What to expect on the VPS
 
-Not VPS numbers: a local test of the runner container on the development
-desktop (32 threads, nested rootless Podman as on the VPS), running
-`just build` and `just rechunk` twice on the same commit, 2026-10-02:
+A build where nothing changed takes about 8 minutes for both images: rechunking
+(2 minutes each), NVIDIA's driver step (2 minutes, rerun on every build because
+the image under it carries the date and commit) and the pushes. A change to
+Atlas Updater adds about 6 minutes (its stage, with the Rust cache), the daily
+package update about 2. A new Kinoite or a cleared cache reruns the stages
+built on it: KIO and the Rust apps from scratch take about 40 minutes.
 
-| Run | Build step | Rechunk |
-|---|---:|---:|
-| First, every cache empty | 18m 35s | 5m 15s |
-| Second, nothing changed | 0m 14s | 4m 26s |
-
-Atlas Updater's RPMs alone, in the `atlas-apps` stage: 4m 4s with an empty
-Rust cache, 5s with a full one.
-
-So on the VPS, a build where nothing in a stage changed skips that stage, and
-rechunking (about 4 to 5 minutes here, on every published build) becomes
-most of the job. A new Kinoite reruns the stages built on it, and a change to
-Atlas Updater reruns its stage with the Rust cache. The VPS has 4 CPUs
-against the desktop's 32, so its cold builds will be slower than these;
-the table above gets its real numbers after the first builds there.
+What limits it, measured on 37130390547 with sar: CPU. The build steps use
+the 4 CPUs; the disk was under 20% busy, the network fetched at 34 MB/s, and
+about 6 GB of memory stayed free. rpm-ostree's chunker ran on one CPU for
+most of its 8.5 minutes, which is why chunkah, using all four, made the
+largest difference.

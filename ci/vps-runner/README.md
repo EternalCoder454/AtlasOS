@@ -139,7 +139,9 @@ and then (`RUNNER_VERSION` and `RUNNER_SHA256` in the Containerfile).
 
 Measured on the VPS (2026-10-03): a build from empty caches took the disk
 from 12 GB used (the runner image and its checkouts) to 42 GB at its peak,
-while rechunking. What stays is Kinoite, Fedora, every cached build step,
+while rechunking with rpm-ostree's chunker, which needed 8 to 10 GB of
+working space. With chunkah, a build that reused the caches went from 29 GB
+to 34 GB. What stays is Kinoite, Fedora, every cached build step,
 the Rust and CMake build cache (5 GB) and dnf's downloads (1 GB); the
 builder stages remove their build dependencies before their layer is saved
 ([drop-build-deps.sh](../../build_files/drop-build-deps.sh)), which keeps
