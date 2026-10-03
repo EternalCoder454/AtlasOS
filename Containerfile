@@ -25,10 +25,11 @@ RUN sh /branding/render.sh /branding /out
 # cache, and a local checkout's build output is gigabytes.
 FROM registry.fedoraproject.org/fedora:44 AS atlas-apps
 COPY --from=atlas-updater --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    ATLAS_BUILD_CACHE=/var/cache/atlas-build /src/packaging/build-rpm.sh /out
+    ATLAS_BUILD_CACHE=/var/cache/atlas-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
@@ -38,9 +39,10 @@ RUN rpm -q kf6-kio-core --qf '%{VERSION}-%{RELEASE}' >/kio-nvr
 FROM registry.fedoraproject.org/fedora:44 AS kio
 COPY --from=base-kio /kio-nvr /kio-nvr
 COPY build_files/kio /kio
+COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    /kio/build-rpm.sh /out
+    drop-build-deps.sh /kio/build-rpm.sh /out
 
 # The first-run wizard in AtlasOS's style (see
 # build_files/plasma-setup/build-rpm.sh): Fedora's plasma-setup, rebuilt at
@@ -51,9 +53,10 @@ RUN rpm -q plasma-setup --qf '%{VERSION}-%{RELEASE}' >/plasma-setup-nvr
 FROM registry.fedoraproject.org/fedora:44 AS plasma-setup
 COPY --from=base-plasma-setup /plasma-setup-nvr /plasma-setup-nvr
 COPY build_files/plasma-setup /plasma-setup
+COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    /plasma-setup/build-rpm.sh /out
+    drop-build-deps.sh /plasma-setup/build-rpm.sh /out
 
 # Build scripts and config files, mounted into the build rather than copied
 # into the image.

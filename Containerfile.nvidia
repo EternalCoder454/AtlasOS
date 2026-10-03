@@ -18,11 +18,12 @@ COPY --from=base-kernel /kver /kver
 COPY --from=base-kernel /nvidia-driver.repo /etc/yum.repos.d/rpmfusion-nonfree-nvidia-driver.repo
 COPY build_files/nvidia /nvidia
 COPY system_files_nvidia/usr/share/atlasos/nvidia/atlasos-module-signing.der /signing.der
+COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 # The private key is a build secret: never written to a layer.
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     --mount=type=secret,id=nvidia-signing-key,target=/signing.key \
-    /nvidia/build-kmod.sh /out
+    drop-build-deps.sh /nvidia/build-kmod.sh /out
 
 FROM scratch AS ctx
 COPY build_files/nvidia /nvidia
