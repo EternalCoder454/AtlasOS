@@ -143,9 +143,9 @@ while rechunking. What stays is Kinoite, Fedora, every cached build step,
 the Rust and CMake build cache (5 GB) and dnf's downloads (1 GB); the
 builder stages remove their build dependencies before their layer is saved
 ([drop-build-deps.sh](../../build_files/drop-build-deps.sh)), which keeps
-about 6 GB out of it. Rechunking needs a few GB: the chunker's work and its
-result, a 3 GB OCI directory in the job's temporary directory, which the
-runner empties after the job. atlasos-nvidia is built in the same job, on the
+about 6 GB out of it. Rechunking needs only its result, a 3 GB OCI
+directory in the job's temporary directory, which the runner empties after
+the job. atlasos-nvidia is built in the same job, on the
 layers already there. (As a job of its own it downloaded the rechunked image,
 9 GB that shares no layers with the cache, and the cache never survived.) On
 a day Fedora publishes a new Kinoite, add 7 GB until the old one is removed

@@ -1,5 +1,7 @@
 image_name := "atlasos"
 image := "localhost/" + image_name
+# The rechunker (see `rechunk`).
+chunkah := "quay.io/coreos/chunkah@sha256:0da1fa543fafe92468ad667d00580aea544a384198f668f1499675c241642e11"
 
 [private]
 default:
@@ -67,55 +69,52 @@ build-nvidia tag="latest" *args:
         --file Containerfile.nvidia \
         --tag "{{ image }}-nvidia:{{ tag }}" .
 
-# Split the built image into up to 127 layers by package (rpm-ostree's
-# chunker), so an update downloads only the parts that changed. CI does this
-# before pushing; local test builds don't need it.
+# Split the built image into up to 127 layers by package (chunkah), so an
+# update downloads only the parts that changed. CI does this before pushing;
+# local test builds don't need it.
 # With an oci directory, the result goes there (as oci:<dir>:<tag>) instead of
-# replacing the image: CI pushes it from there with skopeo. That skips copying
-# it back into Podman's storage, which unpacks every layer (minutes, and 8 GB
-# more disk), and the push recompressing them all.
+# replacing the image: CI pushes it from there with skopeo, which uploads the
+# layers as compressed here, and only those the registry doesn't have.
+# chunkah compresses the layers in parallel and writes a plain OCI image (no
+# OSTree commit, which rpm-ostree's chunker spent minutes making). The layers
+# depend only on the files and SOURCE_DATE_EPOCH, the commit's time here: a
+# build of the same files makes the same layers.
 [group('Build')]
 rechunk tag="latest" name=image_name oci="":
     #!/usr/bin/env bash
     set -euo pipefail
     img="localhost/{{ name }}:{{ tag }}"
     oci="{{ oci }}"
-    # The chunker writes a fresh image config, so carry the labels over (the
-    # daily CI run reads two of them to decide whether to rebuild).
-    list=$(podman image inspect "$img" |
-        jq -r '.[0].Labels // {} | to_entries[] | "\(.key)=\(.value)"')
-    [ -n "$list" ] || { echo "$img has no labels to carry over" >&2; exit 1; }
-    labels=()
-    while IFS= read -r l; do labels+=(--label "$l"); done <<<"$list"
-    if [ -n "$oci" ]; then
-        # It is emptied, and goes into a --mount option.
-        case "$oci" in
-        / | *,*) echo "rechunk: no OCI directory at '$oci'" >&2; exit 1 ;;
-        esac
-        # An empty layout: the chunker looks for a previous image there first.
-        rm -rf "$oci"
-        mkdir -p "$oci/blobs/sha256"
-        echo '{"imageLayoutVersion":"1.0.0"}' >"$oci/oci-layout"
-        echo '{"schemaVersion":2,"manifests":[]}' >"$oci/index.json"
-        mounts=(--mount=type=bind,src="$(realpath "$oci")",target=/out,rw)
-        output="oci:/out:{{ tag }}"
-    else
-        graphroot="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
-        mounts=(
-            --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw
-            --mount=type=tmpfs,target=/run/rpm-ostree-storage
-        )
-        output="containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]$img"
+    keep=1
+    if [ -z "$oci" ]; then
+        oci="$PWD/build/rechunk"
+        keep=
     fi
-    podman run --rm --pull=never --privileged \
-        --mount=type=image,src="$img",target=/rpm-ostree \
-        "${mounts[@]}" \
-        --entrypoint /usr/bin/rpm-ostree \
-        "$img" \
-        compose build-chunked-oci \
-        --max-layers 127 --format-version=2 --bootc "${labels[@]}" \
-        --rootfs /rpm-ostree \
-        --output "$output"
+    # It is removed (chunkah makes it), and its parent goes into a --mount
+    # option.
+    case "$oci" in
+    / | *,*) echo "rechunk: no OCI directory at '$oci'" >&2; exit 1 ;;
+    esac
+    rm -rf "$oci"
+    mkdir -p "$(dirname "$oci")"
+    parent=$(realpath "$(dirname "$oci")")
+    # The image's config (labels, command) carries over, without the base
+    # image's OSTree labels, which describe a commit this image doesn't have.
+    config=$(podman image inspect "$img" | jq -c '.[0].Config')
+    podman run --rm --pull=missing --security-opt label=disable \
+        --mount=type=image,src="$img",target=/chunkah \
+        --mount=type=bind,src="$parent",target=/out,rw \
+        -e CHUNKAH_CONFIG_STR="$config" \
+        -e SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+        {{ chunkah }} build --rootfs /chunkah --prune /sysroot/ \
+        --max-layers 127 --compressed \
+        --label ostree.commit- --label ostree.final-diffid- \
+        --tag "{{ tag }}" --output "oci:/out/$(basename "$oci")"
+    if [ -z "$keep" ]; then
+        id=$(podman pull -q "oci:$oci:{{ tag }}")
+        podman tag "$id" "$img"
+        rm -rf "$oci"
+    fi
 
 # Make a VM disk (build/atlasos.qcow2) with bootc-image-builder. Needs sudo.
 [group('Disk images')]

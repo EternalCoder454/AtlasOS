@@ -85,11 +85,11 @@ selftest)
         # A build with a network RUN and a cache mount, as the Containerfile does.
         printf "FROM %s\nRUN --mount=type=cache,target=/c curl -fsS -o /c/probe https://github.com/ && echo network-ok\n" "$img" |
             podman build --no-cache -t localhost/atlas-selftest -f - /var/tmp
-        # A privileged container with the storage bound in, as `just rechunk` does.
-        podman run --rm --privileged \
+        # An image and a directory mounted in, as `just rechunk` does.
+        podman run --rm --security-opt label=disable \
             --mount=type=image,src=localhost/atlas-selftest,target=/img \
-            --mount=type=bind,src="$graphroot",target=/run/host-container-storage,rw \
-            "$img" sh -c "test -d /img/usr && test -d /run/host-container-storage/overlay && mount -t tmpfs none /mnt && echo privileged-ok"
+            --mount=type=bind,src=/var/tmp,target=/out,rw \
+            "$img" sh -c "test -d /img/usr && test -w /out && echo mounts-ok"
         podman rmi -f localhost/atlas-selftest "$img" >/dev/null
         echo "Self-test passed."'
     ;;
