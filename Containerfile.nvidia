@@ -1,7 +1,8 @@
 # AtlasOS for NVIDIA graphics: the AtlasOS image plus NVIDIA's driver, with
 # its open kernel modules (GeForce GTX 16 and RTX 20 series and newer).
 # Published as ghcr.io/eternalcoder454/atlasos-nvidia; built by
-# `just build-nvidia` on top of a finished AtlasOS image.
+# `just build-nvidia` on top of a finished AtlasOS image (the one under its
+# labels, so a new commit alone doesn't rerun the steps here).
 
 # The AtlasOS image to add the driver to.
 ARG BASE_IMAGE=localhost/atlasos:latest
