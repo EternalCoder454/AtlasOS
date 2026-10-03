@@ -145,18 +145,41 @@ The VPS runs, oldest first:
   rebuild. Rechunking went from about 8.5 minutes per image to 2. Its pushes
   are slow because every layer was new to the registry; they take under a
   minute once the layers are there. Both images in 13m 12s.
+- 37147087222: the first after atlas.spec's faster build flags
+  (atlasos-updater 7830fb6, see below). New flags start the Rust cache over,
+  so all 204 crates recompiled: the RPM's build took 13 minutes. It stopped
+  before pushing (no `SIGNING_SECRET`), so it isn't in the tables.
 
 ### What to expect on the VPS
 
 A build where nothing changed takes about 8 minutes for both images: rechunking
 (2 minutes each), NVIDIA's driver step (2 minutes, rerun on every build because
 the image under it carries the date and commit) and the pushes. A change to
-Atlas Updater adds about 6 minutes (its stage, with the Rust cache), the daily
-package update about 2. A new Kinoite or a cleared cache reruns the stages
-built on it: KIO and the Rust apps from scratch take about 40 minutes.
+Atlas Updater adds about 6 minutes with the old build flags (its stage, with
+the Rust cache) and should add about 3 with the new ones (not yet measured on
+the VPS), the daily package update about 2. A new Kinoite or a cleared cache
+reruns the stages built on it: KIO and the Rust apps from scratch take about 40 minutes.
 
 What limits it, measured on 37130390547 with sar: CPU. The build steps use
 the 4 CPUs; the disk was under 20% busy, the network fetched at 34 MB/s, and
 about 6 GB of memory stayed free. rpm-ostree's chunker ran on one CPU for
 most of its 8.5 minutes, which is why chunkah, using all four, made the
 largest difference.
+
+### The Atlas Updater RPM's build flags
+
+atlasos-updater 7830fb6 builds the Rust code with 4 codegen units and no LTO
+(Fedora's flags ask for 1 and the profile for thin LTO), the C++ app without
+LTO, and atlas-system-helper beside the app. The binaries are about 4 MB
+larger. Measured locally in a container limited to 4 CPUs and 7.6 GB, the
+VPS's size; the RPM's `%build`, in seconds:
+
+| atlas.spec | From scratch | After an atlas-core change |
+|---|---:|---:|
+| Old flags (20ff489) | 261 | 66 |
+| New flags, helper beside the app (7830fb6) | 189 | 20 |
+| New flags, helper after the app | 185 | 32 |
+
+Peak memory stayed under 5 GB. The VPS is about 4 times slower than that
+container: the old flags' 66 seconds took 4m 20s in 37130390547. A change to
+the spec's Rust flags starts the Rust cache over, like a new compiler.
