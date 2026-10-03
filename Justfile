@@ -22,8 +22,16 @@ build tag="latest" *args:
     # checkout of EternalCoder454/atlasos-updater.
     updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
     [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
+    # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
+    # in: a local checkout's target/ is many GB, and podman would copy all of
+    # it each build and rebuild the RPMs whenever a cargo build touched it.
+    src=build/updater-src
+    rm -rf "$src"
+    mkdir -p "$src"
+    git -C "$updater" ls-files -z --cached --others --exclude-standard |
+        rsync -a --from0 --files-from=- --ignore-missing-args "$updater/" "$src/"
     podman build --pull=newer \
-        --build-context atlas-updater="$updater" \
+        --build-context atlas-updater="$src" \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
