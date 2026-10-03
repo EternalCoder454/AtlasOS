@@ -20,8 +20,11 @@ RUN sh /branding/render.sh /branding /out
 # are cache mounts, so they survive between builds without ending up in an
 # image layer. Only a machine that keeps its Podman storage benefits: the VPS
 # runner and local builds (see CI.md).
+# Without what build-rpm.sh leaves out of the source too: .git differs in every
+# checkout, so with it this step and the build after it never come from the
+# cache, and a local checkout's build output is gigabytes.
 FROM registry.fedoraproject.org/fedora:44 AS atlas-apps
-COPY --from=atlas-updater / /src
+COPY --from=atlas-updater --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
