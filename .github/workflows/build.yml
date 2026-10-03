@@ -309,7 +309,8 @@ jobs:
       # runner's disk has room for beside its cache. Its kernel modules are
       # signed with the AtlasOS module key, which CI reads from the
       # NVIDIA_SIGNING_KEY secret (see DEV.md); without it this only leaves a
-      # notice. Pull requests don't build it.
+      # notice. Pull requests don't build it, and neither does a run whose
+      # atlasos steps failed after the push (signing): the next run does.
       - name: Check for the module signing key
         id: nvidia
         if: steps.push.outcome == 'success'
@@ -332,6 +333,13 @@ jobs:
           key="${RUNNER_TEMP}/nvidia-signing.key"
           trap 'rm -f "$key"' EXIT
           (umask 077 && printf '%s\n' "$KEY" >"$key")
+          # atlasos's rechunked copy is pushed: its 3 GB go before this build
+          # needs the space. On a GitHub-hosted runner, so do the build's
+          # intermediate images, which no later run reuses.
+          rm -rf "${RUNNER_TEMP:?}/rechunked"
+          if [ "${{ needs.runner.outputs.kind }}" = hosted ]; then
+            podman image prune -f
+          fi
           NVIDIA_SIGNING_KEY="$key" just build-nvidia "${{ steps.decide.outputs.tag }}"
 
       # Into the same directory, which `just rechunk` empties: atlasos is

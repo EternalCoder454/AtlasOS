@@ -6,10 +6,13 @@
 set -euo pipefail
 
 before=$(mktemp)
+after=$(mktemp)
 rpm -qa --qf '%{NAME}\n' | sort -u >"$before"
 "$@"
-mapfile -t added < <(rpm -qa --qf '%{NAME}\n' | sort -u | comm -13 "$before" -)
-rm -f "$before"
+# Into a file, so a failing rpm fails the build instead of removing nothing.
+rpm -qa --qf '%{NAME}\n' | sort -u >"$after"
+mapfile -t added < <(comm -13 "$before" "$after")
+rm -f "$before" "$after"
 # Without their scriptlets: nothing runs in this stage after the build.
 if [ ${#added[@]} -gt 0 ]; then
 	rpm -e --nodeps --noscripts --notriggers --allmatches "${added[@]}"
