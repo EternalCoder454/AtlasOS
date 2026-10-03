@@ -1,7 +1,7 @@
 // The AtlasOS desktop: a macOS-style menu bar along the top and a dock along
 // the bottom.
 //
-// Menu bar: the AtlasOS menu (apps, settings and power, like the Apple menu)
+// Menu bar: the AtlasOS menu (About, settings and power, like the Apple menu)
 // and the active window's menus (File, Edit, View...) on the left; the system
 // tray and the day, date and time on the right.
 //
@@ -19,9 +19,8 @@ for (var j = 0; j < desktopsArray.length; j++) {
     desktopsArray[j].wallpaperPlugin = "org.kde.image";
 }
 
-// The dock comes first: Meta (and Alt+F1) open the first app launcher Plasma
-// finds, panel by panel in the order they were made, and that should be the
-// dock's rather than the menu bar's AtlasOS menu.
+// The dock comes first. Meta (and Alt+F1) open the first app launcher Plasma
+// finds, panel by panel in the order they were made: the dock's.
 var dock = new Panel;
 dock.location = "bottom";
 dock.floating = true;
@@ -66,9 +65,8 @@ bar.height = 28;
 // See-through with the desktop blurred behind it, like macOS's menu bar
 bar.opacity = "translucent";
 
-var menu = bar.addWidget("org.kde.plasma.kicker");
-menu.currentConfigGroup = ["General"];
-menu.writeConfig("icon", "atlasos");
+// About, settings, Force Quit and power; no apps (those are the dock's)
+bar.addWidget("org.atlasos.menu");
 
 bar.addWidget("org.kde.plasma.appmenu");
 bar.addWidget("org.kde.plasma.panelspacer");

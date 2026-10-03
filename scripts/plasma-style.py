@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Writes the AtlasOS Plasma style's SVGs: the dock's task frames
-(widgets/tasks.svg) and the panel background of the dock and menu bar
-(widgets/, translucent/, opaque/ and solid/ panel-background.svg), into
+(widgets/tasks.svg), the panel background of the dock and menu bar
+(widgets/, translucent/, opaque/ and solid/ panel-background.svg) and the
+app launcher's popup (solid/dialogs/background.svg), into
 system_files/usr/share/plasma/desktoptheme/atlasos/.
 
     scripts/plasma-style.py
@@ -35,6 +36,10 @@ TASK_H = ICON + TASK_MARGIN["top"] + TASK_MARGIN["bottom"]  # 60
 TASK_W = TASK_H + TASK_MARGIN["left"] + TASK_MARGIN["right"]  # 60
 TILE_INSET = 2
 TILE_RADIUS = 10
+# The launcher's popup: the dock's curve, Breeze's 4 px margins (the
+# launcher's layout counts on them) and a soft shadow SHADOW px wide.
+DIALOG_MARGIN = 4
+SHADOW = 10
 UNDERLINE_W = 10
 UNDERLINE_H = 2
 
@@ -136,7 +141,7 @@ def frame(prefix, size, borders, shapes, hints, bounds=True):
         if hint == "stretch-borders":
             out.append(f' <rect id="{name_prefix}hint-stretch-borders" width="1" height="1" fill="#000" opacity="0.004"/>')
         else:  # a margin: its height (top/bottom) or width (left/right)
-            vertical = hint in ("top-margin", "bottom-margin")
+            vertical = hint.split("-")[0] in ("top", "bottom")
             value = value or 1e-08  # an empty rectangle would count as missing
             out.append(f' <rect id="{name_prefix}hint-{hint}" x="0" y="0" '
                        f'width="{1 if vertical else value}" height="{value if vertical else 1}" fill="#000" opacity="0.004"/>')
@@ -210,6 +215,39 @@ def panel(opacity, what):
     return HEADER.format(what=what, w=size, h=size) + "\n".join(body) + "\n</svg>\n"
 
 
+def dialog():
+    """The app launcher's popup, which asks for Plasma's solid dialog
+    background so that no other popup changes: an opaque plate with the
+    dock's corners and hairline edge, and a shadow KWin draws around it,
+    fading over SHADOW px. Its rings are drawn 1 px apart (no SVG filters:
+    KSvg doesn't run them), and none lies under the plate, so the corners
+    stay clear."""
+    r = PANEL_RADIUS
+    b = r + 1
+    size = 2 * b + 8
+    plate = [Shape((0, 0, size, size), r, "ColorScheme-Background", 1),
+             Shape((0, 0, size, size), r, "ColorScheme-Text", 0.12, ring=True)]
+    margins = {f"{side}-margin": DIALOG_MARGIN for side in ("top", "bottom", "left", "right")}
+    insets = {f"{side}-inset": 0 for side in ("top", "bottom", "left", "right")}
+    body = frame("", (size, size), (b, b, b, b), plate, {**margins, **insets})
+    body += frame("mask", (size, size), (b, b, b, b),
+                  [Shape((0, 0, size, size), r, "ColorScheme-Text", 1)], {}, bounds=False)
+    # The shadow: its pieces reach SHADOW px out from the plate and the
+    # plate's corner (b px) in, where KWin lays them under the window.
+    s = SHADOW
+    ssize = 2 * (s + b) + 8
+    rings = [Shape((s - k - 1, s - k - 1, ssize - 2 * (s - k - 1), ssize - 2 * (s - k - 1)),
+                   r + k + 1, "", round(0.16 * (1 - (k + 0.5) / s) ** 2, 4), ring=True)
+             for k in range(s)]
+    body += frame("shadow", (ssize, ssize), (s + b,) * 4, rings,
+                  {f"{side}-{kind}": s for side in ("top", "bottom", "left", "right")
+                   for kind in ("margin", "inset")})
+    # The shadow is black whatever the colours (its rings have no class).
+    body = "\n".join(body).replace('class="" fill="currentColor"', 'fill="#000"')
+    return (HEADER.format(what="The app launcher's popup (Plasma's solid dialog background).",
+                          w=ssize, h=ssize) + body + "\n</svg>\n")
+
+
 def main():
     files = {
         "widgets/tasks.svg": tasks(),
@@ -220,6 +258,9 @@ def main():
         "widgets/panel-background.svg": panel(0.55, "Panel background, adaptive (see-through until a window is maximized)."),
         "opaque/widgets/panel-background.svg": panel(1, "Panel background, opaque."),
         "solid/widgets/panel-background.svg": panel(1, "Panel background, without compositing."),
+        # Only popups that ask for a solid background use this, which in
+        # AtlasOS is the app launcher's; every other popup stays Breeze's.
+        "solid/dialogs/background.svg": dialog(),
     }
     for rel, text in files.items():
         path = OUT / rel

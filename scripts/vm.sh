@@ -51,6 +51,17 @@ common=(
 	--noautoconsole
 )
 
+# T480=1: a ThinkPad T480 with its fastest CPU, the i7-8650U (4 cores, 15 W),
+# for `run` (the test VM). Each vCPU gets a performance core of its own
+# (CPUs 0, 2, 4, 6 are the first threads of four P-cores on the i9-14900KF)
+# and at most 45% of it: a Raptor Lake P-core at 5.7 GHz does about twice the
+# work per clock-second of a Kaby Lake R core held near 3 GHz by its 15 W
+# limit. The GPU can't be matched: the VM draws with the host's (virgl).
+t480=()
+t480_quota=45000
+[ -z "${T480-}" ] || t480=(--cputune
+	vcpupin0.vcpu=0,vcpupin0.cpuset=0,vcpupin1.vcpu=1,vcpupin1.cpuset=2,vcpupin2.vcpu=2,vcpupin2.cpuset=4,vcpupin3.vcpu=3,vcpupin3.cpuset=6)
+
 exists() { virsh dominfo "$1" >/dev/null 2>&1; }
 
 # Only VMs this script made, whose disks are all in build/vm, are ever
@@ -148,7 +159,9 @@ run() {
 	stop "$name"
 	qemu-img create -q -f qcow2 -F qcow2 -b "$(realpath "$base")" "build/vm/overlays/$name.qcow2"
 	virt-install --name "$name" --import \
-		--disk "path=build/vm/overlays/$name.qcow2,bus=virtio" "${common[@]}"
+		--disk "path=build/vm/overlays/$name.qcow2,bus=virtio" "${common[@]}" "${t480[@]}"
+	[ -z "${T480-}" ] || virsh schedinfo "$name" --live \
+		--set vcpu_period=100000 --set vcpu_quota="$t480_quota" >/dev/null
 }
 
 # Brings a disk up to an image in local (rootless) container storage without

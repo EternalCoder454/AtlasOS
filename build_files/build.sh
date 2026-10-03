@@ -171,6 +171,35 @@ keep=(
 )
 rpm -q "${keep[@]}"
 
+# Everyday names for the everyday apps, in every language (as macOS calls
+# its file manager Finder everywhere): Terminal, Files, Store and Notepad.
+# Only the app's own entry is renamed, not its actions; searching the old
+# name still finds it. Ghostty's shortcut copy above is renamed with it.
+rename_app() { # desktop file, new name
+	local old
+	old=$(sed -n '/^\[Desktop Entry\]$/,/^\[/ s/^Name=//p' "$1")
+	[ -n "$old" ] || {
+		echo "build.sh: no Name= in $1" >&2
+		exit 1
+	}
+	awk -v new="$2" -v old="$old" '
+		/^\[/ { entry = ($0 == "[Desktop Entry]") }
+		entry && /^Name\[/ { next }
+		entry && /^Name=/ { $0 = "Name=" new }
+		entry && /^Keywords=/ { $0 = $0 (/;$/ ? "" : ";") old ";" }
+		{ print }' "$1" >"$1.new"
+	mv "$1.new" "$1"
+	grep -q "^Keywords=.*;$old;\$" "$1" || {
+		echo "build.sh: $1 has no Keywords= to add '$old' to" >&2
+		exit 1
+	}
+}
+rename_app /usr/share/applications/com.mitchellh.ghostty.desktop Terminal
+rename_app /usr/share/kglobalaccel/com.mitchellh.ghostty.desktop Terminal
+rename_app /usr/share/applications/org.kde.dolphin.desktop Files
+rename_app /usr/share/applications/org.kde.discover.desktop Store
+rename_app /usr/share/applications/org.kde.kate.desktop Notepad
+
 ### KIO
 
 # Fedora's kf6-kio rebuilt with AtlasOS's fix for a crash on closing Dolphin

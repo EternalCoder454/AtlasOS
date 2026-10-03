@@ -1,5 +1,10 @@
 [KDE]
 LookAndFeelPackage=org.atlasos.desktop
+# Animations a notch quicker than Plasma's (System Settings' speed slider one
+# step towards Faster): KWin and Kirigami's 100/200/400 ms become 71/141/283,
+# near Windows 11's 83/167/250 and macOS's ~250 ms. The dock settling at
+# login and menus opening then keep up with the hand, without any snapping.
+AnimationDurationFactor=0.7071
 
 # IBM Plex Sans for the interface and JetBrains Mono for fixed-width text
 # (Noto stays as the fallback for scripts they don't cover); Ghostty and

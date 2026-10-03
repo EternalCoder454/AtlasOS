@@ -129,7 +129,7 @@ Item {
   Rectangle {
     id: rectFill
     color: PlasmaCore.Theme.highlightColor
-    radius: 6
+    radius: 10 // AtlasOS: the dock's tiles' curve
     z: -20
     anchors.fill: rect
   }

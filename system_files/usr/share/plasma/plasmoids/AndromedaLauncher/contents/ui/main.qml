@@ -172,7 +172,8 @@ PlasmoidItem {
     KSvg.FrameSvgItem {
         id: dialogSvg
         visible: false
-        imagePath: "dialogs/background"
+        // AtlasOS: the popup's frame (see MenuRepresentation.qml)
+        imagePath: "solid/dialogs/background"
     }
 
     PlasmaComponents.Label {

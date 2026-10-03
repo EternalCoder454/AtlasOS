@@ -37,6 +37,11 @@ PlasmaCore.Dialog {
     flags: Qt.WindowStaysOnTopHint
 
     location: Plasmoid.configuration.floating || Plasmoid.configuration.launcherPosition == 2 ? "Floating" : Plasmoid.location
+    // AtlasOS: the AtlasOS style's solid dialog frame, which has the dock's
+    // rounded corners and is used by no other popup, rounded on every side
+    // (it floats above the dock, not against it).
+    backgroundHints: PlasmaCore.Dialog.SolidBackground
+    floating: 1
     hideOnWindowDeactivate: true
 
     Plasmoid.status: root.visible ? PlasmaCore.Types.RequiresAttentionStatus : PlasmaCore.Types.PassiveStatus
@@ -142,7 +147,10 @@ PlasmaCore.Dialog {
             if (Plasmoid.configuration.offsetY > 0) {
               offset = Plasmoid.configuration.offsetY
             }
-            y = screen.y + screen.height - parent.height - height - panelSvg.margins.top - offset * 2.5;
+            // AtlasOS: above the panel's own top edge, wherever that is (a
+            // floating dock sits above its applets' bottom by its margins),
+            // with a gap, so the menu never covers the dock.
+            y = appletTopLeft.y - panelSvg.margins.top - Kirigami.Units.largeSpacing - height - offset * 2.5;
           }
         } else {
           y = vertMidPoint - height / 2
