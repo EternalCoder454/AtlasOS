@@ -144,25 +144,42 @@ sbom tag="latest" out="build/sbom" name=image_name:
     img="localhost/{{ name }}:{{ tag }}"
     mkdir -p "{{ out }}"
     out=$(realpath "{{ out }}")
+    # grype's vulnerability database (3 GB unpacked) is downloaded each time
+    # into a directory beside the output, which goes afterwards (not /tmp,
+    # which can be a small tmpfs). Indexing it after the download is most of
+    # grype's time, so it happens while syft scans, and whichever finishes
+    # last sets the time. If the recipe fails first, the trap removes the
+    # fetch's container before its directory.
+    db=$(mktemp -d "$(dirname "$out")/grype-db.XXXXXX")
+    fetcher="atlas-grype-db-$$"
+    trap 'podman rm --force --ignore --time 0 "$fetcher" >/dev/null 2>&1 || true; wait || true; rm -rf "$db"' EXIT
+    podman run --rm --pull=missing --security-opt label=disable --user 0 \
+        --name "$fetcher" \
+        --mount=type=bind,src="$db",target=/db,rw \
+        -e GRYPE_DB_CACHE_DIR=/db \
+        {{ grype }} db update &
+    fetch=$!
     # Packages only: listing every file made the SBOM 100 MB (22 MB without).
+    # No kernel modules: syft lists each .ko as a package (4,850 of them,
+    # 14 MB of the SBOM and nearly half its scan time), which grype matches
+    # as "linux-kernel" against old NVD entries, all false. The kernel is in
+    # it as its RPM.
     podman run --rm --pull=missing --security-opt label=disable --user 0 \
         -e SYFT_FILE_METADATA_SELECTION=none \
         -e SYFT_RELATIONSHIPS_PACKAGE_FILE_OWNERSHIP=false \
         --mount=type=image,src="$img",target=/rootfs \
         --mount=type=bind,src="$out",target=/out,rw \
         {{ syft }} scan dir:/rootfs --quiet \
+        --select-catalogers=-linux-kernel-cataloger \
         --source-name "{{ name }}" --source-version "{{ tag }}" \
         -o spdx-json=/out/sbom.spdx.json
-    # grype's vulnerability database (about 1 GB unpacked) is downloaded each
-    # time into a directory beside the output, which goes afterwards (not
-    # /tmp, which can be a small tmpfs). Matched as Fedora 44, which syft
-    # can't tell from os-release (ID=atlasos).
-    db=$(mktemp -d "$(dirname "$out")/grype-db.XXXXXX")
-    trap 'rm -rf "$db"' EXIT
+    wait "$fetch"
+    # Matched as Fedora 44, which syft can't tell from os-release
+    # (ID=atlasos).
     podman run --rm --pull=missing --security-opt label=disable --user 0 \
         --mount=type=bind,src="$out",target=/out,rw \
         --mount=type=bind,src="$db",target=/db,rw \
-        -e GRYPE_DB_CACHE_DIR=/db \
+        -e GRYPE_DB_CACHE_DIR=/db -e GRYPE_DB_AUTO_UPDATE=false \
         {{ grype }} sbom:/out/sbom.spdx.json --quiet --distro fedora:44 \
         -o json=/out/vulnerabilities.json -o table=/out/vulnerabilities.txt
     jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("\(.[0]): \(length)") | .[]' \

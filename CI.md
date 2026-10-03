@@ -164,6 +164,17 @@ the Rust cache) and should add about 3 with the new ones (not yet measured on
 the VPS), the daily package update about 2. A new Kinoite or a cleared cache
 reruns the stages built on it: KIO and the Rust apps from scratch take about 40 minutes.
 
+The SBOM and vulnerability scan (`just sbom`) adds to that. On 37150558866
+it took 7 minutes: syft's scan (3.4 minutes), then grype's database (3.4
+minutes, most of it indexing the 3 GB database after a 187 MB download). Now
+the database comes while syft scans, and syft skips the kernel modules
+(nearly half its scan, and their only findings were false). Measured locally
+on the same image in a pod limited to 4 CPUs: 63 seconds one after the
+other, 51 to 55 together, about what the database takes alone. Together they
+peak at about 1 GB of memory. So on the VPS the step should take about as
+long as grype's part did, 3.5 to 4 minutes with the CPUs shared (not yet
+measured there).
+
 What limits it, measured on 37130390547 with sar: CPU. The build steps use
 the 4 CPUs; the disk was under 20% busy, the network fetched at 34 MB/s, and
 about 6 GB of memory stayed free. rpm-ostree's chunker ran on one CPU for

@@ -380,7 +380,7 @@ jobs:
       # What the image contains (an SPDX SBOM of its packages, from syft) and
       # the known vulnerabilities in it (grype), as the run's artifacts and,
       # for a signed image, as a signed attestation beside it on the registry
-      # (`cosign download attestation`; 20 MB, too big for the public
+      # (`cosign download attestation`; 7 MB, too big for the public
       # transparency log, so it stays out of it). Reports only: a finding
       # never fails the build. Both read the image Podman built, mounted, so
       # neither needs disk space for a copy. See `just sbom` for what the scan
