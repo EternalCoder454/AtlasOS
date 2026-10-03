@@ -7,8 +7,9 @@
 FROM quay.io/podman/stable:v5.8.7@sha256:c70aa78a604fafa95076aae36bdc91d1173d2bff05e2749bf7d79c88c248acc0
 
 # The runner's .NET dependencies, and what build.yml and the Justfile use.
+# gettext-envsubst: sigstore/cosign-installer runs envsubst first thing.
 RUN dnf -y install --setopt=install_weak_deps=False \
-        findutils git-core gzip hostname jq just krb5-libs libicu lttng-ust python3 \
+        findutils gettext-envsubst git-core gzip hostname jq just krb5-libs libicu lttng-ust python3 \
         openssl-libs procps-ng rsync ShellCheck skopeo tar util-linux zlib \
     && dnf clean all
 
