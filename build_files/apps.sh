@@ -8,12 +8,20 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 
 ### Atlas apps
 
-# Atlas Updater and atlas-core, built by the atlas-apps stage of the
-# Containerfile (bound in at /atlas-rpms), and Atlas Monitor, built by the
-# monitor-app stage (at /atlas-monitor-rpms); nothing is copied into the
+# atlas-framework first: Atlas.Ui (atlas-ui), the QML module every Atlas app
+# imports, its Material Symbols fonts (atlas-symbols-fonts) and the Atlas
+# Symbols gallery (atlas-symbols), built by the framework stage of the
+# Containerfile (bound in at /atlas-framework-rpms). The apps are built
+# against this Atlas.Ui and require it. Then Atlas Updater and atlas-core,
+# built by the atlas-apps stage (at /atlas-rpms), and Atlas Monitor, built by
+# the monitor-app stage (at /atlas-monitor-rpms); nothing is copied into the
 # image. They are required parts of the system: the build fails without them,
-# and their protected.d files (atlas.conf from atlas-core, atlas-monitor.conf)
-# stop dnf removing them.
+# and their protected.d files (atlas-framework.conf from atlas-ui, atlas.conf
+# from atlas-core, atlas-monitor.conf) stop dnf removing them.
+"${dnf[@]}" install /atlas-framework-rpms/*.rpm
+rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
+[ -f /etc/dnf/protected.d/atlas-framework.conf ]
+[ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
 "${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm
 rpm -q atlas-core atlas-updater atlas-monitor
 [ -f /etc/dnf/protected.d/atlas.conf ]

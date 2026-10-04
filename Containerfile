@@ -12,6 +12,21 @@ RUN apk add --no-cache rsvg-convert imagemagick imagemagick-jpeg imagemagick-jxl
 COPY branding /branding
 RUN sh /branding/render.sh /branding /out
 
+# atlas-framework, the shared base of the Atlas apps (Atlas.Ui, its Material
+# Symbols fonts and the Atlas Symbols gallery), built into RPMs the same way
+# from the build context named "atlas-framework"
+# (EternalCoder454/atlas-framework). The apps below are built against these
+# RPMs (ATLAS_LOCAL_RPMS, see build-rpm.sh in each app), and apps.sh installs
+# them before the apps. The stage has its own name: a stage named like the
+# build context would hide it from COPY --from.
+FROM registry.fedoraproject.org/fedora:44 AS framework
+COPY --from=atlas-framework --exclude=.git --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-framework-build,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    ATLAS_BUILD_CACHE=/var/cache/atlas-framework-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # The Atlas apps (Atlas Updater and atlas-core), built into RPMs in a Fedora 44
 # container, the release the image is based on. The source is the build
 # context named "atlas-updater" (`podman build --build-context
@@ -29,20 +44,25 @@ COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     ATLAS_BUILD_CACHE=/var/cache/atlas-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # Atlas Monitor, built the same way from the build context named
 # "atlas-monitor" (EternalCoder454/atlasos-monitor). A stage of its own, so a
 # change to one app doesn't rebuild the other. Cargo's crate downloads are a
 # cache mount (CARGO_HOME, see the spec there). Its build fetches the
-# atlas-core crate and Atlas.Ui from atlasos-updater at the commit its
-# Cargo.toml pins, so it needs the network.
+# atlas-core crate from atlasos-updater at the commit its Cargo.toml pins,
+# so it needs the network. It gets the framework RPMs like Atlas Updater does
+# (until it builds against them, it still fetches its own Atlas.Ui).
 FROM registry.fedoraproject.org/fedora:44 AS monitor-app
 COPY --from=atlas-monitor --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/atlas-monitor-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-monitor-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
@@ -109,6 +129,7 @@ RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     PACKAGES_DATE="${PACKAGES_DATE}" /ctx/packages.sh
 
 RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
     --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
     --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
     --mount=type=tmpfs,dst=/tmp \

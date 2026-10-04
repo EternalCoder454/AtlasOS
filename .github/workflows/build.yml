@@ -95,6 +95,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      # atlas-framework's source (main), the atlas-framework build context:
+      # the Containerfile builds Atlas.Ui's RPMs from it, and the apps
+      # against them. If the repository is private, store a token that can
+      # read it in the ATLAS_FRAMEWORK_TOKEN secret.
+      - name: Checkout atlas-framework
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlas-framework
+          ref: main
+          path: atlas-framework
+          token: ${{ secrets.ATLAS_FRAMEWORK_TOKEN || github.token }}
+          # Only the checkout needs the token: don't leave it in .git/config
+          # on the self-hosted runner.
+          persist-credentials: false
+
       # The Atlas apps' source (Atlas Updater and atlas-core, main): the
       # Containerfile builds their RPMs from it. If the repository is private,
       # store a token that can read it in the ATLAS_UPDATER_TOKEN secret.
@@ -146,6 +161,7 @@ jobs:
           # already published for this branch was built from this commit on
           # this same Kinoite. That saves a whole build most days.
           skip=false
+          framework=$(git -C atlas-framework rev-parse HEAD)
           updater=$(git -C atlas-updater rev-parse HEAD)
           monitor=$(git -C atlas-monitor rev-parse HEAD)
           if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
@@ -156,6 +172,7 @@ jobs:
               labels=$(jq -c '.Labels // {}' <<<"$json")
             fi
             if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.framework.revision" // ""' <<<"$labels")" = "$framework" ] &&
                [ "$(jq -r '."net.eterneon.atlas.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
                [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
@@ -205,6 +222,7 @@ jobs:
             echo "tag=$tag"
             echo "push=$push"
             echo "base=$base"
+            echo "framework=$framework"
             echo "updater=$updater"
             echo "monitor=$monitor"
             echo "skip=$skip"
@@ -247,7 +265,9 @@ jobs:
         if: steps.decide.outputs.skip != 'true'
         env:
           IMAGE_VERSION: ${{ steps.decide.outputs.version }}
-          # `just build` passes this as the atlas-updater build context.
+          # `just build` passes this as the atlas-framework build context,
+          ATLAS_FRAMEWORK_SRC: ${{ github.workspace }}/atlas-framework
+          # this as the atlas-updater one,
           ATLAS_UPDATER_SRC: ${{ github.workspace }}/atlas-updater
           # and this as the atlas-monitor one.
           ATLAS_MONITOR_SRC: ${{ github.workspace }}/atlas-monitor
@@ -255,6 +275,7 @@ jobs:
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
+            --label net.eterneon.atlas.framework.revision="${{ steps.decide.outputs.framework }}" \
             --label net.eterneon.atlas.updater.revision="${{ steps.decide.outputs.updater }}" \
             --label net.eterneon.atlas.monitor.revision="${{ steps.decide.outputs.monitor }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \

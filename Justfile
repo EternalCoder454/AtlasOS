@@ -31,6 +31,11 @@ build tag="latest" *args:
     # checkout of EternalCoder454/atlasos-updater.
     updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
     [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
+    # atlas-framework's source (Atlas.Ui, which the apps are built against):
+    # the build context named "atlas-framework". CI points it at a checkout of
+    # EternalCoder454/atlas-framework.
+    framework="${ATLAS_FRAMEWORK_SRC:-../Atlas Framework}"
+    [ -d "$framework/packaging" ] || { echo "atlas-framework source not found at '$framework' (set ATLAS_FRAMEWORK_SRC)" >&2; exit 1; }
     # Atlas Monitor's source: the build context named "atlas-monitor". CI
     # points it at a checkout of EternalCoder454/atlasos-monitor.
     monitor="${ATLAS_MONITOR_SRC:-../AtlasOS Monitor}"
@@ -44,9 +49,11 @@ build tag="latest" *args:
         git -C "$1" ls-files -z --cached --others --exclude-standard |
             rsync -a --from0 --files-from=- --ignore-missing-args "$1/" "$2/"
     }
+    copy_source "$framework" build/framework-src
     copy_source "$updater" build/updater-src
     copy_source "$monitor" build/monitor-src
     podman build --pull=newer \
+        --build-context atlas-framework=build/framework-src \
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
@@ -54,6 +61,7 @@ build tag="latest" *args:
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
         --label org.opencontainers.image.version="$version" \
         --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
+        --label net.eterneon.atlas.framework.revision="$(git -C "$framework" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
