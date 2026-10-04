@@ -34,7 +34,11 @@ label is the AtlasOS commit the image was built from, and
   the new image and never reboots; a staged update is used at the next
   shutdown or reboot. It runs at idle CPU and disk priority, only on an
   image-based boot, with the network up, and not on a connection NetworkManager
-  reports as metered. `bootc-fetch-apply-updates.timer` (which reboots) and
+  reports as metered. A download that failed with a network error is tried again
+  after 15 minutes (at most 4 tries in 3 hours). It skips the image this
+  machine went back from, one that failed its boot checks, and one older than
+  the installed version (a tag that went back).
+  `bootc-fetch-apply-updates.timer` (which reboots) and
   `rpm-ostreed-automatic.timer` stay disabled; `build.sh` fails if they are
   enabled.
 - **Notifier:** [Atlas Updater](https://github.com/EternalCoder454/atlasos-updater)

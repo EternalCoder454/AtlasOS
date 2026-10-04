@@ -9,6 +9,12 @@ Documentation=https://github.com/EternalCoder454/AtlasOS
 ConditionPathExists=/run/ostree-booted
 After=network-online.target
 Wants=network-online.target
+# A download that failed with a network error (update-stage exits 75) is
+# tried again in 15 minutes rather than at the next timer run 6 hours later,
+# at most 4 tries in 3 hours; other failures (a full disk) wait for the timer.
+# A skip by the condition script is not a failure.
+StartLimitIntervalSec=3h
+StartLimitBurst=4
 
 [Service]
 Type=oneshot
@@ -19,3 +25,5 @@ Nice=19
 IOSchedulingClass=idle
 CPUSchedulingPolicy=idle
 TimeoutStartSec=2h
+RestartForceExitStatus=75
+RestartSec=15min

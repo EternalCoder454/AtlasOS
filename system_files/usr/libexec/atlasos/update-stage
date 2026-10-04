@@ -15,6 +15,10 @@
 # so bootc status shows the check. If the switch
 # fails (a network error), this run updates as before and the next one tries
 # again.
+#
+# A download that fails with a network error (a dropped connection, DNS, a
+# timeout, the registry busy) exits 75, which the service tries again in 15
+# minutes; any other failure waits for the next timer run.
 ours='ghcr.io/eternalcoder454/atlasos ghcr.io/eternalcoder454/atlasos-nvidia'
 is_ours() {
 	for r in $ours; do
@@ -23,6 +27,25 @@ is_ours() {
 	return 1
 }
 key=/etc/pki/containers/atlasos.pub
+
+# Run the download `$@` and exit with its status, 75 for a network error
+# (the phrases atlas-system-helper retries; keep in step with its
+# helper::retry). Its stderr goes to the journal as it comes.
+fetch() {
+	err=$(mktemp) || exec "$@"
+	trap 'rm -f "$err" "$err.rc"' EXIT
+	{
+		"$@" 2>&1 >&3 3>&-
+		echo "$?" >"$err.rc"
+	} 3>&1 | tee "$err" >&2
+	rc=$(cat "$err.rc" 2>/dev/null) || rc=1
+	if [ "$rc" -ne 0 ] &&
+		! grep -qiE 'signature|denied|unauthorized|manifest unknown|no space left|min-free-space|read-only file system' "$err" &&
+		tail -n 3 "$err" | grep -qiE 'connection (reset|refused|closed|timed out|terminated)|broken pipe|i/o timeout|handshake timeout|operation timed out|socket i/o timed out|timeout was reached|deadline exceeded|name resolution|could not resolve host|name or service not known|server misbehaving|no such host|network is unreachable|no route to host|unexpected eof|: eof$|goaway|connection lost|(status:? ?|http )(429|50[0234])([^0-9]|$)|50[0234] (internal|bad gateway|service unavailable|gateway time)|429 too many|toomanyrequests'; then
+		rc=75
+	fi
+	exit "$rc"
+}
 
 if timeout 30 bootc status --json 2>/dev/null |
 	jq -e '[.status.booted, .status.staged] | any(.incompatible? == true)' >/dev/null 2>&1; then
@@ -34,7 +57,7 @@ if timeout 30 bootc status --json 2>/dev/null |
 		rpm-ostree rebase "ostree-image-signed:docker://$image" && exit 0
 		echo "could not move to signature-checked updates; updating as before"
 	fi
-	exec rpm-ostree upgrade
+	fetch rpm-ostree upgrade
 fi
 
 spec=$(timeout 30 bootc status --json 2>/dev/null |
@@ -45,4 +68,4 @@ if [ -f "$key" ] && [ -n "$spec" ] && is_ours "$spec"; then
 	bootc switch --quiet --enforce-container-sigpolicy "$spec" && exit 0
 	echo "could not move to signature-checked updates; updating as before"
 fi
-exec bootc upgrade --quiet
+fetch bootc upgrade --quiet
