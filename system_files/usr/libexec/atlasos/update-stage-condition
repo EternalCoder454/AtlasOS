@@ -12,8 +12,38 @@
 #    (/var/lib/atlasos/bad-image-digests, written by the greenboot red.d
 #    script), so a bad update isn't staged again even after the rollback
 #    deployment is gone.
+#  - when the newest image is older than the booted or staged image of the
+#    same reference: the tag went back to an older build. Signatures prove
+#    who built an image, not that it is the newest, so a replayed old build
+#    (with its old security holes) would otherwise be installed. Older means
+#    the version labels or the build times say so and neither says the
+#    opposite; Atlas Updater's helper refuses such an image the same way
+#    (atlas_core::bootc::ImageStatus::is_older_than).
 # A newer image has a new digest and goes ahead. If NetworkManager, bootc or
-# the registry can't be asked, the run goes ahead.
+# the registry can't be asked, the run goes ahead, except that an image whose
+# age can't be told (below) is not staged.
+
+# jq: older($c; $o) is true when image $c ({version, timestamp}) is older
+# than $o. Versions compare as numbers split on . and - (44.20261008-2), with
+# missing parts 0; times as RFC 3339 UTC to the second. A signal that can't
+# be read is left out.
+# shellcheck disable=SC2016 # jq's own $variables
+older='
+def vnum: try [splits("[.-]") | tonumber] catch null;
+def pad($n): . + [range($n - length) | 0];
+def vcmp($a; $b): ($a | vnum) as $x | ($b | vnum) as $y
+	| if $x == null or $y == null then null
+	  else ([($x | length), ($y | length)] | max) as $n
+	  | ($x | pad($n)) as $x | ($y | pad($n)) as $y
+	  | if $x < $y then -1 elif $x > $y then 1 else 0 end end;
+def tkey: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*Z$")
+	then .[0:19] else null end;
+def tcmp($a; $b): ($a | tkey) as $x | ($b | tkey) as $y
+	| if $x == null or $y == null then null
+	  elif $x < $y then -1 elif $x > $y then 1 else 0 end;
+def older($c; $o): [vcmp($c.version; $o.version), tcmp($c.timestamp; $o.timestamp)]
+	| any(.[]; . == -1) and all(.[]; . != 1);
+'
 metered=$(busctl --system get-property org.freedesktop.NetworkManager \
 	/org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null) || metered=
 case $metered in
@@ -22,6 +52,12 @@ case $metered in
 	exit 1
 	;;
 esac
+
+# skopeo logs in to the registry with the credentials bootc uses
+auth=
+for a in /run/ostree/auth.json /etc/ostree/auth.json; do
+	[ -f "$a" ] && auth=$a && break
+done
 
 status=$(timeout 30 bootc status --json 2>/dev/null) || exit 0
 if printf '%s' "$status" |
@@ -50,8 +86,15 @@ if printf '%s' "$status" |
 	docker://* | oci:* | oci-archive:* | containers-storage:* | docker-daemon:*) ;;
 	*) exit 0 ;;
 	esac
-	latest=$(timeout 300 skopeo inspect --format '{{.Digest}}' -- "$ref" 2>/dev/null) || exit 0
+	inspect=$(timeout 300 skopeo inspect ${auth:+--authfile "$auth"} -- "$ref" 2>/dev/null) || exit 0
+	latest=$(printf '%s' "$inspect" | jq -r '.Digest // empty' 2>/dev/null)
+	newest=$(printf '%s' "$inspect" | jq -c '{version: .Labels["org.opencontainers.image.version"], timestamp: .Created}' 2>/dev/null)
 	rollback=$(printf '%s' "$rpm" | jq -r '[.deployments[] | select((.booted | not) and (.staged | not))][0]["container-image-reference-digest"] // empty' 2>/dev/null)
+	# a deployment with local changes keeps its image's build time as base-timestamp
+	current=$(printf '%s' "$rpm" | jq -c --arg origin "$origin" --arg latest "$latest" '[.deployments[]
+		| select((.booted or .staged) and .["container-image-reference"] == $origin)
+		| select(.["container-image-reference-digest"] != $latest)
+		| {version, timestamp: ((.["base-timestamp"] // .timestamp) | if type == "number" then todate else null end)}]' 2>/dev/null)
 else
 	# `upgrade --check` fetches only the manifest and records it as a cachedUpdate,
 	# with the digest bootc itself would deploy (for a multi-arch image, this
@@ -61,24 +104,44 @@ else
 	# rollback that is the rollback entry, and the booted entry keeps a stale
 	# cachedUpdate from an older check (bootc 1.16). So the newest image is the
 	# cachedUpdate of the entry holding the ref's commit, or, with none (nothing
-	# newer on the registry), that entry's own image. If no entry holds it, the
-	# booted entry's cachedUpdate as before.
+	# newer on the registry), that entry's own image. If no entry holds it (Atlas
+	# Updater pulled an older image and took it out again, which leaves the ref
+	# on it), the registry is asked with skopeo, since bootc would stage that
+	# image from what it already has. If that fails, this run is skipped. (Its
+	# digest is the one the registry gives: for a multi-arch image not this
+	# machine's, so the rollback and bad-image checks below need a single-arch
+	# image there; AtlasOS's are.)
 	timeout 300 bootc upgrade --check >/dev/null 2>&1 || exit 0
 	status=$(timeout 30 bootc status --json 2>/dev/null) || exit 0
 	heads=$(find /ostree/repo/refs/heads/ostree/container/image -type f -exec cat {} + 2>/dev/null |
 		jq -Rn '[inputs | select(length > 0)]' 2>/dev/null) || heads='[]'
-	latest=$(printf '%s' "$status" | jq -r --argjson heads "${heads:-[]}" '
+	newest=$(printf '%s' "$status" | jq -c --argjson heads "${heads:-[]}" '
 		def same($a; $b): $a.image == $b.image and ($a.transport // "registry") == ($b.transport // "registry");
 		.spec.image as $spec
 		| [.status.staged, .status.booted, .status.rollback
 		   | select(. != null and .image != null)
 		   | select(.ostree.checksum as $c | any($heads[]; . == $c))
 		   | select($spec == null or same(.image.image; $spec))]
-		| if length > 0 then (.[0].cachedUpdate // .[0].image).imageDigest
-		  else null end
-		// empty' 2>/dev/null) || latest=
-	[ -n "$latest" ] || latest=$(printf '%s' "$status" | jq -r '.status.booted.cachedUpdate.imageDigest // empty' 2>/dev/null)
+		| if length > 0 then (.[0].cachedUpdate // .[0].image) else empty end' 2>/dev/null) || newest=
+	if [ -z "$newest" ]; then
+		ref=$(printf '%s' "$status" | jq -r '.spec.image // empty
+			| (if (.transport // "registry") == "registry" then "docker://" else .transport + ":" end) + .image' 2>/dev/null)
+		[ -n "$ref" ] || exit 0
+		inspect=$(timeout 300 skopeo inspect ${auth:+--authfile "$auth"} -- "$ref" 2>/dev/null) || {
+			echo "skopeo inspect $ref failed, so the newest image's age is unknown; not staging it this run"
+			exit 1
+		}
+		newest=$(printf '%s' "$inspect" | jq -c --argjson s "$status" '{image: $s.spec.image,
+			version: .Labels["org.opencontainers.image.version"], timestamp: .Created,
+			imageDigest: .Digest}' 2>/dev/null) || newest=
+	fi
+	latest=$(printf '%s' "$newest" | jq -r '.imageDigest // empty' 2>/dev/null)
 	rollback=$(printf '%s' "$status" | jq -r '.status.rollback.image.imageDigest // empty' 2>/dev/null)
+	# the booted and staged images of the same reference as the newest one
+	current=$(printf '%s' "$status" | jq -c --argjson n "${newest:-null}" '
+		def same($a; $b): $a.image == $b.image and ($a.transport // "registry") == ($b.transport // "registry");
+		[.status.booted.image, .status.staged.image
+		 | select(. != null and $n != null and same(.image; $n.image) and .imageDigest != $n.imageDigest)]' 2>/dev/null)
 fi
 [ -n "$latest" ] || exit 0
 if [ "$latest" = "$rollback" ]; then
@@ -90,4 +153,14 @@ if [ -s "$bad" ] && grep -qxF "$latest" "$bad"; then
 	echo "$latest failed its boot health checks and was rolled back; waiting for a newer image"
 	exit 1
 fi
+[ -n "$newest" ] && [ -n "$current" ] || exit 0
+printf '%s' "$current" | jq -e --argjson c "$newest" "$older"'any(.[]; older($c; .))' >/dev/null 2>&1
+case $? in
+0)
+	echo "$latest is older than the version on this machine (the tag went back); not staging it"
+	exit 1
+	;;
+1) ;;
+*) echo "the check for an older image failed; staging $latest anyway" ;;
+esac
 exit 0
