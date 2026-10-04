@@ -222,8 +222,8 @@ jobs:
         run: just lint
 
       # The runner's disk is too small for a 7 GB image, its rechunked copy
-      # (3 GB, compressed) and Podman's working space without clearing the
-      # preinstalled SDKs.
+      # (2.7 GB with zstd; 5.6 GB at the peak of rechunking) and
+      # Podman's working space without clearing the preinstalled SDKs.
       # (Not on the VPS, whose disk keeps the caches.)
       - name: Maximize build space
         if: steps.decide.outputs.skip != 'true' && needs.runner.outputs.kind == 'hosted'
@@ -352,7 +352,7 @@ jobs:
             echo "::error::Version ${version} was taken while this build ran; run it again."
             exit 1
           fi
-          # The layers go up as the chunker compressed them, and the registry
+          # The layers go up as `just rechunk` compressed them (zstd), and the registry
           # already has every one that didn't change.
           tags=("$tag" "$tag-$version")
           for t in "${tags[@]}"; do
@@ -453,7 +453,7 @@ jobs:
           key="${RUNNER_TEMP}/nvidia-signing.key"
           trap 'rm -f "$key"' EXIT
           (umask 077 && printf '%s\n' "$KEY" >"$key")
-          # atlasos's rechunked copy is pushed: its 3 GB go before this build
+          # atlasos's rechunked copy is pushed: its 2.7 GB go before this build
           # needs the space. On a GitHub-hosted runner, so do the build's
           # intermediate images, which no later run reuses.
           rm -rf "${RUNNER_TEMP:?}/rechunked"

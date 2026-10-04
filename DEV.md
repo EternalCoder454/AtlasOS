@@ -503,6 +503,13 @@ as the `atlas-monitor` one.
 - dnf's downloads are cached between runs, keyed by ISO week (on the VPS,
   kept on its disk with Podman's layer cache and the Rust build cache).
 - Images are rechunked before pushing, so updates download only what changed.
+  Their layers are zstd (level 7, from a pinned skopeo; see `just rechunk`),
+  12% smaller than gzip and quicker to unpack. bootc and rpm-ostree read
+  plain zstd layers (VM-checked 2026-10-03: `bootc switch`, `bootc upgrade`
+  reusing unchanged layers, and `rpm-ostree rebase`); zstd:chunked is not
+  used. The first zstd build changes
+  every layer's digest, so every install downloads that update whole (about
+  2.7 GB), once.
 - Images are signed with cosign. The private key is `secrets/cosign.key`
   here (gitignored, no password) and the `SIGNING_SECRET` repository secret
   in CI; the public half is `cosign.pub`, which the image ships as

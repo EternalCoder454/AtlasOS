@@ -2,6 +2,9 @@ image_name := "atlasos"
 image := "localhost/" + image_name
 # The rechunker (see `rechunk`).
 chunkah := "quay.io/coreos/chunkah@sha256:0da1fa543fafe92468ad667d00580aea544a384198f668f1499675c241642e11"
+# What compresses its layers with zstd (see `rechunk`): pinned, since another
+# encoder version could compress the same layer to other bytes.
+skopeo := "quay.io/skopeo/stable:v1.22.3@sha256:249b92db7297e5c801e19172dbb3b56fde88094a49740a5ededac8c2958bf2c0"
 # The SBOM generator and vulnerability scanner (see `sbom`).
 syft := "ghcr.io/anchore/syft:v1.54.0@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c"
 grype := "ghcr.io/anchore/grype:v0.120.0@sha256:5c88961f4130e830542d441c7ed6c78baa28e799163abac53d2be4923fb5ab7d"
@@ -88,10 +91,16 @@ build-nvidia tag="latest" *args:
 # With an oci directory, the result goes there (as oci:<dir>:<tag>) instead of
 # replacing the image: CI pushes it from there with skopeo, which uploads the
 # layers as compressed here, and only those the registry doesn't have.
-# chunkah compresses the layers in parallel and writes a plain OCI image (no
-# OSTree commit, which rpm-ostree's chunker spent minutes making). The layers
-# depend only on the files and SOURCE_DATE_EPOCH, the commit's time here: a
-# build of the same files makes the same layers.
+# chunkah writes a plain OCI image (no OSTree commit, which rpm-ostree's
+# chunker spent minutes making), with gzip at its fastest level; skopeo then
+# compresses each layer again with zstd at level 7 (12% smaller than gzip's
+# level 6, and quicker to unpack). The gzip keeps the disk this takes small:
+# about 3 GB of gzip beside the 2.7 GB result (5.6 GB at the peak);
+# uncompressed layers would take 7 GB. The layers depend only on the files
+# and SOURCE_DATE_EPOCH, the commit's time here, and the pinned zstd encoder
+# (not on the gzip): a build of the same files makes the same layers. (Plain
+# zstd, not zstd:chunked, which bootc's ostree backend doesn't read reliably
+# yet. Levels above 7 took three times as long for 4% more.)
 [group('Build')]
 rechunk tag="latest" name=image_name oci="":
     #!/usr/bin/env bash
@@ -105,10 +114,15 @@ rechunk tag="latest" name=image_name oci="":
     fi
     # It is removed (chunkah makes it), and its parent goes into a --mount
     # option.
+    while [ "${oci%/}" != "$oci" ]; do oci="${oci%/}"; done
     case "$oci" in
-    / | *,*) echo "rechunk: no OCI directory at '$oci'" >&2; exit 1 ;;
+    "" | . | .. | */. | */.. | *,*) echo "rechunk: no OCI directory at '{{ oci }}'" >&2; exit 1 ;;
     esac
-    rm -rf "$oci"
+    # chunkah's gzip copy goes when done or failed; so does the result when
+    # it only feeds the local image.
+    gz="$oci.gzip"
+    trap 'rm -rf "$gz"; [ -n "$keep" ] || rm -rf "$oci"' EXIT
+    rm -rf "$oci" "$gz"
     mkdir -p "$(dirname "$oci")"
     parent=$(realpath "$(dirname "$oci")")
     # The image's config (labels, command) carries over, without the base
@@ -120,13 +134,19 @@ rechunk tag="latest" name=image_name oci="":
         -e CHUNKAH_CONFIG_STR="$config" \
         -e SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
         {{ chunkah }} build --rootfs /chunkah --prune /sysroot/ \
-        --max-layers 127 --compressed \
+        --max-layers 127 --compressed --compression-level 1 \
         --label ostree.commit- --label ostree.final-diffid- \
-        --tag "{{ tag }}" --output "oci:/out/$(basename "$oci")"
+        --tag "{{ tag }}" --output "oci:/out/$(basename "$gz")"
+    # (the image's entrypoint is skopeo)
+    podman run --rm --pull=missing --security-opt label=disable \
+        --mount=type=bind,src="$parent",target=/out,rw \
+        {{ skopeo }} copy --quiet --dest-force-compress-format \
+        --dest-compress-format zstd --dest-compress-level 7 \
+        "oci:/out/$(basename "$gz"):{{ tag }}" "oci:/out/$(basename "$oci"):{{ tag }}"
+    rm -rf "$gz"
     if [ -z "$keep" ]; then
         id=$(podman pull -q "oci:$oci:{{ tag }}")
         podman tag "$id" "$img"
-        rm -rf "$oci"
     fi
 
 # What the built image contains and its known vulnerabilities, into a
