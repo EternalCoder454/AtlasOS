@@ -21,9 +21,12 @@ rolls itself back.
 ## Highlights
 
 **It looks good out of the box**
-- A macOS-style menu bar on top (app menus, tray, clock) and a floating dock
-  at the bottom with your apps, a short underline under the ones that are
-  open. Both are see-through and blurred.
+- A macOS-style menu bar on top, as three floating islands (app menus on
+  the left, the time and date in the middle, the tray on the right), and a
+  floating dock at the bottom with your apps, a short underline under the
+  ones that are open. Both are see-through and blurred, and both get out of
+  the way: a maximized app gets the whole screen, and **Meta+M** brings the
+  menu bar back over it.
 - Two app launchers, picked when you set up your computer: **Modern**
   (centred over the dock, your favourite apps up front) or **Classic** (a
   compact menu with every app in a list). To switch later, right-click the

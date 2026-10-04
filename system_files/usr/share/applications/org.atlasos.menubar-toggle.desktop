@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Show or Hide the Menu Bar
+Comment=Show the menu bar over the windows, or let it hide under them
+Icon=window-pin
+Exec=/usr/libexec/atlasos/menubar-toggle
+NoDisplay=true
+X-KDE-Shortcuts=Meta+M

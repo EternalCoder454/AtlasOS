@@ -134,6 +134,13 @@ for f in /usr/share/kconf_update/atlasos-*.sh /usr/libexec/atlasos/*; do
 		exit 1
 	}
 done
+# Meta+M: menubar-toggle talks to Plasma through qdbus-qt6, and kglobalaccel
+# reads the shortcut from the link to its desktop file.
+command -v qdbus-qt6 >/dev/null || {
+	echo "build.sh: qdbus-qt6 (used by menubar-toggle) is missing" >&2
+	exit 1
+}
+[ -f /usr/share/kglobalaccel/org.atlasos.menubar-toggle.desktop ]
 # Every script in the .upd has to exist, and every Id has to be unique.
 while IFS=, read -r script _; do
 	[ -x "/usr/share/kconf_update/${script#Script=}" ]
