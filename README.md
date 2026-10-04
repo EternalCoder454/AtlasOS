@@ -1,9 +1,12 @@
-# AtlasOS
+# AtlasOS Linux
 
 **My own take on a KDE desktop: clean, fast, a bit of macOS and Windows 11,
 and updates that never get in your way.**
 
-![The AtlasOS desktop: a macOS-style menu bar on top, a floating dock at the bottom, and Dolphin open over the sakura wallpaper](docs/screenshots/desktop.png)
+AtlasOS Linux is its own project. It isn't related to AtlasOS, the Windows
+modification by Atlas-OS.
+
+![The AtlasOS desktop, cut diagonally into AtlasOS Light on the left and AtlasOS Dark on the right: the menu bar on top, the floating dock at the bottom, and Atlas Notepad and Ghostty open over the sakura wallpaper](docs/screenshots/desktop.webp)
 
 AtlasOS is a personal Linux distro I've been building on top of
 [Fedora Kinoite 44](https://fedoraproject.org/atomic-desktops/kinoite/). It
@@ -27,20 +30,24 @@ rolls itself back.
   ones that are open. Both are see-through and blurred, and both get out of
   the way: a maximized app gets the whole screen, and **Meta+M** brings the
   menu bar back over it.
-- Two app launchers, picked when you set up your computer: **Modern**
-  (centred over the dock, your favourite apps up front) or **Classic** (a
-  compact menu with every app in a list). To switch later, right-click the
-  launcher and choose Show Alternatives.
+- An app launcher centred over the dock, your favourite apps up front. Its
+  search is the one search: there's no separate KRunner bar.
+- Notifications slide down at the top centre, under the clock.
 - Two themes made from the logo's violets: AtlasOS Light and AtlasOS Dark.
   That's it, no wall of half-finished themes. Each has its own Bibata
-  cursor (white with Light, black with Dark), both use the Dracula icons,
-  and the sakura wallpaper turns to night with Dark.
+  cursor (white with Light, black with Dark), Papirus icons (violet folders,
+  a dark variant with Dark), and the sakura wallpaper turns to night with
+  Dark.
 - A first-run setup in the same style: language, keyboard, Light or Dark,
-  your launcher and your account, one page at a time.
-- Rounded windows, soft shadows and acrylic-style menus. It's all Plasma's
-  own Breeze and KWin, set up properly, so nothing extra runs in the background.
+  the computer's name, the time zone and your account, one page at a time.
+- Rounded windows, soft shadows and acrylic-style menus, and right-click
+  menus that keep every action. It's Plasma and KWin with AtlasOS's own style
+  for the desktop and the apps, so nothing extra runs in the background.
 - A macOS-style login and lock screen, a custom boot splash, IBM Plex Sans
   for the interface and JetBrains Mono for code.
+- The everyday apps and codecs are included: Gwenview, Okular, Haruna and
+  Qalculate! in the AtlasOS look, and video plays (with GPU decoding) out of
+  the box.
 
 **Updates that stay out of your way**
 - **Atlas Updater**, my own update app (Rust + Qt), sits in the tray. Updates
@@ -56,12 +63,13 @@ rolls itself back.
 
 **Made for developers**
 - [Ghostty](https://ghostty.org) as the terminal (Ctrl+Alt+T), with
-  "Open Ghostty Here" in Dolphin.
+  "Open Terminal Here" in Dolphin.
 - Podman with a `docker` command and compose, Toolbox and Distrobox for
   mutable dev environments, and [mise](https://mise.jdx.dev) for Node,
   Python, Go and friends.
-- git, gh, just, jq, ripgrep, fd, btop, gdb, strace and perf, already there.
-- Kate as the default editor, and file watch limits raised for big projects.
+- git, gh, just, jq, ripgrep, fd, gdb, strace and perf, already there
+  (Atlas Monitor in place of btop).
+- Atlas Notepad as the text editor, and file watch limits raised for big projects.
 - `atlas`, a command menu for the rest: Homebrew, Docker tools on Podman,
   JetBrains Toolbox, the update channel. Where each kind of software goes:
   [Installing software](docs/INSTALLING-SOFTWARE.md).
@@ -76,15 +84,23 @@ rolls itself back.
 
 ## Screenshots
 
+| The app launcher, Light and Dark |
+|---|
+| ![The app launcher over the dock, cut diagonally into the Light and Dark themes, with the favourite apps up front](docs/screenshots/launcher.webp) |
+
 | Atlas Updater, light | Atlas Updater, dark |
 |---|---|
-| ![Atlas Updater in the light theme](docs/screenshots/updater-light.png) | ![Atlas Updater in the dark theme](docs/screenshots/updater-dark.png) |
+| ![Atlas Updater in the light theme](docs/screenshots/updater-light.webp) | ![Atlas Updater in the dark theme](docs/screenshots/updater-dark.webp) |
 
-| First-run setup: Light or Dark | First-run setup: the app launcher |
-|---|---|
-| ![The setup wizard's Appearance page, with Light and Dark previews](docs/screenshots/setup-appearance.png) | ![The setup wizard's App Launcher page in Dark, with Modern and Classic previews over the night sakura wallpaper](docs/screenshots/setup-launcher.png) |
+| A right-click menu that keeps every action |
+|---|
+| ![A folder's right-click menu in Dolphin, in the dark theme, with every action still there](docs/screenshots/menu.webp) |
 
-![Ghostty, the default terminal](docs/screenshots/ghostty.png)
+| First-run setup: Light or Dark |
+|---|
+| ![The setup wizard's Appearance page in Dark, with Light and Dark previews of the desktop](docs/screenshots/setup-appearance.webp) |
+
+![Ghostty, the default terminal, showing the atlas command menu](docs/screenshots/ghostty.webp)
 
 ## By the numbers
 
@@ -104,7 +120,7 @@ How it got there, change by change: [OPTIMIZATION.md](docs/OPTIMIZATION.md).
 |---|---|---|
 | Processor | 64-bit Intel or AMD (x86_64), 2 cores | 4 cores or more |
 | Memory | 4 GB | 8 GB or more |
-| Storage | 30 GB | 64 GB or more, on an SSD |
+| Storage | 40 GB | 64 GB or more, on an SSD |
 | Graphics | Anything with an open-source driver: Intel, AMD, or NVIDIA with nouveau | Intel or AMD; NVIDIA GeForce GTX 16 / RTX 20 series or newer with the `atlasos-nvidia` image |
 | Firmware | UEFI | UEFI |
 | Internet | Needed to install and for updates | |
@@ -121,7 +137,7 @@ Why these numbers:
   `ghcr.io/eternalcoder454/atlasos-nvidia`, the same system plus the driver.
   It uses NVIDIA's open kernel modules, so it needs a GeForce GTX 16 or
   RTX 20 series card or newer; older NVIDIA cards run on the main image with
-  nouveau. With Secure Boot on, you enroll the AtlasOS key once (see
+  nouveau. With Secure Boot on, a dialog at login walks you through trusting the AtlasOS key once (see
   [DEV.md](DEV.md#nvidia)).
 - **Firmware:** everything is tested on UEFI. Older BIOS-only machines
   aren't tested.
@@ -174,7 +190,7 @@ details.
 ## What's next
 
 - More Atlas apps in the same style as Atlas Updater: a welcome app, an app
-  store, a launcher, notes, a system monitor and a file manager.
+  store, settings, a launcher, notes and a file manager.
 
 ## For developers
 
@@ -191,9 +207,9 @@ template, [bootc](https://bootc-dev.github.io/bootc/),
 [IBM Plex](https://www.ibm.com/plex/),
 [JetBrains Mono](https://www.jetbrains.com/lp/mono/),
 [Bibata](https://github.com/ful1e5/Bibata_Cursor),
-[Dracula Icons](https://github.com/m4thewz/dracula-icons),
-[Andromeda Launcher](https://github.com/EliverLara/AndromedaLauncher) and
-[Simple Application Launcher](https://github.com/HimDek/Simple-Kickoff-for-Plasma).
+[Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme),
+[Kvantum](https://github.com/tsujan/Kvantum),
+and [Andromeda Launcher](https://github.com/EliverLara/AndromedaLauncher).
 
 ## License
 
