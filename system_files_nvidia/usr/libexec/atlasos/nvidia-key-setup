@@ -1,0 +1,148 @@
+#!/usr/bin/bash
+# Gets the AtlasOS module key trusted by the firmware, so NVIDIA's driver loads
+# with Secure Boot on (see DEV.md, "NVIDIA"). The launcher entry "NVIDIA Driver
+# Setup" runs it with --manual; the XDG autostart atlasos-nvidia-key-setup.desktop
+# runs it with --first-login. The firmware keeps the key only after the owner
+# types a one-time code in the blue MOK Manager screen at the next boot: this
+# makes the code (through pkexec, as nvidia-enroll-key --new-code) and shows it.
+#
+# At login it asks only when it matters: an NVIDIA display device is present,
+# Secure Boot is on and the key is not enrolled. "Not Now" is asked again at the
+# next login, as the driver can't work without the key. --manual skips the
+# device check. A request made this boot is marked by the helper in
+# /run/atlasos-nvidia-key-pending, for every user (only root can read the
+# firmware's own list of requests); /run empties at boot, as the firmware
+# drops a request nobody completed, so a later boot asks again.
+set -u
+
+pending_file=/run/atlasos-nvidia-key-pending
+cert=/usr/share/atlasos/nvidia/atlasos-module-signing.der
+helper=/usr/libexec/atlasos/nvidia-enroll-key
+title="NVIDIA Driver Setup"
+mode=${1:-}
+
+case $mode in
+--manual | --first-login) ;;
+*)
+	echo "usage: $0 --manual | --first-login" >&2
+	exit 2
+	;;
+esac
+
+secure_boot_on() {
+	mokutil --sb-state 2>/dev/null | grep -q 'SecureBoot enabled'
+}
+
+key_enrolled() {
+	mokutil --test-key "$cert" 2>/dev/null | grep -q 'is already enrolled'
+}
+
+# A request made earlier in this boot, by anyone, waiting for the restart.
+request_pending() {
+	[ -f "$pending_file" ]
+}
+
+# Helper output for a dialog: plain text (kdialog reads rich text), short.
+plain() {
+	tr -d '<>&' <<<"$1" | head -c 600
+}
+
+nvidia_present() {
+	local d
+	for d in /sys/bus/pci/devices/*; do
+		[ "$(cat "$d/vendor" 2>/dev/null)" = 0x10de ] || continue
+		case $(cat "$d/class" 2>/dev/null) in
+		0x03*) return 0 ;;
+		esac
+	done
+	return 1
+}
+
+restart_now() {
+	busctl --user call org.kde.LogoutPrompt /LogoutPrompt org.kde.LogoutPrompt \
+		promptReboot >/dev/null 2>&1 ||
+		systemctl reboot 2>/dev/null ||
+		kdialog --title "$title" --sorry "Couldn't restart from here. Restart the computer from the menu, then follow the blue screen."
+}
+
+# Makes a new code and shows it. Returns when the person is done.
+new_code() {
+	local out rc code
+	out=$(pkexec "$helper" --new-code 2>&1)
+	rc=$?
+	# Exit 126/127 is pkexec itself: not authorised, or the prompt was closed.
+	[ "$rc" -eq 126 ] || [ "$rc" -eq 127 ] && return 0
+	if [ "$rc" -ne 0 ]; then
+		kdialog --title "$title" --error "Couldn't set up the key.\n\n$(plain "$out")"
+		return 0
+	fi
+	case $out in
+	enrolled)
+		kdialog --title "$title" --msgbox "The key is already trusted. Nothing more to do."
+		return 0
+		;;
+	sb-off)
+		kdialog --title "$title" --msgbox "Secure Boot is off, so the NVIDIA driver starts without a key. Nothing to do."
+		return 0
+		;;
+	esac
+	code=$(grep -E '^code [0-9]{8}( short)?$' <<<"$out" | tail -n1 | cut -d' ' -f2)
+	local wait="It waits five minutes, then starts Linux as usual if nobody is there."
+	grep -qE '^code [0-9]{8} short$' <<<"$out" &&
+		wait="It waits only 10 seconds before it starts Linux as usual: be ready."
+	if [ -z "$code" ]; then
+		kdialog --title "$title" --error "Couldn't set up the key.\n\n$(plain "$out")"
+		return 0
+	fi
+	if kdialog --title "$title" --yes-label "Restart Now" --no-label "Later" --yesno \
+		"<p>Your code is</p><h1 align='center'>$code</h1><p>Write it down, then restart. A blue screen appears before the desktop. $wait Use the arrow keys and Enter:</p><ol><li>Press any key</li><li>Choose <b>Enroll MOK</b></li><li>Choose <b>Continue</b></li><li>Choose <b>Yes</b></li><li>Type the code and press Enter. Nothing shows while you type: that is normal.</li><li>Choose <b>Reboot</b></li></ol><p>If you miss the blue screen, or lose the code, open <b>NVIDIA Driver Setup</b> again for a new code.</p>"; then
+		restart_now
+	fi
+}
+
+if [ "$mode" = --first-login ]; then
+	# The wizard's own session, and the login before the wizard has finished.
+	[ "$(id -un)" = plasma-setup ] && exit 0
+	[ -e /etc/plasma-setup-done ] || exit 0
+	nvidia_present || exit 0
+	secure_boot_on || exit 0
+	key_enrolled && exit 0
+	# Asked for already this boot: the restart is what is left.
+	request_pending && exit 0
+	# Let the desktop finish appearing, and let the other first-login
+	# questions go first: never two dialogs at once.
+	sleep 12
+	for _ in $(seq 40); do
+		pgrep -u "$(id -u)" -f '/usr/libexec/atlasos/(fingerprint|pin)-setup' >/dev/null ||
+			pgrep -u "$(id -u)" -x kdialog >/dev/null ||
+			pgrep -u "$(id -u)" -x systemsettings >/dev/null || break
+		sleep 3
+	done
+	kdialog --title "$title" --yes-label "Set Up Now" --no-label "Not Now" --yesno \
+		"The NVIDIA graphics driver needs your permission to start while Secure Boot is on.\n\nThis takes one restart. You will get a short code to type on a blue screen at startup.\n\nUntil then the screen runs on a basic driver. If you choose Not Now, you will be asked again at the next login, or open NVIDIA Driver Setup from the launcher." || exit 0
+	new_code
+	exit 0
+fi
+
+# --manual
+if ! secure_boot_on; then
+	kdialog --title "$title" --msgbox "Secure Boot is off, so the NVIDIA driver starts without a key. Nothing to do."
+	exit 0
+fi
+if key_enrolled; then
+	kdialog --title "$title" --msgbox "The key is already trusted by this computer. Nothing to do."
+	exit 0
+fi
+if request_pending; then
+	kdialog --title "$title" --yes-label "Restart Now" --no-label "I Lost the Code" \
+		--cancel-label "Close" --yesnocancel \
+		"The key is waiting for a restart. Restart, then on the blue screen (arrow keys and Enter): press any key, Enroll MOK, Continue, Yes, type your code and press Enter (nothing shows while you type), Reboot.\n\nIf you lost the code, make a new one."
+	case $? in
+	0) restart_now ;;
+	1) new_code ;;
+	esac
+	exit 0
+fi
+kdialog --title "$title" --yes-label "Set Up Now" --no-label "Not Now" --yesno \
+	"The NVIDIA graphics driver needs your permission to start while Secure Boot is on.\n\nThis takes one restart. You will get a short code to type on a blue screen at startup." || exit 0
+new_code

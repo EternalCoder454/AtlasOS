@@ -72,7 +72,9 @@ def session_screenshot(con: "Console", password: str, user: str, path: pathlib.P
         try:
             data = b""
             while True:
-                r = agent(con.domain, "guest-file-read", handle=h, count=4 << 20)
+                # 2 MiB: libvirt refuses a reply string over 4 MiB, and
+                # base64 makes 4 MiB of picture 5.3 MiB.
+                r = agent(con.domain, "guest-file-read", handle=h, count=2 << 20)
                 data += base64.b64decode(r["buf-b64"])
                 if r["eof"]:
                     break

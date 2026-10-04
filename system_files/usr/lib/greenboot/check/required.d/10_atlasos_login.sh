@@ -17,10 +17,13 @@ while :; do
 		if pid=$(hc_first_stable $(hc_greeter_pids)); then
 			hc_pass "plasmalogin.service active, greeter running (pid $pid)"
 		fi
-		# shellcheck disable=SC2046
-		if pid=$(hc_first_stable $(hc_plasmashell_pids)); then
-			hc_pass "plasmalogin.service active, Plasma session running (plasmashell pid $pid)"
-		fi
+		# autologin: a user's graphical session (logind's word) with Plasma
+		for uid in $(hc_graphical_uids); do
+			# shellcheck disable=SC2046
+			if pid=$(hc_first_stable $(hc_pids_of /usr/bin/plasmashell "$uid")); then
+				hc_pass "plasmalogin.service active, Plasma session of uid $uid running (plasmashell pid $pid)"
+			fi
+		done
 	fi
 	hc_expired && break
 	hc_sleep 2

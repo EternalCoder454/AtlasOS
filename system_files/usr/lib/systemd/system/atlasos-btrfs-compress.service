@@ -1,0 +1,28 @@
+[Unit]
+Description=Compress new files on the btrfs system disk
+Documentation=https://github.com/EternalCoder454/AtlasOS
+DefaultDependencies=no
+After=local-fs.target ostree-remount.service
+Before=sysinit.target shutdown.target
+Conflicts=shutdown.target
+ConditionPathIsReadWrite=/var
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/atlasos/btrfs-compress
+# Only what a remount needs. Nothing that gives the unit its own mount
+# namespace (ProtectSystem=, PrivateTmp=, ProtectKernel*=): the remount has to
+# act on the system's own mounts.
+CapabilityBoundingSet=CAP_SYS_ADMIN
+NoNewPrivileges=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=sysinit.target

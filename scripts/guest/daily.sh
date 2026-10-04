@@ -65,7 +65,7 @@ app() { # name, class pattern, command...
 apps() {
 	app Files 'dolphin' dolphin
 	app Terminal 'ghostty' ghostty
-	app Notepad 'kate' kate
+	app Notepad 'notepad' atlas-notepad
 	app Settings 'systemsettings' systemsettings
 	app Store 'discover' plasma-discover
 	app Brave 'brave' brave-origin-stable

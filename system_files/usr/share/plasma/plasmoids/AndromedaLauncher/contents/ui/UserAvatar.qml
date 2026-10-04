@@ -21,7 +21,7 @@ Item {
         source: kuser.faceIconUrl
         anchors {
             fill: parent
-            margins: Kirigami.Units.smallSpacing
+            margins: 0
         }
         MouseArea {
             anchors.fill: parent

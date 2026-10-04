@@ -21,29 +21,11 @@
 #    (atlas_core::bootc::ImageStatus::is_older_than).
 # A newer image has a new digest and goes ahead. If NetworkManager, bootc or
 # the registry can't be asked, the run goes ahead, except that an image whose
-# age can't be told (below) is not staged.
+# age can't be told (below) is not staged. Going ahead is safe: update-stage
+# checks the image it staged the same way and takes an older one out again.
 
-# jq: older($c; $o) is true when image $c ({version, timestamp}) is older
-# than $o. Versions compare as numbers split on . and - (44.20261008-2), with
-# missing parts 0; times as RFC 3339 UTC to the second. A signal that can't
-# be read is left out.
-# shellcheck disable=SC2016 # jq's own $variables
-older='
-def vnum: try [splits("[.-]") | tonumber] catch null;
-def pad($n): . + [range($n - length) | 0];
-def vcmp($a; $b): ($a | vnum) as $x | ($b | vnum) as $y
-	| if $x == null or $y == null then null
-	  else ([($x | length), ($y | length)] | max) as $n
-	  | ($x | pad($n)) as $x | ($y | pad($n)) as $y
-	  | if $x < $y then -1 elif $x > $y then 1 else 0 end end;
-def tkey: if type == "string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}.*Z$")
-	then .[0:19] else null end;
-def tcmp($a; $b): ($a | tkey) as $x | ($b | tkey) as $y
-	| if $x == null or $y == null then null
-	  elif $x < $y then -1 elif $x > $y then 1 else 0 end;
-def older($c; $o): [vcmp($c.version; $o.version), tcmp($c.timestamp; $o.timestamp)]
-	| any(.[]; . == -1) and all(.[]; . != 1);
-'
+# older($c; $o): is image $c older than $o (see the file)
+older=$(cat /usr/share/atlasos/image-age.jq) || older=
 metered=$(busctl --system get-property org.freedesktop.NetworkManager \
 	/org/freedesktop/NetworkManager org.freedesktop.NetworkManager Metered 2>/dev/null) || metered=
 case $metered in

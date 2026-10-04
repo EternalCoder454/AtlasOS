@@ -1,0 +1,27 @@
+policy_module(atlasos_bootc, 1.0.0)
+
+########################################
+#
+# bootc and ostree (install_exec_t) run in install_t, which may write SELinux
+# labels the running policy doesn't know yet: a new image can bring new types,
+# and its files are labelled before its policy is loaded. Fedora's policy
+# gives that transition to init_t (a unit whose ExecStart is bootc itself) and
+# to unconfined_t (a root shell), but not to unconfined_service_t, where every
+# AtlasOS service whose ExecStart is a script or a helper runs: update-stage,
+# Atlas Updater's atlas-system-helper and atlas-record-boot, grub-greenboot,
+# the greenboot checks. There bootc's install_t probe (chcon to a made-up
+# type) was denied and logged at every boot, and bootc went on without the
+# right to write those labels. unconfined_service_t is unconfined already;
+# what this adds is mac_admin, only through those programs, as under systemd.
+#
+
+require {
+	type unconfined_service_t;
+	type install_t;
+	class process2 { nnp_transition nosuid_transition };
+}
+
+anaconda_domtrans_install(unconfined_service_t)
+# Units with NoNewPrivileges=yes (grub-greenboot runs `bootc status`): without
+# this the exec of bootc fails instead of staying in the caller's domain.
+allow unconfined_service_t install_t:process2 { nnp_transition nosuid_transition };

@@ -110,8 +110,8 @@ Item {
     states: [
     State {
       name: "highlight"; when: !canNavigate ? highlighted : runnerList.currentMainIndex == index && runnerList.currentSubIndex == subIndex
-      PropertyChanges { target: rectFill; opacity: 0.3}
-      PropertyChanges { target: appname; color: highlightedTextColor}
+      PropertyChanges { target: rectFill; opacity: 0.18}
+      PropertyChanges { target: appname; color: textColor}
     },
     State {
       name: "default"; when: !canNavigate ? !highlighted : runnerList.currentMainIndex != index || runnerList.currentSubIndex != subIndex
@@ -128,8 +128,8 @@ Item {
   
   Rectangle {
     id: rectFill
-    color: PlasmaCore.Theme.highlightColor
-    radius: 10 // AtlasOS: the dock's tiles' curve
+    color: Kirigami.Theme.highlightColor
+    radius: 8 // AtlasOS: Atlas.Ui SidebarItem's pill
     z: -20
     anchors.fill: rect
   }

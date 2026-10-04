@@ -21,3 +21,12 @@ Script=atlasos-20261002-cursors.sh,sh
 
 Id=atlasos-20261002-dock-icons
 Script=atlasos-20261002-dock-icons.sh,sh
+
+Id=atlasos-20261003-aurorae
+Script=atlasos-20261003-aurorae.sh,sh
+
+Id=atlasos-20261003-kvantum
+Script=atlasos-20261003-kvantum.sh,sh
+
+Id=atlasos-20261003-papirus
+Script=atlasos-20261003-papirus.sh,sh

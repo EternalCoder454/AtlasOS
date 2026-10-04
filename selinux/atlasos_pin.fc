@@ -1,0 +1,5 @@
+/usr/libexec/atlasos/pin-daemon		--	gen_context(system_u:object_r:atlasos_pin_exec_t,s0)
+/run/atlasos				-d	gen_context(system_u:object_r:atlasos_pin_var_run_t,s0)
+/run/atlasos/pin\.sock			-s	gen_context(system_u:object_r:atlasos_pin_var_run_t,s0)
+/var/lib/atlasos/pin			-d	gen_context(system_u:object_r:atlasos_pin_var_lib_t,s0)
+/var/lib/atlasos/pin/[^/]+		--	gen_context(system_u:object_r:atlasos_pin_var_lib_t,s0)

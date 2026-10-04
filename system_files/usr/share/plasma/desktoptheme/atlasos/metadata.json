@@ -5,12 +5,12 @@
                 "Name": "AtlasOS"
             }
         ],
-        "Description": "Breeze, with AtlasOS's dock: rounded highlights and a short underline under running apps",
+        "Description": "AtlasOS's shell style: rounded translucent popups and tooltips, pill buttons, soft fields, sliders and switches like the Atlas apps, and the dock's tiles and underline",
         "EnabledByDefault": true,
         "Id": "atlasos",
         "License": "Apache-2.0",
         "Name": "AtlasOS",
-        "Version": "1.0",
+        "Version": "1.1",
         "Website": "https://github.com/EternalCoder454/AtlasOS"
     },
     "X-Plasma-API": "5.0"

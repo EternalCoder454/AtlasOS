@@ -1,0 +1,192 @@
+#!/usr/bin/python3
+# The PIN verifier: atlasos-pin@.service, one instance per connection on
+# /run/atlasos/pin.sock (socket-activated, root, sandboxed). The lock screen
+# runs as the user and can't read /var/lib/atlasos/pin, so it asks here.
+#
+# One request line (ending in a newline) in, one answer line out:
+#   verify <uid> <name> <pin>   ok | bad | locked | nopin | deny
+#   status <uid>         none | set | locked | retired | deny
+#   reset <uid>          done | deny          (root only)
+# A request that isn't whole (no newline, or the client left first) is never
+# counted. Root may ask about any uid, everyone else only about their own
+# (SO_PEERCRED). The count of wrong PINs only goes up, and 5 lock the PIN:
+# verify then answers "locked" without checking. A correct PIN does not reduce
+# it; only `reset` does, which is the login screen's session hook after a
+# sign-in with the password. A second count, wrong PINs since the PIN was set,
+# is not touched by `reset` or a correct PIN and falls by one per full day
+# (at most 7 credited per try); at 20 the PIN is retired for good (a
+# latch): verify refuses as for "locked" (status says "retired") until a new
+# PIN is set. <name> must be the name getpwuid gives for <uid>, so an alias
+# account with the same uid can't use the PIN. A PIN is also dead when the
+# account's password is locked or has changed since it was set (the stamp), or the uid went to
+# another user.
+import os
+import pwd
+import socket
+import struct
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import pinlib  # noqa: E402
+
+
+def answer(text):
+    try:
+        sys.stdout.write(text + "\n")
+        sys.stdout.flush()
+    except OSError:
+        pass
+
+
+def log(text):
+    print("atlasos-pin: " + text, file=sys.stderr, flush=True)
+
+
+def dummy(pin="0000"):
+    # Same work as a real check, so the answer's timing doesn't say who has
+    # a PIN. Outside the store's lock.
+    pinlib.check_pin(pin, pinlib.DUMMY_HASH)
+
+
+def read_request(sock):
+    line = b""
+    try:
+        while b"\n" not in line and len(line) < 128:
+            chunk = sock.recv(128 - len(line))
+            if not chunk:
+                return None
+            line += chunk
+    except OSError:
+        return None
+    if b"\n" not in line:
+        return None
+    return line.split(b"\n")[0].decode("ascii", "replace").strip().split(" ")
+
+
+def live_entry(store, uid):
+    """The user's entry if it still belongs: ("none" | "deny" | "ok", entry)."""
+    entry = store.get(uid)
+    if entry is None:
+        return "none", None
+    stamp = pinlib.account_stamp(uid)
+    if stamp is None:
+        return "deny", entry
+    if entry.get("stamp") != stamp:
+        store.remove(uid)
+        log("PIN of uid %d dropped: the password or the account changed" % uid)
+        return "none", None
+    return "ok", entry
+
+
+def name_matches(uid, name):
+    try:
+        return pwd.getpwuid(uid).pw_name == name
+    except (KeyError, OverflowError, ValueError):
+        return False
+
+
+def verify(peer_uid, uid_text, name, pin):
+    if not uid_text.isdigit():
+        dummy(pin if pinlib.is_pin_shaped(pin) else "0000")
+        return "nopin"
+    uid = int(uid_text)
+    if peer_uid != 0 and peer_uid != uid:
+        return "deny"
+    if not pinlib.is_pin_shaped(pin):
+        dummy()
+        return "nopin"
+    if not name_matches(uid, name):
+        # Unknown uid or an alias account: no PIN for this name.
+        dummy(pin)
+        return "nopin"
+    stored = None
+    with pinlib.Store() as store:
+        state, entry = live_entry(store, uid)
+        if state == "ok":
+            life = pinlib.decay(entry)
+            if pinlib.retired(entry):
+                log("PIN of uid %d is retired (%d wrong PINs since it was set)" % (uid, life))
+            elif entry["fails"] < pinlib.MAX_FAILS:
+                # Count the try (both counts) before checking, so a kill
+                # mid-check can't buy a free guess.
+                entry["fails"] += 1
+                entry["life"] += 1
+                if entry["life"] >= pinlib.LIFETIME_MAX:
+                    entry["retired"] = True
+                store.put(uid, entry)
+                stored = entry
+        result = {"none": "nopin", "deny": "deny", "ok": "locked"}[state]
+    if stored is None:
+        dummy(pin)
+        return result
+    good = pinlib.check_pin(pin, stored["hash"])
+    if good:
+        # Give this try back: a correct PIN doesn't clear earlier wrong ones.
+        with pinlib.Store() as store:
+            now = store.get(uid)
+            if now is not None and now["hash"] == stored["hash"]:
+                if now["fails"] > 0:
+                    now["fails"] -= 1
+                if now.get("life", 0) > 0:
+                    now["life"] -= 1
+                if now["life"] < pinlib.LIFETIME_MAX:
+                    now.pop("retired", None)  # this try set the latch, and was right
+                store.put(uid, now)
+        return "ok"
+    log("wrong PIN for uid %d (%d of %d tries, %d of %d in its lifetime)" % (
+        uid, stored["fails"], pinlib.MAX_FAILS, stored["life"], pinlib.LIFETIME_MAX))
+    if stored["life"] >= pinlib.LIFETIME_MAX:
+        log("PIN of uid %d retired: %d wrong PINs" % (uid, stored["life"]))
+        return "locked"
+    if stored["fails"] >= pinlib.MAX_FAILS:
+        log("PIN of uid %d is locked until a password sign-in" % uid)
+        return "locked"
+    return "bad"
+
+
+def main():
+    sock = socket.socket(fileno=0)
+    cred = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+    _pid, peer_uid, _gid = struct.unpack("3i", cred)
+    sock.settimeout(5)
+    parts = read_request(sock)
+    if not parts or len(parts) < 2:
+        answer("deny")
+        return
+    cmd = parts[0]
+    if cmd == "verify" and len(parts) == 4:
+        answer(verify(peer_uid, parts[1], parts[2], parts[3]))
+        return
+    if len(parts) != 2 or not parts[1].isdigit():
+        answer("deny")
+        return
+    uid = int(parts[1])
+    if peer_uid != 0 and peer_uid != uid:
+        answer("deny")
+    elif cmd == "status":
+        with pinlib.Store() as store:
+            state, entry = live_entry(store, uid)
+        if state == "none":
+            answer("none")
+        elif state == "ok" and pinlib.retired(entry):
+            answer("retired")
+        elif state == "ok" and entry["fails"] >= pinlib.MAX_FAILS:
+            answer("locked")
+        else:
+            answer("set")
+    elif cmd == "reset":
+        if peer_uid != 0:
+            answer("deny")
+            return
+        with pinlib.Store() as store:
+            entry = store.get(uid)
+            if entry is not None and entry["fails"]:
+                entry["fails"] = 0
+                store.put(uid, entry)
+                log("wrong-PIN count of uid %d cleared by a password sign-in" % uid)
+        answer("done")
+    else:
+        answer("deny")
+
+
+main()

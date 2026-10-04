@@ -1,0 +1,5 @@
+github-token
+crash-relay
+*_test.go
+.env
+

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=PIN setup
+Comment=Offers to set up a sign-in PIN the first time a user logs in
+Exec=/usr/libexec/atlasos/pin-setup --first-login
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=panel

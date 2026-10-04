@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Check box and radio button marks.
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="32" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+   .ColorScheme-HighlightedText { color:#ffffff; } .ColorScheme-ViewBackground { color:#ffffff; }
+   .ColorScheme-ButtonBackground { color:#e6e4f4; } .ColorScheme-ButtonText { color:#1b1748; }
+  </style>
+ </defs>
+ <g id="checkbox">
+  <rect x="0.0" y="0.0" width="16" height="16" fill="#000" opacity="0.004"/>
+  <path d="M0.0 8.0 a8.0 8.0 0 1 0 16.0 0 a8.0 8.0 0 1 0 -16.0 0Z" class="ColorScheme-Highlight" fill="currentColor" opacity="1"/>
+  <path d="M4.48 8.32 L7.04 10.88 L11.84 5.44" class="ColorScheme-HighlightedText" fill="none" stroke="currentColor" stroke-width="1.78" stroke-linecap="round" stroke-linejoin="round"/>
+ </g>
+ <g id="radiobutton">
+  <rect x="0.0" y="16.0" width="16" height="16" fill="#000" opacity="0.004"/>
+  <path d="M0.0 24.0 a8.0 8.0 0 1 0 16.0 0 a8.0 8.0 0 1 0 -16.0 0Z" class="ColorScheme-Highlight" fill="currentColor" opacity="1"/>
+  <path d="M5.333333333333334 24.0 a2.6666666666666665 2.6666666666666665 0 1 0 5.333333333333333 0 a2.6666666666666665 2.6666666666666665 0 1 0 -5.333333333333333 0Z" class="ColorScheme-HighlightedText" fill="currentColor" opacity="1"/>
+ </g>
+</svg>

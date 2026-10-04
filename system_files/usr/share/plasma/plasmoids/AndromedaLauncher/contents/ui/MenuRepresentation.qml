@@ -135,11 +135,12 @@ PlasmaCore.Dialog {
         if (Plasmoid.configuration.launcherPosition != 2){
           if (Plasmoid.location == PlasmaCore.Types.TopEdge) {
             if (Plasmoid.configuration.floating) {
-                          /*this is floatingAvatar.width*/
+              // AtlasOS: no floating avatar hangs above the menu any more, so
+              // no room is kept for it.
               if (Plasmoid.configuration.offsetY > 0) {
-                offset = (125 * 1) / 2 + Plasmoid.configuration.offsetY
+                offset = Plasmoid.configuration.offsetY
               } else {
-                offset = (125 * 1) / 2 + parent.height * 0.125
+                offset = parent.height * 0.125
               }
             }
             y = screen.y + parent.height + panelSvg.margins.bottom + offset;

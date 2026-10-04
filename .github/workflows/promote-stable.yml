@@ -1,13 +1,19 @@
 name: Promote stable
 
-# Weekly: the newest testing image becomes stable, so stable is always a build
-# that was in testing first. Nothing is rebuilt: skopeo copies the testing
-# image by digest to :stable, :latest (what existing installs track), :44 and
-# :44.YYYYMMDD. Then a git tag and a GitHub release with the changes since the
-# previous stable, and the live installer ISOs (iso.yml).
+# Saturday (and on a manual run): the newest testing image becomes stable, so
+# stable is always a build that was in testing first. Nothing is rebuilt:
+# skopeo copies the testing image by digest to :stable, :latest (what existing
+# installs track), :44 and :44.YYYYMMDD. Then a git tag and a GitHub release
+# with the changes since the previous stable, and the live installer ISOs
+# (iso.yml).
+# Every other day, a fast path for security updates: the newest per-build
+# testing image that has been in testing for 24 hours and has a newer kernel
+# or Brave than stable (scripts/pick-fast-promotion.sh) goes through the very
+# same verification, copy and release steps. No ISOs on that path: they are
+# weekly, and an install updates to :stable on its first run anyway.
 on:
   schedule:
-    - cron: "30 14 * * 6"
+    - cron: "30 14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -29,40 +35,201 @@ jobs:
       contents: read
       packages: write
     outputs:
-      version: ${{ steps.pick.outputs.version }}
-      revision: ${{ steps.pick.outputs.revision }}
+      go: ${{ steps.choose.outputs.go }}
+      mode: ${{ steps.choose.outputs.mode }}
+      reason: ${{ steps.choose.outputs.reason }}
+      version: ${{ steps.pick.outputs.version || steps.choose.outputs.cu_version }}
+      revision: ${{ steps.pick.outputs.revision || steps.choose.outputs.cu_revision }}
       updater: ${{ steps.pick.outputs.updater }}
       base: ${{ steps.pick.outputs.base }}
+      # NVIDIA behind atlasos's stable (see Choose): only promote-nvidia runs,
+      # for the version and commit atlasos's stable already is.
+      nvidia_catchup: ${{ steps.choose.outputs.nvidia_catchup }}
     steps:
-      # For cosign.pub, which every promoted image must verify against.
+      # main with its full history: for cosign.pub, which every promoted image
+      # must verify against, and to check the image's commit is on main.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          sparse-checkout: cosign.pub
-          sparse-checkout-cone-mode: false
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Pick the testing image
-        id: pick
+      # skopeo's registry login, in this job's temporary directory (emptied
+      # after the job) rather than on skopeo's command lines, where other
+      # processes could read the token. printf is a shell builtin: the token
+      # is in no argv. skopeo reads REGISTRY_AUTH_FILE, cosign DOCKER_CONFIG.
+      - name: Registry login for skopeo
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          mkdir -p -m 700 "$RUNNER_TEMP/auth"
+          (umask 077; printf '{"auths":{"ghcr.io":{"auth":"%s"}}}\n' \
+            "$(printf '%s:%s' "$GITHUB_ACTOR" "$GH_TOKEN" | base64 -w0)" >"$RUNNER_TEMP/auth/config.json")
+          {
+            echo "REGISTRY_AUTH_FILE=$RUNNER_TEMP/auth/config.json"
+            echo "DOCKER_CONFIG=$RUNNER_TEMP/auth"
+          } >>"$GITHUB_ENV"
+
+      # Promoting never signs: only the build workflow's signature, made when
+      # :testing was pushed, counts. A signature belongs to a digest, not a
+      # tag, so it covers every promoted tag. An unsigned :testing is not
+      # promoted; the next signed build fixes that. Installs accept only
+      # signed images (build.sh).
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      # Saturday and a manual run promote the newest :testing (weekly). Any
+      # other day only a security update goes, and only one that has been in
+      # testing for 24 hours (the pick script). Whichever it is, this step
+      # only names the digest; every check and the copy are the steps below,
+      # the same for both.
+      - name: Choose what to promote
+        id: choose
+        run: |
+          set -euo pipefail
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
-          creds="${GITHUB_ACTOR}:${GH_TOKEN}"
+          repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ] || [ "$(date -u +%u)" = 6 ]; then
+            mode=weekly
+            # Resolve the moving tag once; everything after reads that digest.
+            digest=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:testing")
+            reason=""
+            go=true
+          else
+            mode=fast
+            picked=$(scripts/pick-fast-promotion.sh "$repo")
+            go=$(sed -n 's/^found=//p' <<<"$picked")
+            if [ "$go" = true ]; then
+              digest=$(sed -n 's/^digest=//p' <<<"$picked")
+              reason=$(sed -n 's/^reason=//p' <<<"$picked")
+              echo "::notice::${reason} ($(sed -n 's/^version=//p' <<<"$picked"))"
+            else
+              digest=""
+              reason=""
+              # One line of plain text (the script checks the labels in it).
+              why=$(sed -n 's/^why=//p' <<<"$picked" | head -n 1 | tr -cd 'A-Za-z0-9._ :()+,-')
+              echo "::notice::No security update to promote today: ${why}"
+              echo "No fast promotion today: ${why}. The weekly promotion is on Saturday." >>"$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          [[ "$go" =~ ^(true|false)$ ]] || { echo "::error::pick script gave '$go'"; exit 1; }
+
+          # Nothing new for atlasos on a fast day, but NVIDIA's :stable is
+          # behind atlasos's (its half failed on an earlier run, and a re-run
+          # finds atlasos already promoted): promote-nvidia alone brings it up
+          # to atlasos's current stable, from testing-<version>, with its usual
+          # checks. The release and ISO jobs stay out of it.
+          catchup=false
+          cu_version=""
+          cu_revision=""
+          if [ "$mode" = fast ] && [ "$go" = false ]; then
+            absent() { grep -qiE "reading manifest stable in [^ ]+: (manifest|name) unknown" "$1"; }
+            if njson=$(skopeo inspect --retry-times 3 "docker://${repo}-nvidia:stable" 2>"$RUNNER_TEMP/nstable.err"); then
+              ajson=$(skopeo inspect --retry-times 3 "docker://${repo}:stable")
+              n_ver=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$njson")
+              a_ver=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$ajson")
+              a_rev=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$ajson")
+              [[ "$n_ver" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::${IMAGE_NAME}-nvidia:stable has no usable version label: '$n_ver'"; exit 1; }
+              [[ "$a_ver" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::${IMAGE_NAME}:stable has no usable version label: '$a_ver'"; exit 1; }
+              [[ "$a_rev" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::${IMAGE_NAME}:stable has no usable revision label: '$a_rev'"; exit 1; }
+              if [ "$n_ver" != "$a_ver" ] && [ "$(printf '%s\n%s\n' "$n_ver" "$a_ver" | sort -V | tail -n 1)" = "$a_ver" ]; then
+                catchup=true
+                cu_version=$a_ver
+                cu_revision=$a_rev
+                echo "::notice::${IMAGE_NAME}-nvidia:stable is ${n_ver}, behind ${IMAGE_NAME}:stable ${a_ver}; promoting NVIDIA only."
+                echo "NVIDIA's stable (${n_ver}) was behind atlasos's (${a_ver}); catching it up." >>"$GITHUB_STEP_SUMMARY"
+              fi
+            elif ! absent "$RUNNER_TEMP/nstable.err"; then
+              cat "$RUNNER_TEMP/nstable.err" >&2
+              echo "::error::can't read ${IMAGE_NAME}-nvidia:stable."
+              exit 1
+            fi
+          fi
+          {
+            echo "mode=$mode"
+            echo "go=$go"
+            echo "digest=$digest"
+            echo "reason=$reason"
+            echo "nvidia_catchup=$catchup"
+            echo "cu_version=$cu_version"
+            echo "cu_revision=$cu_revision"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Pick the testing image
+        id: pick
+        if: steps.choose.outputs.go == 'true'
+        env:
+          DIGEST: ${{ steps.choose.outputs.digest }}
+          MODE: ${{ steps.choose.outputs.mode }}
+        run: |
+          set -euo pipefail
           repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
 
-          json=$(skopeo inspect --creds "$creds" "docker://${repo}:testing")
-          digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
+          digest="$DIGEST"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::testing has no usable digest: '$digest'"; exit 1; }
+          json=$(skopeo inspect "docker://${repo}@${digest}")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
+          updater=$(jq -r '.Labels["net.eterneon.atlas.updater.revision"] // ""' <<<"$json")
+          base=$(jq -r '.Labels["org.atlasos.base-image"] // ""' <<<"$json")
           [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
           [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::testing has no usable revision label: '$revision'"; exit 1; }
+          # Written to $GITHUB_OUTPUT below: one line, nothing else. The build
+          # always sets both labels; an older image may have neither.
+          [[ -z "$updater" || "$updater" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::testing has a bad updater label: '$updater'"; exit 1; }
+          [[ -z "$base" || "$base" =~ ^[A-Za-z0-9._/:@-]+$ ]] || { echo "::error::testing has a bad base-image label: '$base'"; exit 1; }
+
+          # Built from a commit that is on main, and signed by the build
+          # workflow, or it does not become stable.
+          git merge-base --is-ancestor "$revision" origin/main ||
+            { echo "::error::testing was built from ${revision}, which is not on main; not promoting."; exit 1; }
+          scripts/verify-image.sh "$repo" "$digest" >/dev/null ||
+            { echo "::error::${repo}@${digest} (testing ${version}) does not verify against cosign.pub for this repository; not promoting. The next promotion of a signed testing build fixes this."; exit 1; }
+
+          # Never backwards: the candidate is built from stable's commit or a
+          # descendant of it (an old signed image re-tagged :testing, or a
+          # re-run of an old build, is not promoted), and a weekly one has a
+          # version at or after stable's. No :stable yet (first promotion):
+          # nothing to compare. Any other error reading it stops here.
+          if sdigest=$(skopeo inspect --retry-times 3 --format '{{.Digest}}' "docker://${repo}:stable" 2>"$RUNNER_TEMP/stable.err"); then
+            [[ "$sdigest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::stable has no usable digest: '$sdigest'"; exit 1; }
+            sjson=$(skopeo inspect --retry-times 3 "docker://${repo}@${sdigest}")
+            s_rev=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$sjson")
+            s_ver=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$sjson")
+            [[ "$s_rev" =~ ^[0-9a-f]{40}$ ]] ||
+              { echo "::error::stable has no usable revision label ('$s_rev'), so it can't be checked that testing ${version} descends from it; not promoting."; exit 1; }
+            # git exits 128, not 1, for a commit it doesn't have: say which it is.
+            git cat-file -e "${s_rev}^{commit}" 2>/dev/null ||
+              { echo "::error::stable's commit ${s_rev} is not in main's history (rewritten or force-pushed?); not promoting. See CI.md."; exit 1; }
+            if [ "$s_rev" != "$revision" ] && ! git merge-base --is-ancestor "$s_rev" "$revision"; then
+              echo "::error::testing ${version} (${revision}) is not built from stable's commit ${s_rev} or a descendant of it; not promoting an older build."
+              exit 1
+            fi
+            if [ "$MODE" = weekly ]; then
+              [[ "$s_ver" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::stable has no usable version label: '$s_ver'"; exit 1; }
+              [ "$(printf '%s\n%s\n' "$version" "$s_ver" | sort -V | tail -n 1)" = "$version" ] ||
+                { echo "::error::testing ${version} is older than stable ${s_ver}; not promoting."; exit 1; }
+            fi
+          elif grep -qiE 'reading manifest stable in [^ ]+: (manifest|name) unknown' "$RUNNER_TEMP/stable.err"; then
+            echo "::notice::No ${repo}:stable yet; nothing to compare with."
+          else
+            cat "$RUNNER_TEMP/stable.err" >&2
+            echo "::error::can't read ${repo}:stable; not promoting."
+            exit 1
+          fi
 
           # Already stable (a week with no new testing build): nothing to copy.
-          current=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:stable" 2>/dev/null || true)
-          copy=true
-          if [ "$current" = "$digest" ]; then
-            copy=false
+          # Only when all four tags are already on the digest.
+          copy=false
+          for t in stable latest 44 "$version"; do
+            current=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:${t}" 2>/dev/null || true)
+            [ "$current" = "$digest" ] || copy=true
+          done
+          if [ "$copy" = false ]; then
             echo "::notice::stable is already ${version}; nothing to copy."
           fi
 
@@ -71,74 +238,48 @@ jobs:
             echo "copy=$copy"
             echo "version=$version"
             echo "revision=$revision"
-            echo "updater=$(jq -r '.Labels["net.eterneon.atlas.updater.revision"] // ""' <<<"$json")"
-            echo "base=$(jq -r '.Labels["org.atlasos.base-image"] // ""' <<<"$json")"
+            echo "updater=$updater"
+            echo "base=$base"
           } >>"$GITHUB_OUTPUT"
-
-      # A signature belongs to a digest, not a tag, so the one made when the
-      # testing build was pushed already covers every promoted tag. Signing
-      # again (the same digest, so harmless) covers images pushed before
-      # signing was on. Then it must verify against cosign.pub before any
-      # stable tag moves: installs accept only signed images (build.sh).
-      - name: Check for a signing key
-        id: signing
-        if: steps.pick.outputs.copy == 'true'
-        env:
-          SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
-        run: |
-          if [ -n "$SIGNING_SECRET" ]; then
-            echo "enabled=true" >>"$GITHUB_OUTPUT"
-          elif [ -f cosign.pub ]; then
-            echo "::error::cosign.pub is in the repo but the SIGNING_SECRET secret is empty; not promoting."
-            exit 1
-          else
-            echo "enabled=false" >>"$GITHUB_OUTPUT"
-          fi
-
-      - name: Install cosign
-        if: steps.signing.outputs.enabled == 'true'
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-        with:
-          cosign-release: "v3.1.2"
-
-      - name: Sign
-        if: steps.signing.outputs.enabled == 'true'
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
-          ref="${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.pick.outputs.digest }}"
-          cosign sign -y --new-bundle-format=false --use-signing-config=false \
-            --key env://COSIGN_PRIVATE_KEY "$ref"
-          cosign verify --insecure-ignore-tlog=true --key cosign.pub "$ref" >/dev/null
 
       - name: Copy by digest
         if: steps.pick.outputs.copy == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIGEST: ${{ steps.pick.outputs.digest }}
+          VERSION: ${{ steps.pick.outputs.version }}
         run: |
           set -euo pipefail
           repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
-          for t in stable latest 44 "${{ steps.pick.outputs.version }}"; do
+          for t in stable latest 44 "$VERSION"; do
             skopeo copy --all --preserve-digests \
-              --src-creds "${GITHUB_ACTOR}:${GH_TOKEN}" --dest-creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
-              "docker://${repo}@${{ steps.pick.outputs.digest }}" "docker://${repo}:${t}"
+              "docker://${repo}@${DIGEST}" "docker://${repo}:${t}"
           done
           # The same digest must now sit behind every tag.
-          for t in stable latest 44 "${{ steps.pick.outputs.version }}"; do
-            got=$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" --format '{{.Digest}}' "docker://${repo}:${t}")
-            [ "$got" = "${{ steps.pick.outputs.digest }}" ] || { echo "::error::${t} is ${got}"; exit 1; }
+          for t in stable latest 44 "$VERSION"; do
+            got=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:${t}")
+            [ "$got" = "$DIGEST" ] || { echo "::error::${t} is ${got}"; exit 1; }
           done
+
+      # Whether or not anything was copied: what installs track must verify.
+      - name: Verify stable
+        if: steps.choose.outputs.go == 'true'
+        env:
+          DIGEST: ${{ steps.pick.outputs.digest }}
+        run: |
+          set -euo pipefail
+          repo="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+          got=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:stable")
+          [ "$got" = "$DIGEST" ] || { echo "::error::stable is ${got}, not the verified ${DIGEST}"; exit 1; }
+          scripts/verify-image.sh "$repo" "$got" >/dev/null ||
+            { echo "::error::${repo}:stable (${got}) does not verify against cosign.pub, so installs cannot update to it. The next promotion of a signed testing build fixes this."; exit 1; }
 
   # The same for atlasos-nvidia, whose testing image the build workflow makes
   # from each atlasos testing image. Its signature, like atlasos's, was made
-  # when testing was pushed.
+  # when testing was pushed; it is only verified here.
   promote-nvidia:
     name: Copy testing to stable (NVIDIA)
     needs: promote
+    if: needs.promote.outputs.go == 'true' || needs.promote.outputs.nvidia_catchup == 'true'
     runs-on: ubuntu-26.04
     permissions:
       contents: read
@@ -149,8 +290,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          sparse-checkout: cosign.pub
-          sparse-checkout-cone-mode: false
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      # skopeo's registry login, in this job's temporary directory (emptied
+      # after the job) rather than on skopeo's command lines, where other
+      # processes could read the token. printf is a shell builtin: the token
+      # is in no argv. skopeo reads REGISTRY_AUTH_FILE, cosign DOCKER_CONFIG.
+      - name: Registry login for skopeo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p -m 700 "$RUNNER_TEMP/auth"
+          (umask 077; printf '{"auths":{"ghcr.io":{"auth":"%s"}}}\n' \
+            "$(printf '%s:%s' "$GITHUB_ACTOR" "$GH_TOKEN" | base64 -w0)" >"$RUNNER_TEMP/auth/config.json")
+          {
+            echo "REGISTRY_AUTH_FILE=$RUNNER_TEMP/auth/config.json"
+            echo "DOCKER_CONFIG=$RUNNER_TEMP/auth"
+          } >>"$GITHUB_ENV"
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
@@ -159,21 +318,46 @@ jobs:
 
       - name: Copy by digest
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           PROMOTED_VERSION: ${{ needs.promote.outputs.version }}
           PROMOTED_REVISION: ${{ needs.promote.outputs.revision }}
+          MODE: ${{ needs.promote.outputs.mode }}
         run: |
           set -euo pipefail
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
-          creds="${GITHUB_ACTOR}:${GH_TOKEN}"
           repo="${IMAGE_REGISTRY}/${NVIDIA_IMAGE}"
-          if ! json=$(skopeo inspect --creds "$creds" "docker://${repo}:testing" 2>/dev/null); then
-            echo "::notice::No ${NVIDIA_IMAGE}:testing yet; nothing to promote."
+          # The weekly promotion takes :testing, which must be the build of the
+          # release; a fast one takes that release's own per-build tag, as
+          # :testing may have moved on since.
+          src=testing
+          [ "$MODE" != fast ] || src="testing-${PROMOTED_VERSION}"
+          # Only skopeo's "reading manifest <tag> in <repo>: manifest unknown" (or
+          # "name unknown") for that very tag means it is absent; any other error,
+          # a missing child manifest included, stops.
+          absent() { grep -qiE "reading manifest $1 in [^ ]+: (manifest|name) unknown" "$2"; }
+          if ! digest=$(skopeo inspect --retry-times 3 --format '{{.Digest}}' "docker://${repo}:${src}" 2>"$RUNNER_TEMP/src.err"); then
+            if ! absent "$src" "$RUNNER_TEMP/src.err"; then
+              cat "$RUNNER_TEMP/src.err" >&2
+              echo "::error::can't read ${NVIDIA_IMAGE}:${src}."
+              exit 1
+            fi
+            # A security update must reach NVIDIA users too, if there are any:
+            # with an NVIDIA :stable out there, a missing build is an error.
+            if [ "$MODE" = fast ]; then
+              if skopeo inspect --retry-times 3 --format '{{.Digest}}' "docker://${repo}:stable" >/dev/null 2>"$RUNNER_TEMP/nstable.err"; then
+                echo "::error::No ${NVIDIA_IMAGE}:${src}, so NVIDIA's stable now lags atlasos's. The next daily run (or a re-run) catches NVIDIA up once that build exists."
+                exit 1
+              elif ! absent stable "$RUNNER_TEMP/nstable.err"; then
+                cat "$RUNNER_TEMP/nstable.err" >&2
+                echo "::error::can't read ${NVIDIA_IMAGE}:stable."
+                exit 1
+              fi
+            fi
+            echo "::notice::No ${NVIDIA_IMAGE}:${src} yet; nothing to promote."
             exit 0
           fi
-          digest=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:testing")
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::${src} has no usable digest: '$digest'"; exit 1; }
+          # Labels from that digest, not from a second look at the tag.
+          json=$(skopeo inspect "docker://${repo}@${digest}")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
           # Only the NVIDIA build of the atlasos image just promoted: an older
@@ -184,50 +368,65 @@ jobs:
             echo "::error::${NVIDIA_IMAGE}:testing is ${version} (${revision}), atlasos stable is ${PROMOTED_VERSION} (${PROMOTED_REVISION}); not promoted."
             exit 1
           fi
-          current=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:stable" 2>/dev/null || true)
-          if [ "$current" = "$digest" ]; then
+          # Built from a commit on main and signed by the build workflow, as
+          # for atlasos; promoting never signs.
+          git merge-base --is-ancestor "$revision" origin/main ||
+            { echo "::error::testing was built from ${revision}, which is not on main; not promoting."; exit 1; }
+          scripts/verify-image.sh "$repo" "$digest" >/dev/null ||
+            { echo "::error::${repo}@${digest} (testing ${version}) does not verify against cosign.pub for this repository; not promoting. The next promotion of a signed testing build fixes this."; exit 1; }
+          # Copy unless all four tags are already on the digest.
+          copy=false
+          for t in stable latest 44 "$version"; do
+            current=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:${t}" 2>/dev/null || true)
+            [ "$current" = "$digest" ] || copy=true
+          done
+          if [ "$copy" = true ]; then
+            for t in stable latest 44 "$version"; do
+              skopeo copy --all --preserve-digests \
+                "docker://${repo}@${digest}" "docker://${repo}:${t}"
+            done
+            for t in stable latest 44 "$version"; do
+              got=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:${t}")
+              [ "$got" = "$digest" ] || { echo "::error::${t} is ${got}"; exit 1; }
+            done
+          else
             echo "::notice::stable is already ${version}; nothing to copy."
-            exit 0
           fi
-          # Signed and verified before any stable tag moves, as for atlasos.
-          if [ -n "$COSIGN_PRIVATE_KEY" ]; then
-            echo "$GH_TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
-            cosign sign -y --new-bundle-format=false --use-signing-config=false \
-              --key env://COSIGN_PRIVATE_KEY "${repo}@${digest}"
-          fi
-          if [ -f cosign.pub ]; then
-            cosign verify --insecure-ignore-tlog=true --key cosign.pub "${repo}@${digest}" >/dev/null
-          fi
-          for t in stable latest 44 "$version"; do
-            skopeo copy --all --preserve-digests --src-creds "$creds" --dest-creds "$creds" \
-              "docker://${repo}@${digest}" "docker://${repo}:${t}"
-          done
-          for t in stable latest 44 "$version"; do
-            got=$(skopeo inspect --creds "$creds" --format '{{.Digest}}' "docker://${repo}:${t}")
-            [ "$got" = "$digest" ] || { echo "::error::${t} is ${got}"; exit 1; }
-          done
+          # Copied or not: what installs track must verify.
+          got=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:stable")
+          [ "$got" = "$digest" ] || { echo "::error::stable is ${got}, not the verified ${digest}"; exit 1; }
+          scripts/verify-image.sh "$repo" "$got" >/dev/null ||
+            { echo "::error::${repo}:stable (${got}) does not verify against cosign.pub. The next promotion of a signed testing build fixes this."; exit 1; }
 
   # The live installer ISOs of what just became stable (iso.yml), uploaded
   # to atlasos.eterneon.net. Each skips itself when its version is already up.
   iso:
     name: ISO
     needs: promote
+    # Weekly only (see the top of this file).
+    if: needs.promote.outputs.mode == 'weekly'
     uses: ./.github/workflows/iso.yml
     with:
       image: atlasos
-    secrets: inherit
+    secrets:
+      ISO_UPLOAD_KEY: ${{ secrets.ISO_UPLOAD_KEY }}
+      ISO_UPLOAD_KNOWN_HOSTS: ${{ secrets.ISO_UPLOAD_KNOWN_HOSTS }}
 
   iso-nvidia:
     name: ISO (NVIDIA)
-    needs: promote-nvidia
+    needs: [promote, promote-nvidia]
+    if: needs.promote.outputs.mode == 'weekly'
     uses: ./.github/workflows/iso.yml
     with:
       image: atlasos-nvidia
-    secrets: inherit
+    secrets:
+      ISO_UPLOAD_KEY: ${{ secrets.ISO_UPLOAD_KEY }}
+      ISO_UPLOAD_KNOWN_HOSTS: ${{ secrets.ISO_UPLOAD_KNOWN_HOSTS }}
 
   release:
     name: Tag and release
     needs: promote
+    if: needs.promote.outputs.go == 'true'
     runs-on: ubuntu-26.04
     # Only this job may write to the repository.
     permissions:
@@ -236,7 +435,9 @@ jobs:
       - name: Checkout (full history and tags)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: main
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Release
         env:
@@ -245,8 +446,16 @@ jobs:
           REVISION: ${{ needs.promote.outputs.revision }}
           UPDATER: ${{ needs.promote.outputs.updater }}
           BASE: ${{ needs.promote.outputs.base }}
+          REASON: ${{ needs.promote.outputs.reason }}
         run: |
           set -euo pipefail
+          # A fast promotion says why at the top of the notes. (Checked: it
+          # comes from the pick script, but it ends up in a file.)
+          [[ -z "$REASON" || "$REASON" =~ ^[A-Za-z0-9._\ :+,-]+$ ]] || { echo "::error::bad reason"; exit 1; }
+          # The tag only ever moves to a commit on main.
+          [[ "$REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad revision '$REVISION'"; exit 1; }
+          git merge-base --is-ancestor "$REVISION" origin/main ||
+            { echo "::error::${REVISION} is not on main; not tagging."; exit 1; }
           # A testing build's release is a pre-release under the same version
           # (its notes are written by hand): promoting it keeps the notes,
           # moves the tag to the commit the stable image came from and makes
@@ -260,6 +469,10 @@ jobs:
                 -f sha="$REVISION" -F force=true >/dev/null ||
                 gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
                   -f ref="refs/tags/${VERSION}" -f sha="$REVISION" >/dev/null
+              if [ -n "$REASON" ]; then
+                { printf '**%s.**\n\n' "$REASON"; gh release view "$VERSION" --json body -q .body; } >notes.md
+                gh release edit "$VERSION" --notes-file notes.md
+              fi
               gh release edit "$VERSION" --prerelease=false --latest
               echo "::notice::Promoted pre-release ${VERSION} to stable."
             else
@@ -290,7 +503,10 @@ jobs:
             prev=""
           fi
 
-          scripts/release-notes.sh "$VERSION" "$REVISION" "$prev" "$UPDATER" "$BASE" >notes.md
+          {
+            [ -z "$REASON" ] || printf '**%s.**\n\n' "$REASON"
+            scripts/release-notes.sh "$VERSION" "$REVISION" "$prev" "$UPDATER" "$BASE"
+          } >notes.md
 
           # --target makes the tag on the commit the image was built from.
           gh release create "$VERSION" --target "$REVISION" \

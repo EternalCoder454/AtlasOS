@@ -29,8 +29,8 @@ import org.kde.kirigami as Kirigami
 
 Item {
   property var iconSize
-  width: iconSize * 3.55
-  height: iconSize
+  implicitWidth: buttons.implicitWidth
+  implicitHeight: buttons.implicitHeight
 
   Kicker.SystemModel {
     id: systemModel
@@ -73,48 +73,95 @@ Item {
           : (sourceRow, sourceParent) => !systemFavoritesContainsRow(sourceRow, sourceParent)
   }
 
-  PC3.RoundButton {
-    id: settingsButton
-    visible: true
+  // AtlasOS: a small round button tinted with the accent, as Atlas.Ui's
+  // toolbar buttons; `symbol` is a Material Symbol codepoint.
+  component RoundSymbolButton : PC3.RoundButton {
+    id: btn
+    property int symbol: 0
+    property string fallbackIcon
+    property bool open: false
     flat: true
-    height: iconSize * 1.5
+    readonly property real glyph: Kirigami.Units.iconSizes.smallMedium
+    height: Math.round(glyph * 1.6)
     width: height
-    anchors.left: parent.left
-
-    Kirigami.Icon {
-        id: settingsImage
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.fill: parent
-        source: Qt.resolvedUrl("icons/feather/stngs.svg")
-        isMask: true
-        color: main.textColor
+    padding: 0
+    hoverEnabled: true
+    background: Rectangle {
+      radius: width / 2
+      color: Qt.alpha(Kirigami.Theme.highlightColor, btn.down || btn.open ? 0.3 : btn.hovered ? 0.22 : 0.14)
+      border.width: btn.visualFocus ? 2 : 0
+      border.color: Qt.alpha(Kirigami.Theme.highlightColor, 0.6)
+      Behavior on color {
+        ColorAnimation { duration: Kirigami.Units.shortDuration }
+      }
     }
-    onClicked: {
-      KCM.KCMLauncher.openSystemSettings("kcm_landingpage")
-      root.toggle()
+    contentItem: AtlasSymbol {
+      code: btn.symbol
+      fallback: btn.fallbackIcon
+      size: btn.glyph
+      color: Kirigami.Theme.highlightColor
     }
   }
 
-  PC3.RoundButton {
+  // The lock action of the system model, if this session offers one.
+  property int lockRow: -1
+
+  function findLockRow() {
+    const role = systemModel.KItemModels.KRoleNames.role("favoriteId");
+    for (let r = 0; r < systemModel.rowCount(); ++r) {
+      if (systemModel.data(systemModel.index(r, 0), role) === "lock-screen") {
+        return r;
+      }
+    }
+    return -1;
+  }
+
+  Connections {
+    target: systemModel
+    function onRowsInserted() { lockRow = findLockRow(); }
+    function onRowsRemoved() { lockRow = findLockRow(); }
+    function onModelReset() { lockRow = findLockRow(); }
+  }
+  Component.onCompleted: lockRow = findLockRow()
+
+  Row {
+    id: buttons
+    spacing: Kirigami.Units.smallSpacing
+
+    RoundSymbolButton {
+      id: settingsButton
+      symbol: 0xe8b8 // settings
+      fallbackIcon: "configure"
+      Accessible.name: i18n("System Settings")
+      onClicked: {
+        KCM.KCMLauncher.openSystemSettings("kcm_landingpage")
+        root.toggle()
+      }
+    }
+
+    RoundSymbolButton {
+      id: lockButton
+      visible: lockRow >= 0
+      symbol: 0xe897 // lock
+      fallbackIcon: "system-lock-screen"
+      Accessible.name: i18n("Lock Screen")
+      onClicked: {
+        const row = findLockRow();
+        if (row >= 0) {
+          root.toggle();
+          systemModel.trigger(row, "", null);
+        }
+      }
+    }
+
+    RoundSymbolButton {
       id: leaveButton
       Accessible.role: Accessible.ButtonMenu
-      anchors.right: parent.right
-      flat: true
-      height: iconSize * 1.5
-      width: height
-      visible: true
+      Accessible.name: i18n("Leave")
+      symbol: 0xe8ac // power_settings_new
+      fallbackIcon: "system-shutdown"
       // Make it look pressed while the menu is open
-      down: contextMenu.status === PlasmaExtras.Menu.Open || pressed
-      Kirigami.Icon {
-        id: powerImage
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.fill: parent
-        source: Qt.resolvedUrl("icons/feather/pwr.svg")
-        isMask: true
-        color: Kirigami.Theme.textColor
-      }
+      open: contextMenu.status === PlasmaExtras.Menu.Open
 
       Keys.onLeftPressed: event => {
           if (Qt.application.layoutDirection == Qt.LeftToRight) {
@@ -127,6 +174,7 @@ Item {
           }
       }
       onPressed: contextMenu.openRelative()
+    }
   }
 
   Instantiator {

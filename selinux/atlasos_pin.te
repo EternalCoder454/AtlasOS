@@ -1,0 +1,76 @@
+policy_module(atlasos_pin, 1.0.0)
+
+########################################
+#
+# AtlasOS PIN verifier (atlasos-pin@.service, /usr/libexec/atlasos/pin-daemon).
+# Its own domain, so the login screen (xdm_t, where plasmalogin runs PAM) and
+# the user's session (unconfined_t, where the lock screen runs PAM; already allowed) may reach
+# only this daemon's socket, not every unconfined_service_t one.
+#
+
+require {
+	type xdm_t;
+	type init_t;
+	type hugetlbfs_t;
+}
+
+type atlasos_pin_t;
+type atlasos_pin_exec_t;
+init_daemon_domain(atlasos_pin_t, atlasos_pin_exec_t)
+# The unit sets NoNewPrivileges=yes, which blocks a domain transition unless
+# the policy allows nnp_transition: without this, pin-daemon ran as init_t.
+init_nnp_daemon_domain(atlasos_pin_t)
+
+# /run/atlasos and the socket in it
+type atlasos_pin_var_run_t;
+files_pid_file(atlasos_pin_var_run_t)
+
+# /var/lib/atlasos/pin: the hashes and wrong-PIN counts
+type atlasos_pin_var_lib_t;
+files_type(atlasos_pin_var_lib_t)
+
+# Enforcing: the daemon ran permissive through VM pass 2, and its only
+# denials were the hugepage below. `ausearch -m avc -c pin-daemon` shows any
+# new one (a refusal ends a verify with no answer: the PIN fails, the password
+# still works).
+
+# The daemon: its state, the shadow file (to refuse locked accounts), its
+# accepted connection, and what a Python script needs to run.
+manage_files_pattern(atlasos_pin_t, atlasos_pin_var_lib_t, atlasos_pin_var_lib_t)
+manage_dirs_pattern(atlasos_pin_t, atlasos_pin_var_lib_t, atlasos_pin_var_lib_t)
+files_search_var_lib(atlasos_pin_t)
+list_dirs_pattern(atlasos_pin_t, atlasos_pin_var_run_t, atlasos_pin_var_run_t)
+allow atlasos_pin_t self:unix_stream_socket { accept getopt setopt read write getattr shutdown ioctl append };
+# the script itself (the interpreter opens it)
+allow atlasos_pin_t atlasos_pin_exec_t:file { getattr open read ioctl map lock };
+allow atlasos_pin_t self:capability dac_read_search;
+allow atlasos_pin_t self:process { signal_perms getsched };
+allow atlasos_pin_t atlasos_pin_var_run_t:sock_file { getattr read write };
+# the socket systemd made and passed on, and the journal stream it connected
+allow atlasos_pin_t init_t:unix_stream_socket { getattr read write getopt setopt ioctl append shutdown };
+init_use_fds(atlasos_pin_t)
+auth_read_shadow(atlasos_pin_t)
+auth_use_nsswitch(atlasos_pin_t)
+corecmd_exec_bin(atlasos_pin_t)
+files_read_etc_files(atlasos_pin_t)
+files_read_usr_files(atlasos_pin_t)
+libs_use_ld_so(atlasos_pin_t)
+libs_use_shared_libs(atlasos_pin_t)
+libs_exec_lib_files(atlasos_pin_t)
+libs_read_lib_files(atlasos_pin_t)
+fs_getattr_xattr_fs(atlasos_pin_t)
+kernel_read_system_state(atlasos_pin_t)
+dev_read_urand(atlasos_pin_t)
+# yescrypt (libxcrypt) maps its big table on a huge page when it can
+allow atlasos_pin_t hugetlbfs_t:file { read write map };
+miscfiles_read_localization(atlasos_pin_t)
+logging_send_syslog_msg(atlasos_pin_t)
+
+# Who may ask: the login screen's PAM (xdm_t) and the user's own session (the
+# lock screen's PAM), through the socket only. The user's session is
+# unconfined_t, which the targeted policy already lets connect to any domain
+# and write any socket file (unconfined_domain_type), as pin-admin, which runs
+# as root there, writes the store. xdm_t is confined and needs these:
+allow xdm_t atlasos_pin_var_run_t:dir search_dir_perms;
+allow xdm_t atlasos_pin_var_run_t:sock_file write;
+allow xdm_t atlasos_pin_t:unix_stream_socket connectto;

@@ -77,7 +77,7 @@ PlasmoidItem {
 
             PlasmaExtras.MenuItem {
                 text: i18n("About This Computer")
-                onClicked: run.command("kinfocenter")
+                onClicked: run.command("atlas-monitor --page system")
             }
             PlasmaExtras.MenuItem { separator: true }
             PlasmaExtras.MenuItem {

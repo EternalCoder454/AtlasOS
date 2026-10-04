@@ -1,0 +1,10 @@
+[brave-browser]
+name=Brave Browser
+baseurl=https://brave-browser-rpm-release.s3.brave.com/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+# Always fresh: the daily build exists to pick up a new Brave, and the
+# build's dnf cache otherwise keeps metadata for up to 48 hours.
+metadata_expire=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-atlasos-brave-browser

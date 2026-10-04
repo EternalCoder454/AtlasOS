@@ -1,0 +1,52 @@
+services:
+  crash-relay:
+    image: eterneon/crash-relay:local
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: unless-stopped
+    stop_grace_period: 50s # longer than the 42 s drain in main.go
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    pids_limit: 64
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "/crash-relay", "-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    environment:
+      GITHUB_REPO: EternalCoder454/AtlasOS
+      TOKEN_FILE: /run/secrets/github_token
+      STATE_DIR: /state
+      LISTEN: ":8080"
+      SENTRY_KEY: atlasos
+      # Same value Caddy sends in X-Relay-Proxy; set in ./.env (see README).
+      RELAY_PROXY_SECRET: ${RELAY_PROXY_SECRET:?set RELAY_PROXY_SECRET in .env}
+    secrets:
+      - github_token
+    volumes:
+      - state:/state
+    networks:
+      - relay_edge
+
+# Its own network: only the relay and Caddy are on it, not the Matrix stack.
+networks:
+  relay_edge:
+    name: crash_relay_edge
+
+secrets:
+  github_token:
+    file: ./github-token
+
+volumes:
+  state:

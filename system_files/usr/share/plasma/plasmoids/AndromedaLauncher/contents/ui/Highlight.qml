@@ -1,89 +1,32 @@
 import QtQuick
-import org.kde.ksvg as KSvg
 import org.kde.kirigami as Kirigami
-import Qt5Compat.GraphicalEffects
 
-
+// AtlasOS: the selection pill of Atlas.Ui's SidebarItem (8 px radius, accent
+// tint) in place of the style's viewitem frame; no glow-effect masking.
 Rectangle {
     id: highlight
-    /*!
-    This property holds whether the control is hovered.
 
-    This is set automatically when used in a ListView and GridView.
-    */
+    // Set automatically when used as a ListView or GridView highlight.
     property bool hovered: ListView.view !== null || GridView.view !== null
-
-    /*!
-      This property holds whether the highlight has a pressed appearance.
-     */
     property bool pressed: false
-
-    /*!
-      \qmlproperty int Highlight::marginHints
-
-      This property holds the margin hints used by the background.
-    */
-    property alias marginHints: background.margins
-
-    /*!
-      This property holds whether the item is active. True by default. Set it to
-      false to visually mark an item that's in the "current item" or "selected"
-      state but is not currently being hovered.
-     */
+    // Kept for callers: true by default; false marks a current item that
+    // isn't hovered.
     property bool active: true
-
-    /*!
-      This property holds whether the item should not show a background. False by default. Set it to
-      true to visually hide the background, mainly used when glow is enabled in plasmoid config
-     */
+    // Hide the tint (used when the glow effect marks the selection).
     property bool hideBg: false
 
     width: {
         const view = ListView.view;
         return view ? view.width - view.leftMargin - view.rightMargin : undefined;
-    } 
-
-    radius: 10
-    z: -20
-    color: "transparent"
-    clip: true
-
-    // apply rounded corners mask
-    layer.enabled: true
-    layer.effect: OpacityMask {
-        maskSource: Rectangle {
-            x: highlight.x; y: highlight.y
-            width: highlight.width
-            height: highlight.height
-            radius: highlight.radius
-        }
     }
 
-    KSvg.FrameSvgItem {
-        id: background
+    radius: 8
+    z: -20
+    color: highlight.hideBg ? "transparent" : Qt.alpha(Kirigami.Theme.highlightColor, highlight.pressed ? 0.26 : 0.18)
 
-       // anchors.fill: parent
-        width: highlight.width + highlight.radius
-        height: highlight.height + highlight.radius
-        anchors.centerIn: parent
-
-        opacity: highlight.hideBg ? 0 : 1
-
-        imagePath: "widgets/viewitem"
-        prefix: {
-            if (highlight.pressed) {
-                return highlight.hovered ? 'selected+hover' : 'selected';
-            }
-
-            return highlight.hovered ? 'hover' : 'normal';
-        }
-
-        Behavior on opacity {
-            enabled: Kirigami.Units.veryShortDuration > 0
-            NumberAnimation {
-                duration: Kirigami.Units.veryShortDuration
-                easing.type: Easing.OutQuad
-            }
+    Behavior on color {
+        ColorAnimation {
+            duration: Kirigami.Units.shortDuration
         }
     }
 }

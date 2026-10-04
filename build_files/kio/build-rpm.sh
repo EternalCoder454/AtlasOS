@@ -22,8 +22,18 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 "${dnf[@]}" install rpm-build 'dnf5-command(builddep)'
 
 # Koji keeps every build, so this works even after Fedora's repos move on.
-curl -fsSL --retry 3 -o /tmp/kio.src.rpm \
-	"https://kojipkgs.fedoraproject.org/packages/kf6-kio/$ver/$rel/src/kf6-kio-$nvr.src.rpm"
+# data/signed/6d9f90a6 holds the copies signed with Fedora 44's release key
+# (the files under the build itself are unsigned).
+curl -fsSL --retry 3 --retry-all-errors --proto '=https' --tlsv1.2 -o /tmp/kio.src.rpm \
+	"https://kojipkgs.fedoraproject.org/packages/kf6-kio/$ver/$rel/data/signed/6d9f90a6/src/kf6-kio-$nvr.src.rpm"
+# Koji's packages are signed with Fedora's release key, which this image
+# carries: refuse an SRPM that isn't.
+rpmkeys --import /etc/pki/rpm-gpg/RPM-GPG-KEY-fedora-44-primary
+rpmkeys --checksig /tmp/kio.src.rpm | grep -q ': digests signatures OK$' || {
+	echo "kio/build-rpm.sh: the source RPM is not signed by Fedora's key" >&2
+	rpmkeys --checksig -v /tmp/kio.src.rpm >&2
+	exit 1
+}
 rpm -i /tmp/kio.src.rpm
 top=$(rpm -E %_topdir)
 spec=$top/SPECS/kf6-kio.spec

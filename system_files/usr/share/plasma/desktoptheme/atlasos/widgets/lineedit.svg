@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Text fields.
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+   .ColorScheme-HighlightedText { color:#ffffff; } .ColorScheme-ViewBackground { color:#ffffff; }
+   .ColorScheme-ButtonBackground { color:#e6e4f4; } .ColorScheme-ButtonText { color:#1b1748; }
+  </style>
+ </defs>
+ <rect id="hint-focus-over-base" x="0" y="0" width="2" height="2" fill="#000" opacity="0.004"/>
+ <g id="base-topleft">
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M1 9 V8 A7 7 0 0 1 8 1 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-top">
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M9 0 H17 V9 H9 Z M9 1 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-topright">
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 1 H18 A7 7 0 0 1 25 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-left">
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M0 9 H9 V17 H0 Z M1 9 H9 V17 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-center">
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-right">
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H25 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-bottomleft">
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M1 17 V18 A7 7 0 0 0 8 25 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-bottom">
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V25 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <g id="base-bottomright">
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V25 H18 A7 7 0 0 0 25 18 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.18"/>
+ </g>
+ <rect id="base-hint-top-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
+ <rect id="base-hint-bottom-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
+ <rect id="base-hint-left-margin" x="0" y="0" width="8" height="1" fill="#000" opacity="0.004"/>
+ <rect id="base-hint-right-margin" x="0" y="0" width="8" height="1" fill="#000" opacity="0.004"/>
+ <g id="hover-topleft">
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M1 9 V8 A7 7 0 0 1 8 1 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-top">
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z M9 1 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-topright">
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 1 H18 A7 7 0 0 1 25 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-left">
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z M1 9 H9 V17 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-center">
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-right">
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H25 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-bottomleft">
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M1 17 V18 A7 7 0 0 0 8 25 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-bottom">
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V25 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <g id="hover-bottomright">
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V25 H18 A7 7 0 0 0 25 18 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.4"/>
+ </g>
+ <rect id="hover-hint-top-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="hover-hint-bottom-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="hover-hint-left-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <rect id="hover-hint-right-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <g id="focus-topleft">
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M2 9 V8 A6 6 0 0 1 8 2 H9 V9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-top">
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z M9 2 H17 V9 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-topright">
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 2 H18 A6 6 0 0 1 24 8 V9 H17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-left">
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z M2 9 H9 V17 H2 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-center">
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-right">
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H24 V17 H17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-bottomleft">
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M2 17 V18 A6 6 0 0 0 8 24 H9 V17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-bottom">
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V24 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focus-bottomright">
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V24 H18 A6 6 0 0 0 24 18 V17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <rect id="focus-hint-top-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="focus-hint-bottom-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="focus-hint-left-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <rect id="focus-hint-right-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <g id="focusframe-topleft">
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M2 9 V8 A6 6 0 0 1 8 2 H9 V9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-top">
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z M9 2 H17 V9 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-topright">
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 2 H18 A6 6 0 0 1 24 8 V9 H17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-left">
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z M2 9 H9 V17 H2 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-center">
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-right">
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H24 V17 H17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-bottomleft">
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M2 17 V18 A6 6 0 0 0 8 24 H9 V17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-bottom">
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V24 H9 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <g id="focusframe-bottomright">
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V24 H18 A6 6 0 0 0 24 18 V17 Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="1"/>
+ </g>
+ <rect id="focusframe-hint-top-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="focusframe-hint-bottom-margin" x="0" y="0" width="1" height="1e-08" fill="#000" opacity="0.004"/>
+ <rect id="focusframe-hint-left-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+ <rect id="focusframe-hint-right-margin" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
+</svg>

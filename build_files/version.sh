@@ -4,6 +4,7 @@
 # after the step that takes it is rebuilt whenever it does. build.sh wrote
 # "dev" in its place.
 set -euxo pipefail
+: >/tmp/atlasos-step-start # (see cleanup.sh, "Times")
 
 v=${IMAGE_VERSION:?}
 f=/usr/lib/os-release
@@ -14,3 +15,8 @@ fi
 sed -i -e "s/^VERSION=\"44 (dev)\"\$/VERSION=\"44 ($v)\"/" \
 	-e "s/^IMAGE_VERSION=\"dev\"\$/IMAGE_VERSION=\"$v\"/" "$f"
 grep -qx "IMAGE_VERSION=\"$v\"" "$f"
+# system-release, written by build.sh with "dev" the same way.
+grep -qx 'AtlasOS release 44 (dev)' /usr/lib/atlasos-release
+echo "AtlasOS release 44 ($v)" >/usr/lib/atlasos-release
+
+/ctx/cleanup.sh

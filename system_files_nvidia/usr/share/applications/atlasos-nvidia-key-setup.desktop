@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NVIDIA Driver Setup
+GenericName=Secure Boot key for the NVIDIA driver
+Comment=Let the NVIDIA graphics driver start while Secure Boot is on
+Exec=/usr/libexec/atlasos/nvidia-key-setup --manual
+Icon=nvidia
+Categories=Settings;
+Keywords=nvidia;secure boot;mok;driver;graphics;key
+OnlyShowIn=KDE;

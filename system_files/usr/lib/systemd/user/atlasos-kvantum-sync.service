@@ -1,0 +1,12 @@
+[Unit]
+Description=Pick the AtlasOS Kvantum theme (light/dark, translucent/solid)
+# Plasma writes kdeglobals several times in a row on a theme switch; each write
+# starts this, and the default start limit would stop the watch for the session.
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/atlasos/kvantum-sync
+
+[Install]
+WantedBy=default.target

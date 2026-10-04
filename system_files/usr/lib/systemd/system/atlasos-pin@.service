@@ -1,0 +1,47 @@
+[Unit]
+Description=AtlasOS PIN verifier (%i)
+Documentation=https://github.com/EternalCoder454/AtlasOS
+# Root (it reads and writes /var/lib/atlasos/pin, which only root can), with
+# nothing else: the only writable path is that folder, no network, no new
+# privileges.
+RefuseManualStart=yes
+
+[Service]
+ExecStart=/usr/libexec/atlasos/pin-daemon
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+RuntimeMaxSec=10
+# One yescrypt cost-8 hash peaks at about 148 MB resident (measured with
+# /usr/bin/time -v); 4x that, one single-threaded process.
+MemoryMax=640M
+TasksMax=8
+CPUQuota=100%
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ProtectSystem=strict
+ReadWritePaths=/var/lib/atlasos/pin
+ProtectHome=yes
+ProtectProc=invisible
+ProcSubset=pid
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+NoNewPrivileges=yes
+# Reads /etc/shadow (to refuse accounts whose password is locked)
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX
+SystemCallFilter=@system-service
+# Nothing the daemon does needs these (checked with strace over a verify)
+SystemCallFilter=~@privileged @resources
+SystemCallArchitectures=native

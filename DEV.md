@@ -21,8 +21,10 @@ image plus NVIDIA's driver (see NVIDIA below).
 `latest` is `stable`. The version `44.YYYYMMDD-N` (the build's UTC date, and
 N its number that day across all channels, from 1) is the same in the image's `org.opencontainers.image.version` label, in
 `/etc/os-release` and in the tags. The `org.opencontainers.image.revision`
-label is the AtlasOS commit the image was built from, and
-`net.eterneon.atlas.updater.revision` the Atlas Updater commit.
+label is the AtlasOS commit the image was built from,
+`net.eterneon.atlas.framework.revision` the atlas-framework commit,
+`net.eterneon.atlas.updater.revision` the Atlas Updater commit, and
+`net.eterneon.atlas.monitor.revision` the Atlas Monitor commit.
 
 ## Updates
 
@@ -37,7 +39,35 @@ label is the AtlasOS commit the image was built from, and
   reports as metered. A download that failed with a network error is tried again
   after 15 minutes (at most 4 tries in 3 hours). It skips the image this
   machine went back from, one that failed its boot checks, and one older than
-  the installed version (a tag that went back).
+  the installed version (a tag that went back). That last check runs twice:
+  before the download against the registry, and after it against what was
+  staged (`check_staged` in `update-stage`), which takes an older image out
+  again with `rpm-ostree cleanup -p` and fails the run; it also does that when
+  it can't tell. Both use `/usr/share/atlasos/image-age.jq`, the same rule as
+  Atlas Updater's `ImageStatus::is_older_than`. The service is sandboxed as
+  far as bootc allows (no `ProtectSystem` or `RestrictNamespaces`: it writes
+  `/sysroot`, `/boot`, `/etc` and `/var`, and needs mount namespaces;
+  `CAP_SYS_PTRACE` stays because bootc reads `/proc/1/ns/mnt`). An older
+  version of the same image staged by hand (`rpm-ostree deploy`) is taken out
+  by the next run too; to stay on one, pin it or stop the timer.
+- **SELinux:** bootc and ostree must run in `install_t`, which may write
+  labels the running policy doesn't know yet (a new image can bring new
+  types). Fedora's policy enters it from a unit whose ExecStart is bootc
+  (`init_t`) or a root shell, not from `unconfined_service_t`, where
+  `update-stage`, Atlas Updater's helper, `atlas-record-boot`,
+  `grub-greenboot` and the greenboot checks run. `selinux/atlasos_bootc.te`
+  adds that transition (with `nnp_transition`, for `grub-greenboot`'s
+  `NoNewPrivileges`). Without it, bootc's probe (`chcon` to a made-up type)
+  was denied and logged twice per `bootc status` at every boot, and bootc
+  carried on without the right. Check with
+  `ausearch -m avc -ts boot -c chcon` (empty).
+- **Signatures, tested:** with the policy's key swapped for a wrong one,
+  `bootc switch` (without `--enforce-container-sigpolicy`), `bootc upgrade`,
+  `rpm-ostree rebase` to both `ostree-unverified-registry:` and
+  `ostree-image-signed:`, and `skopeo` all refuse the image, and an unsigned
+  tag fails with "A signature was required". rpm-ostreed reads the policy
+  when it starts: a changed `policy.json` applies after a restart of it (a
+  reboot does that).
   `bootc-fetch-apply-updates.timer` (which reboots) and
   `rpm-ostreed-automatic.timer` stay disabled; `build.sh` fails if they are
   enabled.
@@ -51,11 +81,16 @@ label is the AtlasOS commit the image was built from, and
   build with no pre-release gets the commits since the previous stable
   release, grouped by what they touch (`scripts/release-notes.sh`; the first
   stable lists the newest commits). Older releases are plain `44.YYYYMMDD`.
-- **Atlas apps are system components.** `atlas-core`, `atlas-updater` and
-  `atlas-monitor` are RPMs built into the image under `/usr`, so Discover (its
-  backends here are Flatpak and fwupd, no PackageKit) has no way to
-  uninstall them, and `/etc/dnf/protected.d/atlas.conf` (from `atlas-core`)
-  and `atlas-monitor.conf` stop dnf removing them. The build fails without them. Root can still run
+- **Atlas apps are system components.** `atlas-system-helper` (called
+  `atlas-core` before 0.1.0-2), `atlas-updater`, `atlas-monitor` and
+  `atlas-notepad`, and the framework they share (`atlas-ui`, the Atlas.Ui
+  QML module in `/usr/lib64/qt6/qml/Atlas/Ui`, with `atlas-symbols-fonts`
+  and the `atlas-symbols` gallery), are RPMs built into the image under
+  `/usr`, so Discover (its backends here are Flatpak and fwupd, no
+  PackageKit) has no way to uninstall them, and
+  `/etc/dnf/protected.d/atlas-framework.conf` (from `atlas-ui`), `atlas.conf`
+  (from `atlas-system-helper`), `atlas-monitor.conf` and `atlas-notepad.conf`
+  stop dnf removing them. The build fails without them. Root can still run
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
   a system timer and keeps working.
@@ -131,10 +166,23 @@ healthy machine. Every check passes ("skipped") when:
   `emergency`), the default target isn't `graphical.target`, the display manager
   isn't plasmalogin or it is masked, or at the end there is no `/dev/dri/card*`.
 
+Each check finds its processes by the program they run (`/proc/<pid>/exe`,
+`hc_pids_of` in `health-lib`), not by name, only in the host's mount
+namespace, and the greeter's by its user (`plasmalogin`) too: a process name
+is whatever a process says, and in a mount namespace of its own (`unshare
+-Urm`, open to any user) a process can mount anything over
+`/usr/bin/plasmashell`. And a user's Plasma counts only for a user logind
+says has a local graphical session (`hc_graphical_uids`): otherwise any user
+could start a `plasmashell` at boot (a lingering user service, a cron job) and
+either keep a broken update or, with no `kwin_wayland` beside it, fail a
+healthy one and force a rollback. Not covered: the signed-in user's own
+programs can still make their desktop crash twice, which fails the check;
+that takes code already running as that user.
+
 | Check | Passes when | Waits | Limit |
 |---|---|---|---|
-| `10_atlasos_login.sh` | `plasmalogin.service` is active and the greeter (`/usr/libexec/plasma-login-greeter`) or a `plasmashell` (autologin) has run for 10 s | until 190 s awake | 240 s |
-| `20_atlasos_plasma.sh` | with a user session: `plasmashell` and that user's `kwin_wayland` run for 10 s, and neither unit restarted twice or more (one crash is tolerated); without one: the greeter and the greeter's `kwin_wayland` run for 10 s and `plasmalogin.service` hasn't restarted twice | until 240 s awake | 300 s |
+| `10_atlasos_login.sh` | `plasmalogin.service` is active and the greeter (`/usr/libexec/plasma-login-greeter`) or the `plasmashell` of a graphical session (autologin) has run for 10 s | until 190 s awake | 240 s |
+| `20_atlasos_plasma.sh` | with a user's graphical session: that user's `plasmashell` and `kwin_wayland` run for 10 s, and neither unit restarted twice or more (one crash is tolerated; one healthy session is enough); without one: the greeter and the greeter's `kwin_wayland` run for 10 s and `plasmalogin.service` hasn't restarted twice | until 240 s awake | 300 s |
 | `30_atlasos_network.sh` | `NetworkManager.service` is active and `nmcli general status` answers; connectivity is not needed | until 90 s awake | 120 s |
 
 Time is counted awake (`sleep` in a loop; `/proc/uptime` and `timeout(1)` count
@@ -235,9 +283,30 @@ sudo bootc status                       # booted / staged / rollback
   KCharSelect, KFind, KHelpCenter, KJournald, KRfb, KWalletManager, KWrite,
   System Monitor, Plasma Welcome, Partition Manager, KDebugSettings and the
   Firewall app (firewalld itself stays). Firefox, Konsole, and with it
-  DrKonqi, KDE's crash reporter, which needs it. Also two wallpaper sets
-  nothing depends on. (Menu Editor and Emoji Selector stay: they are part
-  of `plasma-desktop`.)
+  DrKonqi, KDE's crash reporter, which needs it. Also Fedora's wallpapers
+  (F44, Default, Breeze's Next: the picker shows only AtlasOS's, checked at
+  build time; `kde-settings-plasma` requires the Fedora set, so its packages
+  stay installed and `build.sh` deletes only the pictures), Fedora's bookmarks,
+  Chromium policy packages (Brave doesn't read them) and Fedora Linux's
+  AppStream entry. (Menu Editor and Emoji Selector stay: they are part
+  of `plasma-desktop`. Menu Editor and Kvantum Manager are hidden from the
+  app menu by `packages.sh`; Menu Editor still opens from the launcher's
+  "Edit Applications".)
+- **Network:** firewalld's default zone is `AtlasOS`
+  (`/usr/lib/firewalld/zones/AtlasOS.xml`, set in `firewalld-workstation.conf`
+  by `build.sh`): Fedora Workstation's zone without its open ports
+  1025-65535, so nothing on the network reaches this computer except replies,
+  DHCPv6, mDNS (printers and other devices), Windows file share browsing, and
+  SSH once its server is turned on. A port is opened in System Settings,
+  Firewall (`plasma-firewall-firewalld`). Steam's Remote Play and local
+  game transfers stay open (`steam-streaming`, `steam-lan-transfer`; only
+  Steam listens there). An install whose `/etc/firewalld/firewalld.conf` is
+  still the shipped link gets the zone with the update; one where an admin
+  replaced it keeps its own default, and NetworkManager connections set to
+  another zone keep theirs. LLMNR is off
+  (`/usr/lib/systemd/resolved.conf.d/50-atlasos.conf`): anyone on the network
+  can answer an LLMNR query for a one-word name and send this computer to
+  their own address. mDNS (`.local`, through Avahi) and DNS are unchanged.
 - **Turned off:** Discover's unattended updates, automatic reboots for
   updates (see Updates), dnf's metadata refresh
   timer (dnf can't change an image-based system anyway), and Fedora's
@@ -250,13 +319,59 @@ sudo bootc status                       # booted / staged / rollback
   it; Brave Origin as the browser, from
   [Brave's own RPM repository](https://brave.com/linux/) (it isn't on
   Flathub); IBM Plex Sans for the interface and JetBrains Mono for terminals
-  and code. Ghostty's own "Open Ghostty Here" is in Dolphin's right-click
-  menu, and Shift+F4 opens it too.
+  and code. Dolphin's "Open Terminal Here" (and Shift+F4) opens
+  Ghostty; Ghostty's own duplicate "Open Ghostty Here" entry is removed. Native RPMs for the everyday apps, so
+  they take the Kvantum style and Papirus icons: Gwenview, Okular,
+  Qalculate! (`qalculate-qt`) and Haruna, with `kf6-kimageformats`,
+  `qt6-qtimageformats` and `kdegraphics-thumbnailers` named explicitly (weak
+  dependencies are off). They are the default for images, PDFs, video and
+  audio (`mimeapps.list`), and Okular starts without a menu bar and with small
+  toolbar icons (`/etc/xdg/okularrc`). Haruna and Qalculate! read only their
+  own `~/.config` files, so AtlasOS can't set their defaults system-wide;
+  Haruna's hardware decoding is on (`auto`) by default anyway.
+- **Third-party repos (Ghostty's COPR, Brave, mise, NVIDIA's container
+  toolkit):** never trusted on first use. Each repo's `.repo` file is in
+  `build_files/repos` (`gpgcheck=1`, and `repo_gpgcheck=1` where the vendor
+  signs its repodata: Brave, mise, NVIDIA; COPR doesn't) and its public key
+  in `build_files/keys`, with the key's fingerprint pinned in `packages.sh`
+  (`nvidia/build.sh` for NVIDIA). The build refuses a key that doesn't match
+  ("vendor rotated its key"); then check the new key, replace the file and
+  update the fingerprint. The repo and key are removed again after the
+  install. Fedora's own koji downloads (KIO, plasma-setup, kernel-devel) are
+  taken from koji's `data/signed` copies and checked against Fedora's
+  release key before use.
+  Key expiry, for diagnosing a future build failure: mise 2028-01-02,
+  Ghostty 2030-05-15 (UTC), Brave 2032-12-24, 2035-03-15 and 2035-07-27,
+  NVIDIA's primary key never (its signing subkey expired in 2021; the
+  primary signs the repodata).
+- **Codecs and video decoding:** `ffmpeg` replaces `ffmpeg-free`, with
+  GStreamer's ugly, bad-freeworld and libav plugins, and Cisco's
+  `openh264` plus `gstreamer1-plugin-openh264` replace `noopenh264`. These,
+  `mesa-va-drivers-freeworld` (AMD) and `intel-media-driver` (Intel) come
+  from RPM Fusion, whose release packages `packages.sh` installs for the
+  build and removes again: no RPM Fusion repo is enabled in the image. If
+  RPM Fusion's freeworld Mesa isn't the exact version of Fedora's yet,
+  the build logs a warning and goes on with Fedora's own VA-API drivers. The
+  NVIDIA image adds `libva-nvidia-driver`. Also added: `steam-devices`
+  (controller udev rules) and `plasma-print-manager`. Discover's firmware
+  updates come with `plasma-discover-libs` (its fwupd backend); there is no
+  separate package.
 - **Kept:** Plasma, KWin, Dolphin, Discover for Flatpaks,
   NetworkManager, PipeWire, Bluetooth, CUPS printing, Flatpak, zram swap.
 - **Branding:** AtlasOS boot splash, Plasma splash, launcher icon, About page,
   login screen and wallpaper; `os-release` says AtlasOS (`ID=atlasos`,
-  `ID_LIKE=fedora`, `VERSION_ID=44`).
+  `ID_LIKE=fedora`, `VERSION_ID=44`), and so do `/etc/system-release` and
+  `/etc/redhat-release` ("AtlasOS release 44 (version)", in
+  `/usr/lib/atlasos-release`; `/etc/fedora-release` stays Fedora's). Plymouth's
+  font is IBM Plex Sans: its label plugin ignores the theme's `Font=` and
+  loads the file `Plymouth.ttf`, so a dracut module
+  (`system_files/usr/lib/dracut/modules.d/50atlasos-plymouth-font`) links
+  that to Plex in the initramfs. Ghostty has no system-wide config, so
+  `/etc/skel/.config/ghostty/config` (JetBrains Mono, padding, themes `AtlasOS
+  Light` and `AtlasOS Dark` in `/usr/share/ghostty/themes`, following the
+  system's light and dark setting) is copied once to each user's
+  `~/.config/ghostty/config` at their first Plasma session, unless they have
+  one; their file overrides it from then on.
 - **Windows 11 and macOS-style desktop:** a macOS-style menu bar along the
   top, as three floating islands each only as wide as what it holds: the
   AtlasOS menu and the active app's menus (File, Edit, View...) on the left,
@@ -289,21 +404,37 @@ sudo bootc status                       # booted / staged / rollback
   plate. Open apps get a short underline (accent colour for the active
   one) and a rounded tile covering the whole item on hover. All of that is
   the AtlasOS Plasma style (`system_files/usr/share/plasma/desktoptheme/atlasos/`:
-  the task frames and the dock's and menu bar's background, with `plasmarc`
-  copied from Breeze at build time; everything else falls back to Breeze's
-  `default`). Its SVGs are generated by `scripts/plasma-style.py` for the
-  dock's 60 px; change the script and rerun it rather than editing them.
+  the task frames, the dock's and menu bar's background, and every surface
+  Plasma draws from its theme: popups (`dialogs/background`, 12 px card,
+  hairline, soft shadow, see-through so KWin's blur shows), tooltips, desktop
+  widget backgrounds, pill buttons and flat tool buttons, text fields,
+  sliders, switches, check and radio marks, scrollbars, tabs, list and view
+  items, frames and progress bars, all sized like the Kvantum themes and
+  coloured from the colour scheme so light, dark and the accent follow; with
+  `plasmarc` copied from Breeze at build time; what is left (icons, clock,
+  calendar, weather, action overlays) falls back to Breeze's `default`).
+  Its SVGs are generated by `scripts/plasma-style.py` (the dock's 60 px, and
+  each element keeps the ids of Breeze's); change the script and rerun it
+  rather than editing them, and bump `Version` in the theme's
+  `metadata.json` when they change (Plasma caches theme SVGs by it).
   The dock is made before the menu bar's islands, so Meta opens the dock's
   launcher (Plasma opens the first one it finds). Both bars are
   see-through, with a strong blur and a little noise behind them like
   Windows 11's acrylic (`[Effect-blur]` in `/etc/xdg/kwinrc`, which the
-  menus and popups share). The launcher is Modern ([Andromeda
-  Launcher](https://github.com/EliverLara/AndromedaLauncher)) or Classic
-  ([Simple Application Launcher](https://github.com/HimDek/Simple-Kickoff-for-Plasma)),
-  chosen in the first-run wizard; both are vendored in
+  menus and popups share). The launcher is [Andromeda
+  Launcher](https://github.com/EliverLara/AndromedaLauncher), vendored in
   `system_files/usr/share/plasma/plasmoids/` (GPL, with an
-  `ATLASOS-CHANGES.md` each), themed to AtlasOS. Window titles on the left; minimize, maximize and close on the
-  right; rounded window corners with a thin outline and soft shadows;
+  `ATLASOS-CHANGES.md`), themed to AtlasOS. (A Classic launcher, Simple
+  Kickoff, was dropped; a settings update swaps it out of existing docks.)
+  The launcher's search is the only search: KRunner (Alt+Space) is retired
+  by `build.sh`, which deletes its program, shortcuts file and D-Bus
+  activation and masks `plasma-krunner.service` (the KRunner library and
+  its plugins stay; Andromeda runs them in its own process, and Settings'
+  Plasma Search page still picks them). Notifications drop down at the top
+  centre (`PopupPosition=TopCenter`, added to `/etc/xdg/plasmanotifyrc` by
+  `build.sh`), sliding down from the top edge, just under the clock island;
+  the tray island is too narrow for Plasma's "near the icon" default.
+  Window titles on the left; minimize, maximize and close on the right; rounded window corners with a thin outline and soft shadows;
   translucent, blurred menus with a little noise (Windows' "acrylic"); the
   IBM Plex Sans font in place of Segoe UI. All of it is Plasma's own Breeze and KWin,
   configured; nothing extra runs.
@@ -319,12 +450,15 @@ sudo bootc status                       # booted / staged / rollback
   cursors are removed (the empty `breeze-cursor-theme` package stays, since
   `plasma-integration` requires it), and a settings update moves existing
   users off them.
-- **Icons:** [Dracula Icons](https://github.com/m4thewz/dracula-icons)
-  (GPL-3.0, built from Tela-circle and Papirus; `branding/icon-theme/` has
-  the tarball, the license and where it came from), one theme for both
-  Light and Dark: its small panel icons follow the colour scheme. A
-  settings update (`atlasos-20261002-dock-icons.sh`) moves existing users
-  from Breeze's icons and Plasma style to Dracula and AtlasOS.
+- **Icons:** [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
+  (GPL-3.0, Fedora's `papirus-icon-theme` and `-dark`): Papirus with
+  AtlasOS Light and Papirus-Dark with Dark, set in each global theme's
+  `defaults`; their panel and symbolic icons follow the colour scheme.
+  `build.sh` turns the folders violet, as papirus-folders does: it points
+  the `folder-*.svg` and `user-*.svg` links in each `places/` directory at
+  the `-violet-` files instead of the `-blue-` ones, and fails if any is
+  missing. A settings update (`atlasos-20261003-papirus.sh`) moves users
+  from Dracula, which AtlasOS used before, to the matching Papirus.
 
 ## Patched KIO
 
@@ -355,21 +489,184 @@ and not a theme. The patch:
   nothing;
 - falls back to the light wallpaper picture when a wallpaper has no dark one;
 - adds the components AtlasOS's own pages use (`AtlasButton`, `ChoiceCard`,
-  `DesktopPreview`, `SectionBackground` in `org.kde.plasmasetup.components`).
+  `DesktopPreview`, `SectionBackground` in `org.kde.plasmasetup.components`);
+- skips what Atlas Installer already asked. The installer writes
+  `/etc/atlasos/installer.ini` (`[Installer]` with `Version=1`, `Language`,
+  `KeyboardLayout`, `KeyboardVariant` and `Network=true|false`). The
+  **Language** page is left out when `Language` is set, and **Keyboard** when
+  `KeyboardLayout` is set: the installer also wrote `locale.conf` and
+  `00-keyboard.conf`, and the login screen and new users' desktops take theirs
+  from localed. Plasma-setup only writes `kxkbrc` for its own user. **Wi-Fi**
+  is left out when `Network=true` and NetworkManager reports full
+  connectivity as the wizard starts. An Anaconda install has no such file and
+  sees every page.
 
-The **App Launcher** page is AtlasOS's own package,
-`system_files/usr/share/plasma/packages/org.atlasos.plasmasetup.launcher`
-(weight 11, right after Appearance). It writes `[Launcher] style=modern|classic`
-to `/var/lib/atlasos-setup/choices.ini` as the wizard's `plasma-setup` user
-(the folder comes from `tmpfiles.d/atlasos-setup.conf`), and the Global
-Themes' layout script reads it when a user's desktop is first set up; no file
-means Modern. The file stays, so accounts added later get the same launcher. To see the wizard again in a VM:
+To see the wizard again in a VM:
 `sudo rm /etc/plasma-setup-done` and reboot.
 
 To change the patch: clone plasma-setup at the base image's version, apply
 Fedora's patches from the source RPM, then the AtlasOS patch, edit, commit
 and `git format-patch -1`. The build fails when the patch no longer applies to
 a new version.
+
+## Fingerprint readers and smart cards
+
+Everything ships in the image; `build.sh` turns on authselect's
+`with-fingerprint` (as Fedora Workstation does) and fails the build if
+`pam_fprintd` is missing from `system-auth` or `fingerprint-auth`, or has
+crept into `password-auth` (the login screen stays password-only, so the
+wallet unlocks). That gives fingerprint unlock for the lock screen, `sudo` and
+polkit prompts. `pam_fprintd` falls through at once with no reader or no
+enrolled finger, so other machines see no change, and fprintd is D-Bus
+activated, so nothing runs at idle. Images updated from older ones pick it up
+through the /etc merge, as long as nobody changed authselect locally.
+
+Asking to set one up is `/usr/libexec/atlasos/fingerprint-setup`, an XDG
+autostart (`/etc/xdg/autostart/atlasos-fingerprint-setup.desktop`). It is not a
+wizard page: the wizard runs as its own `plasma-setup` user before the account
+exists, and enrolling needs the account. At login, once the wizard is done, it
+asks fprintd (`Manager.GetDevices`) for readers; with one and no finger
+enrolled it shows a kdialog and, on "Set Up Fingerprint", opens System
+Settings' Users page, whose Fingerprint dialog does the enrolling. Any answer
+(or an already enrolled finger) writes
+`~/.local/state/atlasos/fingerprint-setup-done`; with no reader nothing is
+written, so a reader plugged in later still gets the question. Existing users
+are asked once too, after the update. To see it again, delete that file.
+
+Smart card readers work as shipped (`pcscd.socket`, ccid, opensc, for browsers,
+ssh and gpg). Logging in with a card is not offered: authselect's `local`
+profile has no smartcard support, and it would need the `sssd` profile plus
+certificate mapping, which a home PC has no use for.
+
+## PIN sign-in
+
+A Windows Hello-style PIN, 4 to 8 digits, for the login screen (plasmalogin)
+and the lock screen (kscreenlocker, PAM service `kde`) and nowhere else: not
+`sudo`, polkit, `su` or ssh. It is typed in the same field as the password; the
+password always keeps working.
+
+- **PAM.** `build.sh` makes a custom authselect profile, `atlasos`, based on
+  `local` (every file but `password-auth` is a symlink to local's), selects it
+  with the features the image already had plus `with-pin`, and fails the build
+  if the profile, the lines, their order or the units are missing. `with-pin`
+  adds to `password-auth`, right after `pam_unix.so ... try_first_pass`:
+  `pam_succeed_if service in kde:plasmalogin` (skips the next line otherwise),
+  then `pam_atlasos_pin.so` (`sufficient`), then the stock `pam_deny`; and one
+  `pam_atlasos_pin.so` line in the session part. The module is C
+  (`build_files/pam-pin/`, built in a Containerfile stage). pam_unix tries the
+  typed text first as a password and keeps it as PAM_AUTHTOK; the module reads
+  that same token (it never prompts), so there is only ever one prompt.
+  `system-auth` has no PIN lines. The module also checks the service itself
+  (kde or plasmalogin, else `PAM_IGNORE`), and for text that is not 4 to 8
+  digits it does not call the verifier and counts nothing.
+- **setcred.** The login screen calls `pam_setcred` after authenticating (the
+  lock screen doesn't). pam_unix answers it with its saved failure (it saw the
+  PIN as a wrong password), so the module also answers setcred: success, but
+  only for a login it let in (a flag in the PAM handle), else `PAM_IGNORE`.
+  Without that a correct PIN failed with "Failure setting user credentials".
+  Nothing here relies on `pam_exec` or `pam_permit` returning or not returning
+  `PAM_IGNORE`.
+- **The PIN is not a login secret.** On a correct PIN the module clears
+  PAM_AUTHTOK. plasmalogin's own file runs `pam_gnome_keyring`, `pam_kwallet5`,
+  `pam_kwallet` and `pam_oo7` after `password-auth`; they would otherwise take
+  the PIN for the password (a keyring or wallet protected by 4 to 8 digits), and
+  with the token gone `pam_kwallet5` prompts for the password a second time.
+  So `build.sh` writes `/etc/pam.d/plasmalogin` (the vendor file with one line
+  added, and fails if the vendor file is not the expected shape):
+  `auth [success=4 default=ignore] pam_atlasos_pin.so pinlogin` right after
+  `substack password-auth`, which jumps over those four lines after a PIN login.
+  After a password login they get the password as before.
+- **Storage.** `/var/lib/atlasos/pin/<uid>` (root only, 0700; tmpfiles.d),
+  JSON with a yescrypt hash, the count of wrong tries and a stamp (a digest of
+  the user name, uid and the shadow password hash). The PIN hash is only as
+  safe as the disk: without disk encryption anyone who can read the disk can
+  guess a 4 to 8 digit PIN offline in moments. A PIN is weaker at rest than
+  a password: only 10^4 to 10^8 values behind one yescrypt cost-8 hash, in a
+  root-only store, so disk encryption matters, and `pin-setup` tells users not
+  to reuse a bank-card PIN and that a longer PIN is safer. The lock screen runs as the user
+  and can't read the store, so the check goes through `atlasos-pin.socket`
+  (`/run/atlasos/pin.sock`, Accept=yes, no start rate limit, 2 connections per
+  user), which starts a sandboxed `atlasos-pin@.service` (`pin-daemon`, root,
+  ProtectSystem=strict, only the PIN folder writable, no network, 10 s limit)
+  per question. It reads SO_PEERCRED: root may ask about any user, everyone else
+  only about their own. Requests: `verify <uid> <name> <pin>` (the name must be what
+  `getpwuid` gives for the uid, so an alias account with the same uid can't use
+  another name's PIN), `status`, and `reset` (root only). The unit also has
+  MemoryMax=640M (a verify peaks near 148 MB), TasksMax=8, CPUQuota=100%,
+  ProtectProc=invisible, ProcSubset=pid and `~@privileged @resources`. A
+  request without its newline (the client left) is never counted. The store's
+  lock is held only for reading and writing the count, never while hashing.
+- **Lockout.** Wrong PINs accumulate (each is logged to the journal as
+  `atlasos-pin: wrong PIN for uid ...`); a correct PIN does not reduce the
+  count. After 5, `verify` answers "locked" without checking, and the lock
+  screen shows "Too many wrong PINs. Use your password." (not the login screen,
+  which would show which names have a PIN). Only a session opened at the login screen
+  clears the count: the module's `open_session` hook acts only when PAM_SERVICE
+  is exactly `plasmalogin` (never the lock screen, `kde`) and resets when the
+  session was not opened by a PIN login. Auto-login goes through its own
+  service, `plasmalogin-autologin` (checked in the VM), which has no PIN line,
+  so it leaves the count alone. A user with an all-digit password who
+  mistypes it counts as a wrong PIN too.
+- **Lifetime cap.** A second count, wrong PINs since the PIN was set
+  (`life`, with `life_at` in the record), is not cleared by a password sign-in
+  or a correct PIN; it falls by one per full day (at most 7 credited per try, and the
+  clock going backwards credits nothing). At 20 the PIN is retired for good (a
+  latch, `retired: true`; decay never undoes it):
+  `verify` refuses as for "locked" (same dummy hash), `status` answers
+  "retired", the daemon logs it (uid and count), and `pin-setup` says so and
+  offers a new PIN. `pin-admin set` clears it. Records without the fields count
+  as 0.
+- **When a PIN stops working.** It is refused for an account whose password is
+  locked (`passwd -l`, a `!` or `*` hash) or empty (`pin-daemon` answers
+  `deny`; `pin-admin set` refuses). When the stamp no longer matches (the
+  password was changed, or the uid went to another user), the entry is deleted
+  and the PIN is gone: set it again. With no PIN, a locked PIN, a refused
+  account or an unknown user, the daemon still hashes a dummy, so the answer
+  takes as long as a real check.
+- **SELinux.** `selinux/atlasos_pin.te` gives the daemon its own domain
+  (`atlasos_pin_t`, its socket `atlasos_pin_var_run_t`, the store
+  `atlasos_pin_var_lib_t`) and lets the login screen's domain (`xdm_t`, where
+  plasmalogin runs PAM, and so the module) connect to it; the lock screen's
+  `unconfined_t` is already allowed. The unit has `NoNewPrivileges=yes`, which
+  blocks the transition into `atlasos_pin_t` unless the policy has
+  `init_nnp_daemon_domain(atlasos_pin_t)` (it does; without it the daemon ran as
+  `init_t`). The Containerfile's `selinux-policy` stage compiles it and
+  `build.sh` installs it with `semodule -i`; the module store is under
+  `/etc/selinux/targeted/active` (store-root is /etc/selinux), which a bootc
+  upgrade replaces with the new image's, unless someone changed it locally (for
+  example `semanage` or `setsebool -P`). `atlasos_pin_t` is enforcing: it ran
+  permissive through VM pass 2, where its only denial was yescrypt mapping a
+  huge page (now allowed). After a change to the daemon, check
+  `ausearch -m avc -ts boot -c pin-daemon`: a denial ends a verify with no
+  answer, so the PIN fails and the password still works.
+- **Setting it.** `pin-admin set|remove` runs through pkexec under the polkit
+  action `org.atlasos.pin.manage` (`auth_self`: the user confirms with their
+  own password), acts only for PKEXEC_UID and reads the PIN from stdin.
+  It refuses PINs that are not 4 to 8 digits, one repeated digit, or a straight
+  run (1234, 4321). `pin-admin status` needs no pkexec. The user-facing pieces
+  are `pin-setup` (kdialog; the "Set Up PIN" launcher entry), and
+  `atlas pin set|remove|status`.
+- **First login.** `/etc/xdg/autostart/atlasos-pin-setup.desktop` runs
+  `pin-setup --first-login`: once the first-run wizard is done, a user without
+  a PIN is asked once; any answer writes
+  `~/.local/state/atlasos/pin-setup-done`. It waits for the fingerprint
+  question, any other kdialog and System Settings first, so two dialogs never
+  show at once.
+- **KWallet.** After a PIN login the keyring modules are skipped (above), so
+  KWallet asks for the password once, itself: the wallet opens with the real
+  password, and a PIN is not that. Typing the password at the login screen once
+  avoids it. Tell users this; there is no way around it short of storing the
+  wallet's key, which a PIN of 4 digits would not protect.
+- **Testing.** The tools use fixed paths (no overrides, as they run as root);
+  a test that needs others patches `pinlib.STORE`, `SOCKET` and `SHADOW`. The
+  PAM stack can be tried in a container from the image with a small libpam
+  conversation program (counting prompts; call `pam_authenticate`,
+  `pam_setcred`, `pam_open_session`): run `pin-daemon` on a socket with
+  `systemd-socket-activate --inetd -a -l /run/atlasos/pin.sock
+  /usr/libexec/atlasos/pin-daemon`, then authenticate with service `kde`
+  (as the user), `plasmalogin` (as root) and `sshd` or `sudo`. A probe module
+  placed in place of the wallet lines shows what they would be given.
+  SELinux and the real greeters are not covered that way.
 
 ## NVIDIA
 
@@ -382,10 +679,33 @@ image with nouveau.
 - **Kernel modules:** built in a throwaway stage with `akmods` for exactly the
   image's kernel (headers from Koji), then signed with the AtlasOS module key
   so they load with Secure Boot on. The image has no compilers and no akmods.
-- **Secure Boot:** the firmware must trust the key once:
-  `sudo /usr/libexec/atlasos/nvidia-enroll-key`, set a one-time password,
-  reboot, and choose "Enroll MOK" in the blue MOK Manager screen. With Secure
-  Boot off nothing is needed.
+- **Secure Boot:** the firmware must trust the key once, and it is a dialog,
+  not a terminal step. At login, when an NVIDIA display device is present,
+  Secure Boot is on and the key is not enrolled, `nvidia-key-setup
+  --first-login` (XDG autostart) asks "Set Up Now / Not Now" (Not Now asks
+  again at the next login). "Set Up Now" runs `pkexec nvidia-enroll-key
+  --new-code` (polkit action `org.atlasos.nvidia.enroll-key`,
+  `auth_admin`), which makes a random 8-digit code, sets it as the
+  one-time password (piped to mokutil), and prints it;
+  the dialog shows it with the blue-screen steps (Enroll MOK, Continue, Yes,
+  type the code, Reboot) and offers Restart Now. The launcher entry "NVIDIA
+  Driver Setup" runs the same dialog by hand (it also offers a new code
+  after "I Lost the Code"). A request made this boot is marked in
+  `/run/atlasos-nvidia-key-pending` (root-owned, for every user, gone at the
+  next boot like an unfinished request). The helper runs one at a time
+  (flock) and replaces only its own pending request: one for another key,
+  queued by hand, makes it stop with a message. `--new-code` also
+  sets MokTimeout to 300, so the blue screen's "Press any key" waits five
+  minutes instead of 10 seconds (and still boots on by itself); a missed
+  screen drops the request, so a later boot with the key still missing asks
+  again. Tested end to end in the Secure Boot VM: code, restart, the six
+  steps, and `mokutil --test-key` then reports the key enrolled, for a normal
+  user too (MokListRT is world-readable). Accepted: the code is in kdialog's
+  command line while it is shown; it only confirms someone at the keyboard
+  at boot and can only enrol this one certificate. MokAuth (its hash) is
+  root-only. From a terminal,
+  `sudo /usr/libexec/atlasos/nvidia-enroll-key` still works (it asks for the
+  password itself). With Secure Boot off nothing is needed.
 - **Also in it:** CUDA's driver libraries, VA-API video decoding
   (`libva-nvidia-driver`), the suspend/resume services, and NVIDIA's container
   toolkit (`podman run --device nvidia.com/gpu=all ...`).
@@ -417,9 +737,9 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `build_files/drop-build-deps.sh` | Runs a builder stage's build, then removes its build dependencies |
 | `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `atlasos-nvidia` image |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |
-| `system_files/` | Files copied as-is into the image (`/etc`, `/usr`), including the two Global Themes, their colour schemes, the menu bar and dock layout, the two launchers and the wizard's launcher page |
+| `system_files/` | Files copied as-is into the image (`/etc`, `/usr`), including the two Global Themes, their colour schemes, the menu bar and dock layout and the launcher |
 | `branding/source/` | The AtlasOS logo SVGs (copies, never edited) |
-| `branding/cursors/`, `branding/icon-theme/` | Bibata cursors and Dracula icons, as tarballs with their licenses |
+| `branding/cursors/` | Bibata cursors, as a tarball with its license |
 | `branding/wallpaper.jpg`, `wallpaper-dark.jpg` | The wallpaper and its night picture for Dark, 4K copies of the originals; the light one also blurred for the login screen |
 | `build_files/plasma-setup/` | The first-run wizard rebuilt in AtlasOS's style (see First-run setup) |
 | `branding/render.sh` | Renders icons, splash images and wallpapers (plain and blurred) at build time |
@@ -429,19 +749,30 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `.github/workflows/build.yml` | Builds, rechunks, pushes and signs testing and beta |
 | `.github/workflows/promote-stable.yml` | Weekly: testing becomes stable, then tag and release |
 | `scripts/release-notes.sh` | Writes a stable release's notes from the git log |
-| `scripts/plasma-style.py` | Writes the AtlasOS Plasma style's SVGs (dock tasks, panel backgrounds) |
+| `scripts/plasma-style.py` | Writes the AtlasOS Plasma style's SVGs (dock tasks, panels, popups, tooltips, buttons, fields, sliders, switches, scrollbars, tabs, items) |
 
 ## Building and testing locally
 
 Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
-The Atlas apps are built from a second repository, passed to `podman build` as
+The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), is
+built first from its own repository, the named build context
+`atlas-framework`: `../Atlas Framework` or `$ATLAS_FRAMEWORK_SRC`, with its
+commit in `net.eterneon.atlas.framework.revision`. Its `framework` stage
+makes the RPMs; the app stages build against them (`ATLAS_LOCAL_RPMS`), and
+`apps.sh` installs them before the apps. Atlas.Ui changes go there, never
+into an app.
+
+The Atlas apps are built from another repository, passed to `podman build` as
 the named build context `atlas-updater`. `just build` uses `../Atlas Updater`
 (next to this repo), or `$ATLAS_UPDATER_SRC`; it needs
 `packaging/build-rpm.sh` there. Its commit goes in the
 `net.eterneon.atlas.updater.revision` label. Atlas Monitor comes from a third,
 the build context `atlas-monitor`: `../AtlasOS Monitor` or
 `$ATLAS_MONITOR_SRC`, with its commit in `net.eterneon.atlas.monitor.revision`.
+Atlas Notepad comes from a fourth, the build context `atlas-notepad`:
+`../AtlasOS Text Editor` or `$ATLAS_NOTEPAD_SRC`, with its commit in
+`net.eterneon.atlas.notepad.revision`.
 
 | Command | Does |
 |---|---|
@@ -499,15 +830,18 @@ and pull requests (build only), daily, and by hand. Builds of `main` and tags
 run on the self-hosted runner on the VPS while it is online, everything else
 on GitHub's runners; [CI.md](CI.md) has the routing, the caches and build
 times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out
+`EternalCoder454/atlas-framework` (`main`) as the `atlas-framework` build
+context (if private, with a token in the `ATLAS_FRAMEWORK_TOKEN` secret),
 `EternalCoder454/atlasos-updater` (`main`) as the `atlas-updater` build context
 (if that repository is private, put a token that can read it in the
-`ATLAS_UPDATER_TOKEN` secret), and `EternalCoder454/atlasos-monitor` (`main`)
-as the `atlas-monitor` one.
+`ATLAS_UPDATER_TOKEN` secret), `EternalCoder454/atlasos-monitor` (`main`)
+as the `atlas-monitor` one, and `EternalCoder454/atlasos-notepad` (`main`) as
+the `atlas-notepad` one.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default
   branch), and skips the build when the published `testing` image already has
-  this commit, this Atlas Updater commit and the current Kinoite digest.
+  this commit, the same Atlas app commits and the current Kinoite digest.
   GitHub pauses schedules in repos with no activity for 60 days.
 - `promote-stable.yml` runs weekly (Saturday) and by hand: `skopeo copy --all`
   of the `testing` image, by digest, to `stable`, `latest`, `44` and
@@ -559,4 +893,52 @@ as the `atlas-monitor` one.
 - Every build also makes an SBOM and a vulnerability report (`just sbom`:
   syft and grype from their pinned container images), kept as the run's
   `sbom-<tag>` artifact; for a pushed image the SBOM is also a signed
-  attestation on the registry (`cosign download attestation`). Report only.
+  attestation on the registry (`cosign download attestation`). The build
+  fails before the push on a Critical vulnerability with a fix available
+  (CI.md, "SBOM and vulnerability gate"; ignore list: `.grype.yaml`).
+
+## Window title bars (Aurorae)
+
+Rounded-square caption buttons (26 px, 7 px corners, 10 px apart, tinted at rest,
+accent on hover, red close) come from two Aurorae themes,
+`system_files/usr/share/aurorae/themes/AtlasOS-Light` and `AtlasOS-Dark`
+(theme ids `__aurorae__svg__AtlasOS-Light` / `-Dark`, `library=org.kde.kwin.aurorae`),
+selected in `/etc/xdg/kwinrc` and each look-and-feel's `defaults`. The files are
+generated: change sizes or colours in `scripts/gen-aurorae-themes.py`, run it, and
+commit the output. Title bar colours are the schemes' `[Colors:Header]` colours.
+`atlasos-20261003-aurorae.sh` (kconf_update) moves users still on Breeze.
+
+## Application style (Kvantum)
+
+Qt and KDE apps (Dolphin, System Settings, Discover...) use the Kvantum widget
+style (`widgetStyle=kvantum`: `/etc/xdg/kdeglobals`, the look-and-feel
+`defaults`, and `atlasos-20261003-kvantum.sh` for users still on Breeze) with
+the AtlasOS themes in `system_files/usr/share/Kvantum/`: `AtlasOS`,
+`AtlasOSDark`, and `AtlasOSSolid` / `AtlasOSDarkSolid` (no translucency or
+blur). The `opaque=` list in each `.kvconfig` keeps browsers, video players,
+editors, games, terminals and the Atlas apps opaque.
+
+The themes are generated: edit colours and sizes in
+`scripts/gen-kvantum-themes.py` (colours come from the AtlasOS colour schemes),
+run `python3 scripts/gen-kvantum-themes.py`, commit the output. Splitters stay
+2 px wide, near Breeze's 1 px: Dolphin's floating status bar cuts its text off
+under a wider splitter (its width sum assumes Breeze's).
+
+`/usr/libexec/atlasos/kvantum-sync` writes `theme=` in
+`~/.config/Kvantum/kvantum.kvconfig`: Dark when the `ColorScheme` in kdeglobals
+contains "Dark" (read like the session does: `~/.config/kdeglobals`, then
+`~/.config/kdedefaults/kdeglobals`, where applying a Global Theme puts it, then
+`/etc/xdg`), Solid when `atlasrc` `[Appearance] Transparency` is false (the
+switch the Atlas apps use). It leaves a Kvantum theme the user picked that
+isn't one of ours alone. The user units `atlasos-kvantum-sync.service` and
+`.path` (both enabled globally) run it at login and on any save directly in
+`~/.config` or `~/.config/kdedefaults`. The path unit watches the folders, not
+the files: KConfig saves by renaming a new file over the old one, and a
+`PathChanged=` on the file misses some of those saves. Started by the
+path unit, kvantum-sync first checks a stamp in `$XDG_RUNTIME_DIR` and stops
+unless kdeglobals, kdedefaults/kdeglobals or atlasrc was saved since its last
+read (other apps' saves cost only that check); then it waits a second for a
+theme switch's burst of saves to settle, and reads again (twice at most) if
+one landed while it ran, since that starts nothing new. Running apps keep their style until restarted.
+
+To go back to Breeze: System Settings > Colors & Themes > Application Style.

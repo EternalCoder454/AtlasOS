@@ -18,7 +18,8 @@ sends the build to one of two places:
 [ci/vps-runner](ci/vps-runner/README.md) sets it up. The build job names
 the runner it got: "Build and push (vps)" or "Build and push (hosted)".
 
-`promote-stable.yml` (the weekly stable release) stays on GitHub's runners. It
+`promote-stable.yml` (the stable release, weekly plus a security fast path, see
+below) stays on GitHub's runners. It
 builds nothing: skopeo copies the newest `testing` image to `stable` by
 digest, so it has nothing to cache. Then it calls `iso.yml` for each image
 it promoted, which builds the live installer ISO on GitHub's runners (the VPS
@@ -58,6 +59,148 @@ On the VPS, jobs run as an unprivileged account in a container, on a 50 GB
 disk of their own, with limits on memory and CPU, and a firewall that keeps
 them off the VPS's other services (see
 [ci/vps-runner](ci/vps-runner/README.md#how-it-is-put-together)).
+
+### Security fast path
+
+A Brave or kernel fix should not wait for Saturday. Two parts:
+
+- **The build notices Brave.** The daily scheduled build skips only when
+  nothing changed; Decide now also reads the newest `brave-origin` in Brave's
+  RPM repo (`scripts/brave-version.sh`, a trigger only, the build verifies
+  signatures through dnf) and rebuilds when it differs from the published
+  image's `org.atlasos.brave.version` label. The label is set after the build
+  from the version installed in the image, so it is what the image holds. If
+  Brave's repo can't be read, the run builds rather than skips. A kernel
+  update arrives with the Kinoite base, whose digest already triggers a build.
+- **Promotion runs daily (14:30 UTC).** On Saturday and for a manual run it is
+  the weekly promotion above. Any other day `scripts/pick-fast-promotion.sh`
+  picks the newest `testing-44.YYYYMMDD-N` build that (1) was built at least
+  24 hours ago, so it soaked in testing for a day, (2) has a newer
+  `ostree.linux` (kernel) or `org.atlasos.brave.version` than `:stable` and an
+  older one of neither, and (3) has a version label after `:stable`'s, so
+  `:stable` never moves backwards. If none qualifies the run ends cleanly and
+  its summary says why. A pick then goes through the same verification
+  (cosign, ancestor of `main`, tag checks), copy and release steps as the
+  weekly run, and its release notes start with the reason ("Security update
+  ... kernel X and Brave Y"). The NVIDIA image of the same version is promoted
+  from its own `testing-<version>` tag. No ISOs on a fast promotion: they stay
+  weekly, and an existing install updates to `:stable` itself.
+- **Details of the pick.** Build time is the signed `org.atlasos.built` label
+  (epoch seconds, set next to the Brave label), not the image's `Created`,
+  which is the commit's time (`SOURCE_DATE_EPOCH` in rechunk) and can be days
+  old for a scheduled rebuild. Images built before the label existed count as
+  too young, so the fast path only starts with builds that have it. Labels are
+  checked to be short plain strings before they reach a message. Tags dated
+  after today are ignored. A candidate without a Brave label is refused when
+  `:stable` has one. The pick is the newest build that has soaked, even when
+  a newer, younger build exists: that one gets its own turn a day later, or
+  on Saturday. Each candidate is checked with `verify-image.sh` already
+  while picking, so a forged tag is passed over, with cosign's message in
+  the log.
+- **When a fast promotion half fails.** If NVIDIA's `testing-<version>` is
+  missing the NVIDIA job fails (a security update must not skip NVIDIA
+  users). Nothing needs doing by hand: on a day with nothing new for
+  atlasos, the workflow sees NVIDIA's `:stable` is older than atlasos's and
+  runs only the NVIDIA job, for atlasos's current stable version, from
+  `testing-<that version>` and with the same checks. A re-run of the failed
+  run does the same, and fails the same way until that build exists. (Don't
+  start it by hand with "Run workflow" for this: that is the weekly
+  promotion of `:testing`, which fails if NVIDIA's `:testing` has moved on.)
+  If the copy worked but the release job failed, the next day's pick sees
+  `:stable` already there and does nothing. Run the workflow by hand: that is
+  the weekly promotion of the current `:testing`. While `:testing` is still
+  that build it skips the copy and makes the tag and release; if `:testing`
+  has moved on, it promotes the newer build, with its own release, and the
+  half-done one gets no release of its own.
+- **Stable never goes backwards.** Both modes read `:stable`'s
+  `org.opencontainers.image.revision` and promote only a build of that
+  commit or a later one on main (`git merge-base --is-ancestor`); weekly
+  also needs a version at or after stable's. So a re-run of an old build, or
+  an old image tagged `:testing`, is refused. If main's history is ever
+  rewritten so stable's commit is no longer on it, or `:stable` has no
+  revision label, promotion stops until you fix it by hand (build from main,
+  check the image, and copy it to `:stable` yourself): both the weekly and
+  the fast run fail with "stable's commit ... is not in main's history".
+  Only skopeo's "reading manifest stable in ...: manifest unknown" (or "name
+  unknown") counts as "no `:stable` yet"; any other registry error stops
+  the run.
+
+### What gets promoted, and what goes into an ISO
+
+Only the build workflow signs, and only for pushes of `main` and `beta` (beta
+builds are signed too). promote-stable.yml never
+signs: it checks that the `:testing` digest verifies against `cosign.pub`, with
+`scripts/verify-image.sh`, which also requires the signature to name that
+repository and digest (atlasos and atlasos-nvidia share the key, so a copied
+signature must not pass), and
+that its `org.opencontainers.image.revision` is an ancestor of `main`, and
+otherwise stops without moving a tag. It verifies `:stable` afterwards even
+when nothing was copied, so an unsigned `:stable` fails the run; the next
+promotion of a signed `:testing` fixes it. The release tag only moves to a
+commit on `main`. iso.yml verifies the stable digest the same way before
+building, checks the version tag it builds from is that digest, and records
+the image digest and the installer commit it checked out in `<image>.json`
+and the job summary. It also checks that what make-iso.sh pinned (the
+`.image` file beside the ISO) is that digest, and refuses to upload when
+`installer_ref` is not `main`. promote-stable.yml hands iso.yml only the two upload
+secrets.
+
+Recommended in Settings, which no workflow can do:
+- Pending (owner step): `SIGNING_SECRET` is still a repository secret, so any
+  branch's workflow can read it. Move it, and `COSIGN_PASSWORD`, into an
+  Environment named `signing` whose deployment branches are `main` and `beta`
+  only, protect the `beta` branch (no force pushes, no deletion, pull
+  requests or restricted pushes), and then add `environment: signing` to the
+  build.yml jobs that sign (and nothing else).
+- Put `ISO_UPLOAD_KEY` and `ISO_UPLOAD_KNOWN_HOSTS` in a GitHub Environment
+  limited to the `main` branch, and name it in the jobs that use them.
+- Make `ATLAS_FRAMEWORK_TOKEN` and `ATLAS_UPDATER_TOKEN` fine-grained tokens
+  with read-only Contents access to just their repository, with an expiry.
+
+## SBOM and vulnerability gate
+
+Before the push, each image (atlasos, and atlasos-nvidia when it is built) is
+scanned: syft makes an SPDX SBOM of its packages, grype
+matches it against its vulnerability database. A **Critical with a fix
+available** (`--only-fixed --fail-on critical`) fails the build, so such an
+image never reaches `:testing` or `:beta`. Pull requests are scanned too.
+Both tools run from the container images pinned by digest in the Justfile
+(`just sbom`); the gate is the same SBOM matched again with `.grype.yaml`.
+
+- grype has no Fedora data, so it covers the Go and Python modules built into
+  programs, not the RPMs. Fedora's updates fix those; the daily build takes them.
+- The database (about 1 GB) is downloaded on every scan, with 3 tries. If it
+  can't be, the build fails rather than push unchecked. The scan takes about
+  3 minutes per image (syft 1m45, grype 1m15 on the dev machine), twice the
+  grype time with the gate's own run.
+- The SBOM must list at least 1,000 RPMs and 100 Go modules (the image has
+  about 1,900 and 1,000), or the build fails: "nothing found" must not be
+  "nothing scanned".
+- `.grype.yaml` lists ignored findings, one line each, naming the
+  vulnerability and the package's exact name, version and type (another copy
+  or version still fails), ending in `# until YYYY-MM-DD: reason`, at most 90
+  days ahead. `scripts/grype-ignores.sh` checks every line and leaves out
+  entries whose date has passed (the log names them); any other layout is an
+  error. To release a blocked build, update the package, or add an entry with
+  a short expiry. An expired entry blocks every build, Brave's updates
+  included, until it is extended or removed.
+- The gate runs only when a build does: a new Critical against an unchanged
+  image, or an expired entry, shows at the next build, not before.
+- The scan is of the image as built (`localhost/atlasos:<tag>`, and
+  `localhost/atlasos-nvidia:<tag>`); the pushed atlasos is its rechunked copy,
+  the same files with `/sysroot` pruned.
+- atlasos-nvidia is built, and so scanned, after atlasos is pushed (it builds
+  on it). A Critical only in the NVIDIA image (its Go tools) fails the job with
+  atlasos already published and atlasos-nvidia a build behind until fixed.
+- The attestation is tried 3 times: the image is already pushed, and a rerun
+  of the same commit skips the build, so a failure there leaves that digest
+  without an attestation (it stays signed).
+- The SBOM and the full report are the run's `sbom-<tag>` (and
+  `sbom-nvidia-<tag>`) artifacts, and the findings are in the job summary. For a
+  signed image the SBOM is also attested on the registry with the signing key,
+  and the step checks that the attestation names that image's digest (the two
+  images share the key): `cosign verify-attestation --type spdxjson
+  --insecure-ignore-tlog=true --key cosign.pub <image>@<digest>`.
 
 ## Caches on the VPS
 
@@ -178,7 +321,7 @@ LTO, and atlas-system-helper beside the app. The binaries are about 4 MB
 larger. Measured locally in a container limited to 4 CPUs and 7.6 GB, the
 VPS's size; the RPM's `%build`, in seconds:
 
-| atlas.spec | From scratch | After an atlas-core change |
+| atlas.spec | From scratch | After an atlas-core (now atlas-update-engine) change |
 |---|---:|---:|
 | Old flags (20ff489) | 261 | 66 |
 | New flags, helper beside the app (7830fb6) | 189 | 20 |

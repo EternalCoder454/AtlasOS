@@ -1,0 +1,76 @@
+#!/usr/bin/bash
+# Asks, once per user, whether to set up a fingerprint, if the machine has a
+# reader. Started at login by /etc/xdg/autostart/atlasos-fingerprint-setup.desktop.
+# It can't be a first-run wizard page: the wizard runs as its own user before
+# the account exists, and enrolling needs the account. A machine without a
+# reader is left alone and asked again once one turns up; any answer ends it.
+set -u
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/atlasos"
+done_file="$state/fingerprint-setup-done"
+
+# The wizard's own session, and the login before the wizard has finished.
+[ "$(id -un)" = plasma-setup ] && exit 0
+[ -e /etc/plasma-setup-done ] || exit 0
+[ -e "$done_file" ] && exit 0
+
+mark_done() {
+	mkdir -p "$state" && : >"$done_file"
+}
+
+# A question left without an answer (closed, or no notification service yet)
+# comes back at the next login, three times at most.
+unanswered() {
+	local tries="$state/fingerprint-setup-tries" n
+	n=$(cat "$tries" 2>/dev/null) || n=0
+	case $n in '' | *[!0-9]*) n=0 ;; esac
+	n=$((n + 1))
+	if [ "$n" -ge 3 ]; then
+		mark_done
+	else
+		mkdir -p "$state" && echo "$n" >"$tries"
+	fi
+}
+
+# fprintd lists its readers (D-Bus activated; it exits again when idle).
+devices=$(busctl --system --json=short call net.reactivated.Fprint \
+	/net/reactivated/Fprint/Manager net.reactivated.Fprint.Manager GetDevices 2>/dev/null |
+	jq -r '.data[0][]' 2>/dev/null) || exit 0
+[ -n "$devices" ] || exit 0
+
+# Already has a finger enrolled (set up in Settings, say): nothing to ask.
+# fprintd answers NoEnrolledPrints when there is none. Any other error (busy,
+# timed out) proves nothing either way: ask again at the next login.
+for dev in $devices; do
+	if err=$(busctl --system call net.reactivated.Fprint "$dev" \
+		net.reactivated.Fprint.Device ListEnrolledFingers s "$(id -un)" 2>&1 >/dev/null); then
+		mark_done
+		exit 0
+	fi
+	case $err in
+	# busctl prints the message ("No fingerprints enrolled"), not the name
+	*NoEnrolledPrints* | *"No fingerprint"*) ;;
+	*) exit 0 ;;
+	esac
+done
+
+# Let the desktop finish appearing first.
+sleep 5
+
+# A notification with buttons, not a dialog (see pin-setup), kept until it is
+# answered. notify-send prints the chosen action, or nothing if the
+# notification was closed; its errors go to the journal.
+answer=$(notify-send --app-name=AtlasOS --icon=fingerprint-gui \
+	--action=setup="Set Up Fingerprint" --action=later="Not Now" \
+	--expire-time=0 --wait \
+	"This computer has a fingerprint reader" \
+	"Use your fingerprint to unlock the screen and approve administrator prompts. Your password keeps working. You can also do this later in System Settings, under Users.")
+case $answer in
+setup)
+	mark_done
+	exec systemsettings kcm_users
+	;;
+later) mark_done ;;
+*) unanswered ;;
+esac
+exit 0

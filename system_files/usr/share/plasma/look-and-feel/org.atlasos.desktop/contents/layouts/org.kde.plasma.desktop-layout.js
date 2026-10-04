@@ -14,9 +14,7 @@
 // apps. Running apps have a short underline. Its look (the see-through
 // rounded plate, the icon spacing, the hover tile and the underline) is the
 // AtlasOS Plasma style's, made by scripts/plasma-style.py for this height
-// (60 px: 48 px icons). The launcher is the one
-// chosen in the first-run wizard: Modern (Andromeda, the default) or Classic
-// (Simple Kickoff).
+// (60 px: 48 px icons). The launcher is Andromeda.
 
 var desktopsArray = desktopsForActivity(currentActivity());
 for (var j = 0; j < desktopsArray.length; j++) {
@@ -36,20 +34,9 @@ dock.opacity = "translucent";
 // "automatically hide and show the Dock": apps get the whole screen.
 dock.hiding = "autohide";
 
-// The wizard's launcher page writes this file (see
-// /usr/lib/tmpfiles.d/atlasos-setup.conf); without it, Modern.
-var choices = ConfigFile("/var/lib/atlasos-setup/choices.ini", "Launcher");
-var classic = choices.readEntry("style") == "classic";
-
-var launcher;
-if (classic) {
-    launcher = dock.addWidget("org.kde.plasma.simplekickoff");
-    launcher.currentConfigGroup = ["General"];
-} else {
-    launcher = dock.addWidget("AndromedaLauncher");
-    launcher.currentConfigGroup = ["General"];
-    launcher.writeConfig("launcherPosition", 1); // centred over the dock
-}
+var launcher = dock.addWidget("AndromedaLauncher");
+launcher.currentConfigGroup = ["General"];
+launcher.writeConfig("launcherPosition", 1); // centred over the dock
 launcher.writeConfig("icon", "atlasos");
 
 dock.addWidget("org.atlasos.dockseparator");

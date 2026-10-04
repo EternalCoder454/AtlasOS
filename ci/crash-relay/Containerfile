@@ -1,0 +1,15 @@
+FROM docker.io/library/golang:1.27-alpine AS build
+WORKDIR /src
+COPY go.mod ./
+COPY *.go ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /crash-relay . \
+ && mkdir /state
+
+FROM scratch
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /crash-relay /crash-relay
+COPY --from=build --chown=10001:10001 /state /state
+USER 10001:10001
+ENV STATE_DIR=/state LISTEN=:8080
+EXPOSE 8080
+ENTRYPOINT ["/crash-relay"]

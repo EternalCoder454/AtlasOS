@@ -12,6 +12,29 @@ Conflicts=shutdown.target
 [Service]
 Type=oneshot
 ExecStart=/bin/sh -c 'f=/proc/sys/fs/inotify/max_user_watches; n=$(cat $f); echo "kernel default: $n"; [ "$n" -ge 524288 ] || echo 524288 >$f; echo "now: $(cat $f)"'
+# Sandbox: it only writes that one /proc/sys file (so no
+# ProtectKernelTunables). No PrivateTmp: that would order it after local
+# file systems, and it runs before sysinit.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
 
 [Install]
 WantedBy=sysinit.target

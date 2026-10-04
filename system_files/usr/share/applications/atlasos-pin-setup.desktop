@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Set Up PIN
+GenericName=Sign-in PIN
+Comment=Sign in and unlock the screen with a short PIN
+Exec=/usr/libexec/atlasos/pin-setup
+Icon=dialog-password
+Categories=Settings;
+Keywords=pin;passcode;login;lock;unlock;password;hello

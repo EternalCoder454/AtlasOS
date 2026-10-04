@@ -1,0 +1,8 @@
+# Okular: no menu bar (the hamburger button in the toolbar has every menu,
+# and Ctrl+M brings the bar back) and small toolbar icons. A user's own
+# ~/.config/okularrc overrides these.
+[MainWindow]
+MenuBar=Disabled
+
+[MainWindow][Toolbar mainToolBar]
+IconSize=16

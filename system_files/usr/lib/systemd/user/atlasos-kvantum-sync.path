@@ -1,0 +1,20 @@
+# Re-runs kvantum-sync when the colour scheme or the Atlas transparency switch
+# changes. The service itself is enabled too, and runs once at login.
+# The folders are watched, not the files: KConfig saves by renaming a new file
+# over the old one, and a watch on the file itself misses some of those saves
+# (it re-arms on the new file first). Any save directly in ~/.config starts
+# kvantum-sync, which is cheap and writes nothing unless the theme changes.
+# kdedefaults is where applying a Global Theme writes the colour scheme.
+# Started from here (it sees TRIGGER_UNIT), kvantum-sync returns at once
+# unless one of its three files changed, then lets a burst of saves settle
+# and reads again if one landed while it ran (that starts nothing new).
+[Unit]
+Description=Watch the colour scheme and Atlas transparency setting
+
+[Path]
+PathChanged=%h/.config
+PathChanged=%h/.config/kdedefaults
+Unit=atlasos-kvantum-sync.service
+
+[Install]
+WantedBy=default.target

@@ -26,7 +26,7 @@ build tag="latest" *args:
     # CI passes IMAGE_VERSION (44.YYYYMMDD-N) so the image and its pushed tag
     # carry the same version; a local build is the plain 44.YYYYMMDD.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
-    # The Atlas apps' source (Atlas Updater and atlas-core): a named build
+    # The Atlas apps' source (Atlas Updater and atlas-system-helper): a named build
     # context, so the Containerfile can build their RPMs. CI points it at a
     # checkout of EternalCoder454/atlasos-updater.
     updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
@@ -40,6 +40,10 @@ build tag="latest" *args:
     # points it at a checkout of EternalCoder454/atlasos-monitor.
     monitor="${ATLAS_MONITOR_SRC:-../AtlasOS Monitor}"
     [ -d "$monitor/packaging" ] || { echo "Atlas Monitor source not found at '$monitor' (set ATLAS_MONITOR_SRC)" >&2; exit 1; }
+    # Atlas Notepad's source: the build context named "atlas-notepad". CI
+    # points it at a checkout of EternalCoder454/atlasos-notepad.
+    notepad="${ATLAS_NOTEPAD_SRC:-../AtlasOS Text Editor}"
+    [ -d "$notepad/packaging" ] || { echo "Atlas Notepad source not found at '$notepad' (set ATLAS_NOTEPAD_SRC)" >&2; exit 1; }
     # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
     # in: a local checkout's target/ is many GB, and podman would copy all of
     # it each build and rebuild the RPMs whenever a cargo build touched it.
@@ -52,10 +56,12 @@ build tag="latest" *args:
     copy_source "$framework" build/framework-src
     copy_source "$updater" build/updater-src
     copy_source "$monitor" build/monitor-src
+    copy_source "$notepad" build/notepad-src
     podman build --pull=newer \
         --build-context atlas-framework=build/framework-src \
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
+        --build-context atlas-notepad=build/notepad-src \
         --volume "$dnf_cache:/var/cache/libdnf5:Z" \
         --build-arg IMAGE_VERSION="$version" \
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
@@ -64,6 +70,7 @@ build tag="latest" *args:
         --label net.eterneon.atlas.framework.revision="$(git -C "$framework" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.atlas.notepad.revision="$(git -C "$notepad" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \
@@ -293,10 +300,12 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh system_files/usr/libexec/atlasos/* system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/atlasos/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
     shellcheck -s sh branding/render.sh system_files/usr/bin/atlas system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
     just --unstable --fmt --check --justfile system_files/usr/share/atlasos/atlas.just
-    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py
+    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/atlasos/pinlib.py
+    python3 -m py_compile system_files/usr/libexec/atlasos/pin-admin system_files/usr/libexec/atlasos/pin-daemon
+    rm -rf system_files/usr/libexec/atlasos/__pycache__
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory

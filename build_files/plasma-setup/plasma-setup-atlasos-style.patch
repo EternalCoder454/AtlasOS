@@ -1,4 +1,4 @@
-From 72b6dd52ae02c6fd577e714aa77e04193aa5c05e Mon Sep 17 00:00:00 2001
+From ae54887cb37294ad2f93e857b48f91995595baff Mon Sep 17 00:00:00 2001
 From: AtlasOS <atlasos@users.noreply.github.com>
 Date: Fri, 2 Oct 2026 13:46:10 -0700
 Subject: [PATCH] AtlasOS look for the first-run wizard
@@ -15,24 +15,27 @@ Subject: [PATCH] AtlasOS look for the first-run wizard
   dark one (a url that wasn't found is still truthy)
 - Components for AtlasOS's own setup pages: AtlasButton, ChoiceCard,
   DesktopPreview, SectionBackground
+- Language, keyboard and Wi-Fi pages skip themselves when Atlas Installer
+  already asked: /etc/atlasos/installer.ini has the language or keyboard
+  layout, or a network that came along and is fully online now
 ---
  modules/finished/contents/ui/main.qml    |  20 +-
- modules/keyboard/contents/ui/main.qml    |  16 +-
- modules/language/contents/ui/main.qml    |   8 +-
- modules/prepare/contents/ui/main.qml     | 113 +++---
- modules/prepare/metadata.json            |  72 +---
+ modules/keyboard/contents/ui/main.qml    |  32 ++-
+ modules/language/contents/ui/main.qml    |  23 +-
+ modules/prepare/contents/ui/main.qml     | 113 +++++-----
+ modules/prepare/metadata.json            |  72 +------
  modules/prepareutil/prepareutil.cpp      |   7 +-
  modules/time/contents/ui/main.qml        |   3 +-
- modules/wifi/contents/ui/main.qml        |  16 +-
+ modules/wifi/contents/ui/main.qml        |  38 +++-
  src/components/CMakeLists.txt            |   4 +
- src/components/qml/AtlasButton.qml       | 107 ++++++
- src/components/qml/ChoiceCard.qml        | 117 +++++++
- src/components/qml/DesktopPreview.qml    | 424 +++++++++++++++++++++++
- src/components/qml/SectionBackground.qml |  19 +
- src/qml/LandingComponent.qml             |  47 ++-
+ src/components/qml/AtlasButton.qml       | 107 ++++++++++
+ src/components/qml/ChoiceCard.qml        | 117 +++++++++++
+ src/components/qml/DesktopPreview.qml    | 286 +++++++++++++++++++++++
+ src/components/qml/SectionBackground.qml |  19 ++
+ src/qml/LandingComponent.qml             |  47 ++++-
  src/qml/SessionMenu.qml                  |  17 +-
- src/qml/Wizard.qml                       |  72 +++-
- 16 files changed, 858 insertions(+), 204 deletions(-)
+ src/qml/Wizard.qml                       |  72 +++++--
+ 16 files changed, 773 insertions(+), 204 deletions(-)
  create mode 100644 src/components/qml/AtlasButton.qml
  create mode 100644 src/components/qml/ChoiceCard.qml
  create mode 100644 src/components/qml/DesktopPreview.qml
@@ -79,10 +82,40 @@ index 92c1d9f..92ae93c 100644
          }
      }
 diff --git a/modules/keyboard/contents/ui/main.qml b/modules/keyboard/contents/ui/main.qml
-index 219d5d3..c68f743 100644
+index 219d5d3..b62a6fb 100644
 --- a/modules/keyboard/contents/ui/main.qml
 +++ b/modules/keyboard/contents/ui/main.qml
-@@ -206,11 +206,9 @@ PlasmaSetupComponents.SetupModule {
+@@ -7,6 +7,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ pragma ComponentBehavior: Bound
+ 
++import QtCore
+ import QtQuick
+ import QtQuick.Layouts
+ import QtQuick.Controls
+@@ -24,6 +25,21 @@ PlasmaSetupComponents.SetupModule {
+ 
+     available: !Kirigami.Settings.isMobile
+ 
++    // Atlas Installer already asked this: it writes what was chosen to
++    // /etc/atlasos/installer.ini (an install without it has no file).
++    Settings {
++        id: installer
++        location: "file:///etc/atlasos/installer.ini"
++        category: "Installer"
++    }
++    Component.onCompleted: {
++        // The layout went to localed (00-keyboard.conf), which the login
++        // screen and every new user's desktop take theirs from.
++        if (installer.value("KeyboardLayout", "") !== "") {
++            available = false;
++        }
++    }
++
+     function onPageActivated(): void {
+         // Temporarily disable the highlight move duration so the correct
+         // layout is preselected when the page is activated.
+@@ -206,11 +222,9 @@ PlasmaSetupComponents.SetupModule {
                      Layout.fillWidth: true
                      Layout.fillHeight: true
  
@@ -97,7 +130,7 @@ index 219d5d3..c68f743 100644
  
                      contentItem: ListView {
                          id: layoutsView
-@@ -231,11 +229,9 @@ PlasmaSetupComponents.SetupModule {
+@@ -231,11 +245,9 @@ PlasmaSetupComponents.SetupModule {
                      Layout.fillWidth: true
                      Layout.fillHeight: true
  
@@ -113,10 +146,39 @@ index 219d5d3..c68f743 100644
                      contentItem: ListView {
                          id: variantView
 diff --git a/modules/language/contents/ui/main.qml b/modules/language/contents/ui/main.qml
-index ea4bc36..a9221c6 100644
+index ea4bc36..a6441e3 100644
 --- a/modules/language/contents/ui/main.qml
 +++ b/modules/language/contents/ui/main.qml
-@@ -56,11 +56,9 @@ PlasmaSetupComponents.SetupModule {
+@@ -3,6 +3,7 @@
+ 
+ pragma ComponentBehavior: Bound
+ 
++import QtCore
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -22,6 +23,20 @@ import org.kde.plasmasetup.components as PlasmaSetupComponents
+ PlasmaSetupComponents.SetupModule {
+     id: root
+ 
++    // Atlas Installer already asked this: it writes what was chosen to
++    // /etc/atlasos/installer.ini (an install without it has no file).
++    Settings {
++        id: installer
++        location: "file:///etc/atlasos/installer.ini"
++        category: "Installer"
++    }
++    Component.onCompleted: {
++        // The language went to locale.conf, which every session takes.
++        if (installer.value("Language", "") !== "") {
++            available = false;
++        }
++    }
++
+     contentItem: ColumnLayout {
+         id: mainColumn
+ 
+@@ -56,11 +71,9 @@ PlasmaSetupComponents.SetupModule {
                  Layout.fillWidth: true
                  Layout.fillHeight: true
  
@@ -402,10 +464,46 @@ index c259c36..8d801a8 100644
                  visible: !Kirigami.Settings.isMobile
              }
 diff --git a/modules/wifi/contents/ui/main.qml b/modules/wifi/contents/ui/main.qml
-index 6cb5d7c..d76d233 100644
+index 6cb5d7c..793bad8 100644
 --- a/modules/wifi/contents/ui/main.qml
 +++ b/modules/wifi/contents/ui/main.qml
-@@ -80,11 +80,9 @@ PlasmaSetupComponents.SetupModule {
+@@ -4,6 +4,7 @@
+ //
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
++import QtCore
+ import QtQuick
+ import QtQuick.Controls
+ import QtQuick.Layouts
+@@ -18,6 +19,27 @@ PlasmaSetupComponents.SetupModule {
+ 
+     available: availableDevices.wirelessDeviceAvailable
+ 
++    // Atlas Installer already asked this: it writes what was chosen to
++    // /etc/atlasos/installer.ini (an install without it has no file).
++    Settings {
++        id: installer
++        location: "file:///etc/atlasos/installer.ini"
++        category: "Installer"
++    }
++    PlasmaNM.NetworkStatus {
++        id: networkStatus
++    }
++
++    Component.onCompleted: {
++        // The installer brought a network along (its Wi-Fi, or a cable), and
++        // it works: nothing to ask. Online but not fully (a hotspot's sign-in
++        // page, no internet), or not yet connected, still shows the page.
++        // (4: NetworkManager::FullConnectivity.)
++        if (String(installer.value("Network", "false")) === "true" && networkStatus.connectivity === 4) {
++            available = false;
++        }
++    }
++
+     contentItem: ColumnLayout {
+         id: mainColumn
+ 
+@@ -80,11 +102,9 @@ PlasmaSetupComponents.SetupModule {
                  Layout.fillWidth: true
                  visible: enabledConnections.wirelessEnabled && count > 0
  
@@ -420,7 +518,7 @@ index 6cb5d7c..d76d233 100644
  
                  // number of visible entries
                  property int count: 0
-@@ -127,11 +125,9 @@ PlasmaSetupComponents.SetupModule {
+@@ -127,11 +147,9 @@ PlasmaSetupComponents.SetupModule {
                  Layout.fillHeight: true
                  visible: enabledConnections.wirelessEnabled
  
@@ -688,10 +786,10 @@ index 0000000..8b323bf
 +}
 diff --git a/src/components/qml/DesktopPreview.qml b/src/components/qml/DesktopPreview.qml
 new file mode 100644
-index 0000000..2727e0d
+index 0000000..31eef8c
 --- /dev/null
 +++ b/src/components/qml/DesktopPreview.qml
-@@ -0,0 +1,424 @@
+@@ -0,0 +1,286 @@
 +// SPDX-FileCopyrightText: 2026 AtlasOS
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +
@@ -703,15 +801,12 @@ index 0000000..2727e0d
 +/*!
 +    A small drawing of the AtlasOS desktop, for the choices in the setup
 +    pages: the wallpaper, the top bar and the dock, in AtlasOS Light or Dark,
-+    with two windows open or one of the app launchers.
++    with two windows open.
 +*/
 +Item {
 +    id: root
 +
 +    property bool dark: false
-+    // "" shows windows; "modern" (Andromeda) or "classic" (Simple Kickoff)
-+    // shows that launcher open.
-+    property string launcher: ""
 +    property real radius: Kirigami.Units.cornerRadius * 2
 +
 +    // AtlasOS Light and Dark (the colour schemes' Window, View and Header
@@ -768,12 +863,13 @@ index 0000000..2727e0d
 +        }
 +    }
 +
-+    // Top bar: the launcher mark, a menu, and the clock on the right.
++    // The menu bar, as three islands: the launcher mark and the app menus on
++    // the left, the clock in the middle, the tray on the right.
 +    Rectangle {
 +        id: topBar
 +        x: root.u * 1.2
 +        y: root.u * 1.2
-+        width: root.width - x * 2
++        width: root.u * 29.5
 +        height: root.u * 4
 +        radius: height / 2
 +        color: root.barColor
@@ -798,23 +894,51 @@ index 0000000..2727e0d
 +                color: Qt.alpha(root.textColor, 0.45)
 +            }
 +        }
++    }
++    Rectangle { // clock
++        anchors.horizontalCenter: parent.horizontalCenter
++        y: topBar.y
++        width: root.u * 10
++        height: topBar.height
++        radius: height / 2
++        color: root.barColor
 +        Rectangle {
-+            anchors.right: parent.right
-+            anchors.rightMargin: root.u * 1.6
-+            anchors.verticalCenter: parent.verticalCenter
-+            width: root.u * 9
++            anchors.centerIn: parent
++            width: root.u * 6
 +            height: root.u * 0.9
 +            radius: height / 2
 +            color: Qt.alpha(root.textColor, 0.55)
 +        }
 +    }
++    Rectangle { // tray
++        anchors.right: parent.right
++        anchors.rightMargin: topBar.x
++        y: topBar.y
++        width: root.u * 10
++        height: topBar.height
++        radius: height / 2
++        color: root.barColor
++        Row {
++            anchors.centerIn: parent
++            spacing: root.u * 1
++            Repeater {
++                model: 4
++                Rectangle {
++                    width: root.u * 1.3
++                    height: width
++                    radius: width / 2
++                    color: Qt.alpha(root.textColor, 0.5)
++                }
++            }
++        }
++    }
 +
-+    // Two windows, when no launcher is open.
++    // Two windows.
 +    Repeater {
-+        model: root.launcher === "" ? [
++        model: [
 +            { x: 9, y: 11, w: 52, h: 34 },
 +            { x: 41, y: 21, w: 49, h: 30 }
-+        ] : []
++        ]
 +        Rectangle {
 +            required property var modelData
 +            x: root.u * modelData.x
@@ -946,170 +1070,6 @@ index 0000000..2727e0d
 +                        height: Math.max(1, root.u * 0.35)
 +                        radius: height / 2
 +                        color: parent.index === 2 ? root.accentColor : Qt.alpha(root.textColor, 0.45)
-+                    }
-+                }
-+            }
-+        }
-+    }
-+
-+    // Modern (Andromeda): centred over the dock, a greeting, favourites in a
-+    // grid, and the search bar at the bottom.
-+    Rectangle {
-+        visible: root.launcher === "modern"
-+        anchors.horizontalCenter: parent.horizontalCenter
-+        anchors.bottom: dock.top
-+        anchors.bottomMargin: root.u * 1.4
-+        width: root.u * 50
-+        height: root.height - topBar.height - dock.height - root.u * 6.2
-+        radius: root.u * 2.2
-+        color: root.windowColor
-+        border.width: 1
-+        border.color: root.lineColor
-+        Rectangle { // avatar
-+            x: root.u * 3
-+            y: root.u * 2.6
-+            width: root.u * 5
-+            height: width
-+            radius: width / 2
-+            gradient: Gradient {
-+                GradientStop { position: 0; color: "#6252DD" }
-+                GradientStop { position: 1; color: "#C3B8FF" }
-+            }
-+        }
-+        Rectangle { // "Hi, name"
-+            x: root.u * 9.6
-+            y: root.u * 4.6
-+            width: root.u * 12
-+            height: root.u * 1.2
-+            radius: height / 2
-+            color: Qt.alpha(root.textColor, 0.55)
-+        }
-+        Grid {
-+            x: root.u * 3
-+            y: root.u * 10.4
-+            columns: 6
-+            columnSpacing: (parent.width - root.u * 6 - 6 * root.u * 5.2) / 5
-+            rowSpacing: root.u * 2.6
-+            Repeater {
-+                model: ["#F25F2C", "#3D8BF2", "#4A4766", "#33B8A0", "#8E5CE8", "#E8B22C", "#5CC46A", "#E85C8E", "#4AC0E8", "#9A98AC", "#6858E2", "#F2884A"]
-+                Rectangle {
-+                    required property color modelData
-+                    width: root.u * 5.2
-+                    height: width
-+                    radius: root.u * 1.3
-+                    color: modelData
-+                }
-+            }
-+        }
-+        Rectangle { // search
-+            anchors.bottom: parent.bottom
-+            anchors.bottomMargin: root.u * 2.2
-+            anchors.horizontalCenter: parent.horizontalCenter
-+            width: parent.width - root.u * 6
-+            height: root.u * 4
-+            radius: height / 2
-+            color: root.viewColor
-+            border.width: 1
-+            border.color: root.lineColor
-+            Rectangle {
-+                x: root.u * 1.6
-+                anchors.verticalCenter: parent.verticalCenter
-+                width: root.u * 1.6
-+                height: width
-+                radius: width / 2
-+                color: "transparent"
-+                border.width: Math.max(1, root.u * 0.3)
-+                border.color: Qt.alpha(root.textColor, 0.45)
-+            }
-+        }
-+    }
-+
-+    // Classic (Simple Kickoff): a menu opening from the launcher, with the
-+    // search field on top, a list of apps, and the user and power at the
-+    // bottom.
-+    Rectangle {
-+        visible: root.launcher === "classic"
-+        x: dock.x
-+        anchors.bottom: dock.top
-+        anchors.bottomMargin: root.u * 1.4
-+        width: root.u * 32
-+        height: root.height - topBar.height - dock.height - root.u * 6.2
-+        radius: root.u * 1.6
-+        color: root.windowColor
-+        border.width: 1
-+        border.color: root.lineColor
-+        Rectangle { // search
-+            x: root.u * 1.8
-+            y: root.u * 1.8
-+            width: parent.width - root.u * 3.6
-+            height: root.u * 3.6
-+            radius: root.u * 0.9
-+            color: root.viewColor
-+            border.width: 1
-+            border.color: root.lineColor
-+        }
-+        Column {
-+            x: root.u * 1.8
-+            y: root.u * 7.4
-+            spacing: root.u * 1.25
-+            Repeater {
-+                model: [["#F25F2C", 0.55], ["#3D8BF2", 0.42], ["#4A4766", 0.5], ["#33B8A0", 0.38], ["#8E5CE8", 0.6], ["#E8B22C", 0.45], ["#5CC46A", 0.35]]
-+                Row {
-+                    required property var modelData
-+                    required property int index
-+                    spacing: root.u * 1.4
-+                    Rectangle {
-+                        width: root.u * 3
-+                        height: width
-+                        radius: root.u * 0.8
-+                        color: parent.modelData[0]
-+                    }
-+                    Rectangle {
-+                        anchors.verticalCenter: parent.verticalCenter
-+                        width: root.u * 32 * parent.modelData[1]
-+                        height: root.u * 1
-+                        radius: height / 2
-+                        color: Qt.alpha(root.textColor, 0.35)
-+                    }
-+                }
-+            }
-+        }
-+        Rectangle { // footer
-+            anchors.bottom: parent.bottom
-+            width: parent.width
-+            height: root.u * 5
-+            radius: parent.radius
-+            color: root.headerColor
-+            Rectangle {
-+                width: parent.width
-+                height: parent.radius
-+                color: parent.color
-+            }
-+            Rectangle {
-+                x: root.u * 1.8
-+                anchors.verticalCenter: parent.verticalCenter
-+                width: root.u * 2.8
-+                height: width
-+                radius: width / 2
-+                gradient: Gradient {
-+                    GradientStop { position: 0; color: "#6252DD" }
-+                    GradientStop { position: 1; color: "#C3B8FF" }
-+                }
-+            }
-+            Row {
-+                anchors.right: parent.right
-+                anchors.rightMargin: root.u * 1.8
-+                anchors.verticalCenter: parent.verticalCenter
-+                spacing: root.u * 1.2
-+                Repeater {
-+                    model: 2
-+                    Rectangle {
-+                        width: root.u * 2
-+                        height: width
-+                        radius: width / 2
-+                        color: "transparent"
-+                        border.width: Math.max(1, root.u * 0.3)
-+                        border.color: Qt.alpha(root.textColor, 0.45)
 +                    }
 +                }
 +            }

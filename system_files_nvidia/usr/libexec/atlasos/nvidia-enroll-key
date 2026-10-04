@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
 # Asks the firmware to trust the AtlasOS module key, so NVIDIA's driver loads
-# with Secure Boot on. Run it once as root:
+# with Secure Boot on. Two ways in:
+#
 #   sudo /usr/libexec/atlasos/nvidia-enroll-key
-# It asks for a one-time password; at the next boot the blue MOK Manager screen
-# asks for it again: choose "Enroll MOK", "Continue", "Yes", type the password.
+#       From a terminal: mokutil asks for a one-time password; at the next boot
+#       the blue MOK Manager screen asks for it again: choose "Enroll MOK",
+#       "Continue", "Yes", type the password.
+#   pkexec /usr/libexec/atlasos/nvidia-enroll-key --new-code
+#       What nvidia-key-setup (the "NVIDIA Driver Setup" dialog) runs. No
+#       questions: it makes a random 8-digit code, sets it as the one-time
+#       password (piped to mokutil, not in its command line; the dialog then
+#       shows it, so it is in kdialog's for a moment: the code only confirms
+#       someone at the keyboard at boot, and can only ever enrol this one
+#       certificate), replaces an earlier request for this certificate (one
+#       for any other key is left alone: it fails instead), records the
+#       request in /run/atlasos-nvidia-key-pending (gone at the next boot,
+#       as is an unfinished request), gives the blue screen five minutes instead of 10
+#       seconds before it boots on, and prints one line on stdout:
+#         code NNNNNNNN   a request is waiting; NNNNNNNN is the code to type
+#         code NNNNNNNN short   the same, but the screen keeps its 10 seconds
+#         enrolled        the key is already trusted: nothing to do
+#         sb-off          Secure Boot is off: nothing to do
+#       Exit status 0 for those three, 1 for a failure (message on stderr).
+#
+# It only ever enrols the one certificate below, whatever it is given.
 set -euo pipefail
+export LC_ALL=C
 
 cert=/usr/share/atlasos/nvidia/atlasos-module-signing.der
 
@@ -12,13 +33,98 @@ if [ "$(id -u)" -ne 0 ]; then
 	echo "Run as root: sudo $0" >&2
 	exit 1
 fi
-if ! mokutil --sb-state 2>/dev/null | grep -q 'SecureBoot enabled'; then
-	echo "Secure Boot is off: the driver loads without enrolling a key."
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != --new-code ]; }; then
+	echo "usage: $0 [--new-code]" >&2
+	exit 2
+fi
+if [ ! -r "$cert" ]; then
+	echo "The AtlasOS module key is missing from this system." >&2
+	exit 1
+fi
+
+noninteractive=0
+[ "${1:-}" = --new-code ] && noninteractive=1
+
+# Hide the one-time password from anything that lists processes or logs.
+umask 077
+
+if [ ! -d /sys/firmware/efi ]; then
+	# Not a UEFI boot: there is no Secure Boot to satisfy.
+	sb="SecureBoot disabled"
+elif ! sb=$(mokutil --sb-state 2>&1); then
+	echo "Couldn't read the Secure Boot state: $sb" >&2
+	exit 1
+fi
+if ! grep -q 'SecureBoot enabled' <<<"$sb"; then
+	if [ "$noninteractive" -eq 1 ]; then
+		echo sb-off
+	else
+		echo "Secure Boot is off: the driver loads without enrolling a key."
+	fi
 	exit 0
 fi
-if mokutil --test-key "$cert" 2>/dev/null | grep -q 'is already enrolled'; then
-	echo "The AtlasOS module key is already enrolled."
+# --test-key exits non-zero exactly when the key is enrolled or pending, so
+# its output is read, not its status (a pipe into grep would fail with
+# pipefail).
+key_state() { mokutil --test-key "$cert" 2>/dev/null || true; }
+if grep -q 'is already enrolled' <<<"$(key_state)"; then
+	if [ "$noninteractive" -eq 1 ]; then
+		echo enrolled
+	else
+		echo "The AtlasOS module key is already enrolled."
+	fi
 	exit 0
 fi
-mokutil --import "$cert"
-echo "Reboot, then choose \"Enroll MOK\" in the blue screen and type the same password."
+
+if [ "$noninteractive" -eq 0 ]; then
+	mokutil --import "$cert"
+	echo "Reboot, then choose \"Enroll MOK\" in the blue screen and type the same password."
+	exit 0
+fi
+
+# One run at a time: two would leave a code that isn't the firmware's.
+exec 9>/run/atlasos-nvidia-enroll.lock
+flock -n 9 || { echo "NVIDIA Driver Setup is already making a code." >&2; exit 1; }
+
+# Start over, but only over our own request: one for another key is
+# someone else's (made with mokutil by hand) and is left alone.
+pending=$(grep -c '^\[key' <<<"$(mokutil --list-new 2>/dev/null || true)" || true)
+if [ "$pending" -gt 0 ]; then
+	if [ "$pending" -eq 1 ] &&
+		grep -q 'already in the enrollment request' <<<"$(key_state)"; then
+		# It asks for no password.
+		mokutil --revoke-import >/dev/null 2>&1 || true
+	else
+		echo "Another key is waiting to be enrolled. Finish or cancel that first (mokutil --revoke-import)." >&2
+		exit 1
+	fi
+fi
+rm -f /run/atlasos-nvidia-key-pending
+
+# 8 digits, uniform: MOK Manager has a US keyboard, so digits only. Take 32
+# random bits and retry above the largest multiple of 10^8, to avoid bias.
+while :; do
+	n=$(od -An -N4 -tu4 /dev/urandom | tr -d ' \n')
+	[ "$n" -lt 4000000000 ] && break
+done
+code=$(printf '%08d' $((n % 100000000)))
+
+if ! err=$(printf '%s\n%s\n' "$code" "$code" | mokutil --import "$cert" 2>&1); then
+	echo "Couldn't ask the firmware to trust the key: $err" >&2
+	exit 1
+fi
+# MokTimeout, in seconds: how long the blue screen's "Press any key" waits.
+# The 10-second default is easy to miss; five minutes still boots on its own
+# if nobody is there. Shim deletes it with the request (VM-checked: after a
+# missed or completed screen MokNew, MokAuth and MokTimeout are all gone), so
+# later boots are not slowed. MokAuth (the code's hash) is root-only.
+# For every user's dialog: a request is waiting this boot. Root-owned in
+# /run, so it goes with the boot, as an unfinished request does.
+echo pending >/run/atlasos-nvidia-key-pending
+chmod 644 /run/atlasos-nvidia-key-pending
+if mokutil --timeout 300 >/dev/null 2>&1; then
+	echo "code $code"
+else
+	echo "Couldn't lengthen the MOK Manager prompt; it keeps its 10 seconds." >&2
+	echo "code $code short"
+fi

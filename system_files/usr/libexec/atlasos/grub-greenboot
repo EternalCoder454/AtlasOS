@@ -47,10 +47,20 @@ if [ "${1:-start}" = stop ]; then
 	[ -f "$grubenv" ] || exit 0
 	vars=$(grub2-editenv "$grubenv" list 2>/dev/null) || exit 0
 	grep -q '^boot_counter=' <<<"$vars" || exit 0
-	queued=$(timeout 30 bootc status --json 2>/dev/null | jq -r '.status.rollbackQueued // false' 2>/dev/null) || exit 0
+	queued=$(timeout 30 bootc status --json 2>/dev/null | jq -r '.status.rollbackQueued // false' 2>/dev/null) || {
+		err "cannot read bootc status; if a rollback is queued, its stale boot_counter stays"
+		exit 0
+	}
 	if [ "$queued" = true ]; then
-		boot_rw || exit 0
-		grub2-editenv "$grubenv" unset boot_counter && say "rollback queued: cleared the stale boot_counter"
+		boot_rw || {
+			err "cannot make /boot writable; the stale boot_counter stays"
+			exit 0
+		}
+		if grub2-editenv "$grubenv" unset boot_counter; then
+			say "rollback queued: cleared the stale boot_counter"
+		else
+			err "could not clear the stale boot_counter"
+		fi
 	fi
 	exit 0
 fi

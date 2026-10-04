@@ -3,6 +3,9 @@
 [org.kde.kdecoration2]
 ButtonsOnLeft=M
 ButtonsOnRight=IAX
+# AtlasOS's Aurorae theme (Light; the Dark look-and-feel picks AtlasOS-Dark).
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__AtlasOS-Light
 
 # Fedora turns on the on-screen keyboard (plasma-keyboard, about 270 MB of
 # RAM). Off by default, like Windows on a non-touch PC; System Settings >

@@ -8,7 +8,7 @@
   <group name="General">
     <entry name="favoriteApps" type="StringList">
       <label>Favourite apps, before they are moved to the activity favourites (AtlasOS).</label>
-      <default>preferred://browser,org.kde.dolphin.desktop,com.mitchellh.ghostty.desktop,org.kde.kate.desktop,org.kde.discover.desktop,systemsettings.desktop</default>
+      <default>preferred://browser,org.kde.dolphin.desktop,com.mitchellh.ghostty.desktop,net.eterneon.atlas.notepad.desktop,org.kde.discover.desktop,systemsettings.desktop</default>
     </entry>
     <entry name="favoritesPortedToKAstats" type="Bool">
       <label>Whether favoriteApps were moved to the activity favourites (AtlasOS).</label>

@@ -35,12 +35,11 @@ Item {
  // signal  newTextQuery(string text)
 
   readonly property color textColor: Kirigami.Theme.textColor
-  readonly property string textFont: plasmoid.configuration.useSystemFontSettings ? Kirigami.Theme.defaultFont : "SF Pro Text"
+  readonly property string textFont: plasmoid.configuration.useSystemFontSettings ? Kirigami.Theme.defaultFont.family : "SF Pro Text"
   readonly property real textSize: plasmoid.configuration.useSystemFontSettings ? Kirigami.Theme.defaultFont.pointSize : 11
   readonly property color bgColor: Kirigami.Theme.backgroundColor
   readonly property color highlightColor: Kirigami.Theme.highlightColor
   readonly property color highlightedTextColor: Kirigami.Theme.highlightedTextColor
-  readonly property bool isTop: plasmoid.location == PlasmaCore.Types.TopEdge & plasmoid.configuration.launcherPosition != 2 & !plasmoid.configuration.floating
 
   readonly property color glowColor1: plasmoid.configuration.glowColor == 0 ? "#6252DD" : // AtlasOS violets
                                       plasmoid.configuration.glowColor == 1 ? "#20bdff" :
@@ -52,14 +51,15 @@ Item {
   property bool showAllApps: false
 
   property bool isDarkTheme: ColorType.isDark(bgColor)
-  property color contrastBgColor: isDarkTheme ? Qt.rgba(255, 255, 255, 0.15) : Qt.rgba(255, 255, 255, 0.25)
+  // AtlasOS: the neutral tint Atlas.Ui puts on its pill controls.
+  property color contrastBgColor: Qt.alpha(Kirigami.Theme.textColor, 0.08)
 
   property int pinnedModel: plasmoid.configuration.pinnedModel
 
   property alias headerLabelRow: headerLabelRow
   property alias searchBar: searchBar
   property alias contentY: backdrop
-  property int itemSpacing: 8
+  property int itemSpacing: Kirigami.Units.largeSpacing
 
   KCoreAddons.KUser {
       id: kuser
@@ -78,56 +78,41 @@ Item {
   Rectangle {
     id: backdrop
     x: 0
-    y: isTop ? 125 : 90
+    // AtlasOS: below the user row.
+    y: headerBar.height + itemSpacing
     width: main.width
-    height: isTop ? main.height - y - Kirigami.Units.largeSpacing : main.height - y //- (searchBarContainer.height + 20)
+    height: main.height - y
     color: bgColor
     opacity: 0
   }
-  //Floating Avatar
-  Item {
-    id: avatarParent
-    x: main.width / 2
-    y: - root.margins.top
-    FloatingAvatar { //Anyone looking for an unpredictable number generator?
-      id: floatingAvatar
-      //visualParent: root
-      isTop: main.isTop
-      avatarWidth: 110
-      visible: root.visible && !isTop ? true : root.visible && plasmoid.configuration.floating ? true : false
-    }
-  }
-  //Power & Settings
+
+  // AtlasOS: a compact user row (small avatar, name) with the settings, lock
+  // and power buttons on the right, instead of the big floating avatar.
+
   RowLayout {
     id: headerBar
     width: main.width
-    Item {
+    spacing: Kirigami.Units.largeSpacing
+
+    UserAvatar {
+      id: userAvatar
+      Layout.preferredWidth: Kirigami.Units.iconSizes.large
+      Layout.preferredHeight: Kirigami.Units.iconSizes.large
+      Layout.alignment: Qt.AlignVCenter
+    }
+
+    Greeting {
+      id: greeting
       Layout.fillWidth: true
-      UserAvatar {
-        width: 80
-        height: width
-        visible: !floatingAvatar.visible
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: width / 2
-      }
+      Layout.alignment: Qt.AlignVCenter
+      textSize: Kirigami.Theme.defaultFont.pointSize
     }
 
     Header {
       id: powerSettings
-      iconSize: 20 
-      Layout.fillHeight: false
-      Layout.alignment: Qt.AlignRight | Qt.AlignTop
+      iconSize: Kirigami.Units.iconSizes.smallMedium
+      Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
     }
-
-  }
-  
-  //Greeting
-  Greeting {
-    id: greeting
-    visible: true//floatingAvatar.visible
-    x: main.width / 2 - textWidth / 2 //This centeres the Text
-    y: main.isTop ? 95 : 50 
-    textSize: 20 
   }
 
   // Fvorites / All apps label
@@ -139,6 +124,18 @@ Item {
     anchors.bottom: parent.bottom
 
     spacing: itemSpacing
+
+    // Search Bar (AtlasOS: on top, a pill like Atlas.Ui's SearchField)
+
+    SearchBar {
+      id: searchBar
+      Layout.fillWidth: true
+      Layout.preferredHeight: Math.round(Kirigami.Units.gridUnit * 2.2)
+      Layout.maximumHeight: Layout.preferredHeight
+      Layout.alignment: Qt.AlignTop
+      Keys.priority: Keys.AfterItem
+      Keys.forwardTo: stack.currentItem.viewItem
+    }
 
     RowLayout {
       id: headerLabelRow
@@ -157,17 +154,6 @@ Item {
       }
         
       Kirigami.Icon {
-        id: headerLabel
-        source:  Qt.resolvedUrl("icons/feather/star.svg")
-        visible: !main.showAllApps
-        Layout.preferredHeight: 15
-        Layout.preferredWidth: 15
-        Layout.fillHeight: false
-        isMask: true
-        color: main.textColor
-      }
-
-      Kirigami.Icon {
         id: sortingImage
         Layout.preferredHeight: 15
         Layout.preferredWidth: 15
@@ -179,6 +165,10 @@ Item {
         id: mainLabelGrid
         font.family: textFont
         font.pointSize: textSize
+        // AtlasOS: Atlas.Ui's Section title: semibold, subdued.
+        font.weight: Font.DemiBold
+        opacity: 0.65
+        Layout.leftMargin: Kirigami.Units.smallSpacing
         Layout.fillWidth: true
         MouseArea {
           anchors.fill: parent
@@ -209,7 +199,7 @@ Item {
 
       //  icon.name: showAllApps ? "go-previous" : "go-next"
         icon.height: 15
-        icon.width: icon.height
+        icon.width: 15
 
         font.pointSize: textSize
         font.family: textFont
@@ -226,9 +216,7 @@ Item {
         }
         background: Rectangle {
           id: btnBg
-          color: main.contrastBgColor
-          border.width: 1
-          border.color: main.contrastBgColor
+          color: Qt.alpha(Kirigami.Theme.highlightColor, allAppsButton.down ? 0.3 : allAppsButton.hovered ? 0.22 : 0.14)
           radius: height / 2
 
           Rectangle {
@@ -305,17 +293,6 @@ Item {
       }
     }
 
-    // Search Bar
-
-    SearchBar {
-      id: searchBar
-      Layout.fillWidth: true
-      Layout.preferredHeight: 45
-      Layout.maximumHeight: Layout.preferredHeight
-      Layout.alignment: Qt.AlignBottom
-      Keys.priority: Keys.AfterItem
-      Keys.forwardTo: stack.currentItem.viewItem
-    }
   }
   onSearchingChanged: {
     if(searching){

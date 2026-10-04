@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/var/cache/atlas-framework-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     ATLAS_BUILD_CACHE=/var/cache/atlas-framework-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# The Atlas apps (Atlas Updater and atlas-core), built into RPMs in a Fedora 44
+# The Atlas apps (Atlas Updater and atlas-system-helper), built into RPMs in a Fedora 44
 # container, the release the image is based on. The source is the build
 # context named "atlas-updater" (`podman build --build-context
 # atlas-updater=<path>`; `just build` and CI pass it). Cargo's downloads and
@@ -52,9 +52,9 @@ RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
 # "atlas-monitor" (EternalCoder454/atlasos-monitor). A stage of its own, so a
 # change to one app doesn't rebuild the other. Cargo's crate downloads are a
 # cache mount (CARGO_HOME, see the spec there). Its build fetches the
-# atlas-core crate from atlasos-updater at the commit its Cargo.toml pins,
-# so it needs the network. It gets the framework RPMs like Atlas Updater does
-# (until it builds against them, it still fetches its own Atlas.Ui).
+# atlas-framework crates from GitHub at the commit its Cargo.toml pins, so it
+# needs the network. Like Atlas Updater, it is built against the framework
+# RPMs (ATLAS_LOCAL_RPMS).
 FROM registry.fedoraproject.org/fedora:44 AS monitor-app
 COPY --from=atlas-monitor --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
@@ -64,6 +64,18 @@ RUN --mount=type=cache,target=/var/cache/atlas-monitor-cargo,sharing=locked \
     --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-monitor-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
+# Atlas Notepad, built the same way as Atlas Monitor from the build context
+# named "atlas-notepad" (the AtlasOS Text Editor source).
+FROM registry.fedoraproject.org/fedora:44 AS notepad-app
+COPY --from=atlas-notepad --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-notepad-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    CARGO_HOME=/var/cache/atlas-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
@@ -92,6 +104,27 @@ RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     drop-build-deps.sh /plasma-setup/build-rpm.sh /out
 
+# The SELinux modules (selinux/: the PIN verifier's, see DEV.md "PIN sign-in",
+# and atlasos_bootc, bootc's install_t from services, see DEV.md "SELinux"),
+# compiled in Fedora's own container, which has selinux-policy-devel; the
+# image gets only the compiled modules, and build.sh installs them.
+FROM registry.fedoraproject.org/fedora:44 AS selinux-policy
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False install selinux-policy-devel make
+COPY selinux /selinux
+RUN make -C /selinux -f /usr/share/selinux/devel/Makefile atlasos_pin.pp atlasos_bootc.pp \
+ && install -D -t /out /selinux/atlasos_pin.pp /selinux/atlasos_bootc.pp
+
+# The PIN stack's one PAM module (build_files/pam-pin/), a small C file.
+FROM registry.fedoraproject.org/fedora:44 AS pam-pin
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False install gcc pam-devel
+COPY build_files/pam-pin /pam-pin
+# -fcf-protection is x86-only: the image is built for x86_64 only.
+RUN install -d /out && gcc -O2 -Wall -Wextra -Werror \
+    -fstack-protector-strong -D_FORTIFY_SOURCE=3 -fstack-clash-protection -fcf-protection -fPIC -shared -Wl,-z,relro,-z,now \
+    -o /out/pam_atlasos_pin.so /pam-pin/pam_atlasos_pin.c -lpam
+
 # Build scripts and config files, mounted into the build rather than copied
 # into the image.
 # Each RUN step below sees only its own inputs, so Podman reruns a step (and
@@ -99,18 +132,19 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
 # doesn't reinstall the packages.
 FROM scratch AS ctx-packages
 COPY build_files/packages.sh build_files/cleanup.sh /
+COPY build_files/keys /keys
+COPY build_files/repos /repos
 
 FROM scratch AS ctx-apps
 COPY build_files/apps.sh build_files/cleanup.sh /
 
 FROM scratch AS ctx-version
-COPY build_files/version.sh /
+COPY build_files/version.sh build_files/cleanup.sh /
 
 FROM scratch AS ctx
-COPY build_files/build.sh build_files/cleanup.sh build_files/icon-recolor.py cosign.pub /
+COPY build_files/build.sh build_files/cleanup.sh cosign.pub /
 COPY system_files /system_files
 COPY branding/cursors /cursors
-COPY branding/icon-theme /icon-theme
 
 FROM ${BASE_IMAGE}
 
@@ -132,17 +166,21 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
     --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
     --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
+    --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=bind,from=branding,source=/out,target=/branding \
+    --mount=type=bind,from=selinux-policy,source=/out,target=/selinux \
+    --mount=type=bind,from=pam-pin,source=/out,target=/pam-pin \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/build.sh
 
 # The version changes every day: declared only here, so it reruns only this.
 ARG IMAGE_VERSION=dev
 RUN --mount=type=bind,from=ctx-version,source=/,target=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
     IMAGE_VERSION="${IMAGE_VERSION}" /ctx/version.sh
 
 RUN bootc container lint

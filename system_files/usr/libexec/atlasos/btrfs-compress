@@ -1,0 +1,22 @@
+#!/usr/bin/bash
+# Turns on zstd compression for new writes when the system disk is btrfs, as
+# Fedora Workstation does at install time (compress=zstd:1: less disk used and
+# less to read, for little CPU). Done by remounting /var at boot rather than
+# with a kernel argument, so a disk formatted as ext4 or XFS boots as before.
+# The option applies to the whole filesystem (/var, /etc, /sysroot, homes).
+# A compress option the owner set already is left alone. To opt out:
+# systemctl mask atlasos-btrfs-compress.service
+set -euo pipefail
+
+[ "$(findmnt -no FSTYPE /var)" = btrfs ] || exit 0
+case ",$(findmnt -no OPTIONS /var)," in
+*,compress=* | *,compress-force=* | *,compress,* | *,compress-force,*)
+	exit 0 ;;
+esac
+# Compression is a saving, not something the system needs: when the kernel
+# refuses, say so and carry on, rather than leave a failed unit every boot.
+if ! mount -o remount,compress=zstd:1 /var; then
+	echo "btrfs: couldn't turn on compression; new files are stored uncompressed" >&2
+	exit 0
+fi
+echo "btrfs: new files on this disk are compressed (zstd:1)"

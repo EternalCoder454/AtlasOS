@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>AtlasOS</vendor>
+  <vendor_url>https://github.com/EternalCoder454/AtlasOS</vendor_url>
+
+  <!-- pin-admin only ever changes the PIN of the user who ran it, so they
+       confirm with their own password, not an administrator's. -->
+  <action id="org.atlasos.pin.manage">
+    <description>Set, change or remove your sign-in PIN</description>
+    <message>Authentication is required to set, change or remove your sign-in PIN</message>
+    <icon_name>dialog-password</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_self</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/atlasos/pin-admin</annotate>
+  </action>
+</policyconfig>

@@ -1,0 +1,30 @@
+# Ignore list for the CI vulnerability gate (build.yml: grype --only-fixed
+# --fail-on critical). Prefer fixing over listing. scripts/grype-ignores.sh
+# checks every line: an entry is one line, names the vulnerability and the
+# package's exact name, version and type (so another copy, or a newer one that
+# is still affected, fails the gate again), and ends with
+# "# until YYYY-MM-DD: reason", at most 90 days ahead. Once the date passes the
+# entry no longer applies and the gate fails if the fix is still missing:
+# delete it, or extend it with a new reason. Anything else is an error.
+#
+# Entries added 2026-10-04: the affected programs are Fedora's own packages
+# (gocryptfs, skopeo, buildah, podman, python3-anyio), not built by this repo.
+# The fix has to come from Fedora, which the daily build picks up as soon as
+# it ships.
+ignore:
+  - {vulnerability: GHSA-5cgq-3rg8-m6cv, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-5cgq-3rg8-m6cv, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-89gr-r52h-f8rx, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-89gr-r52h-f8rx, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-f5wc-c3c7-36mc, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-f5wc-c3c7-36mc, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-jppx-rxg9-jmrx, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-jppx-rxg9-jmrx, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-rm3j-f69w-wqmq, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-rm3j-f69w-wqmq, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-vgwf-h737-ff37, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-vgwf-h737-ff37, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-x527-x647-q7gg, package: {name: golang.org/x/crypto, version: v0.33.0, type: go-module}} # until 2026-11-04: gocryptfs, Fedora's build
+  - {vulnerability: GHSA-x527-x647-q7gg, package: {name: golang.org/x/crypto, version: v0.46.0, type: go-module}} # until 2026-11-04: skopeo, Fedora's build
+  - {vulnerability: GHSA-p77j-4mvh-x3m3, package: {name: google.golang.org/grpc, version: v1.72.2, type: go-module}} # until 2026-11-04: podman and buildah, Fedora's builds
+  - {vulnerability: GHSA-82r6-8w77-94w6, package: {name: anyio, version: 4.13.0, type: python}} # until 2026-11-04: python3-anyio, Fedora's package

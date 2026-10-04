@@ -1,0 +1,20 @@
+[Unit]
+Description=AtlasOS PIN verifier socket
+Documentation=https://github.com/EternalCoder454/AtlasOS
+
+# Nothing runs until the login screen or the lock screen asks: each question
+# starts one atlasos-pin@.service, which exits when it has answered.
+[Socket]
+ListenStream=/run/atlasos/pin.sock
+# The lock screen runs as the user; the service decides who may ask what.
+SocketMode=0666
+DirectoryMode=0755
+Accept=yes
+MaxConnections=16
+MaxConnectionsPerSource=2
+# Each question starts a service; the default start limit would stop the
+# socket after a burst of requests, and the PIN would stop working until a restart.
+TriggerLimitIntervalSec=0
+
+[Install]
+WantedBy=sockets.target

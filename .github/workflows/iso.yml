@@ -26,6 +26,11 @@ on:
       installer_ref:
         type: string
         default: main
+    secrets:
+      ISO_UPLOAD_KEY:
+        required: false
+      ISO_UPLOAD_KNOWN_HOSTS:
+        required: false
   workflow_dispatch:
     inputs:
       image:
@@ -63,8 +68,22 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 180
     steps:
-      # The version the stable tag points to now. The build uses that
-      # version's own tag, which never moves, so the ISO holds exactly this.
+      # An ISO built with an installer from a branch or commit other than
+      # main is for testing: it is never uploaded.
+      - name: Check the inputs
+        env:
+          UPLOAD: ${{ inputs.upload }}
+          INSTALLER_REF: ${{ inputs.installer_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$UPLOAD" = true ] && [ "$INSTALLER_REF" != main ]; then
+            echo "::error::Uploading needs installer_ref main, not '${INSTALLER_REF}'; run with upload off to keep it as an artifact."
+            exit 1
+          fi
+
+      # The version the stable tag points to now, and its digest. The build
+      # uses that version's own tag, which never moves, so the ISO holds
+      # exactly this; the "Verify the image" step checks it is that digest.
       - name: Pick the version
         id: pick
         env:
@@ -74,8 +93,11 @@ jobs:
           set -euo pipefail
           [[ "$IMAGE" =~ ^atlasos(-nvidia)?$ ]] || { echo "::error::Unknown image '$IMAGE'"; exit 1; }
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
-          version=$(skopeo inspect "docker://${IMAGE_REGISTRY}/${IMAGE}:stable" |
-            jq -r '.Labels["org.opencontainers.image.version"] // ""')
+          # Resolve the moving tag once; the labels come from that digest.
+          digest=$(skopeo inspect --format '{{.Digest}}' "docker://${IMAGE_REGISTRY}/${IMAGE}:stable")
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::${IMAGE}:stable has no usable digest: '$digest'"; exit 1; }
+          json=$(skopeo inspect "docker://${IMAGE_REGISTRY}/${IMAGE}@${digest}")
+          version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::${IMAGE}:stable has no usable version label: '$version'"; exit 1; }
           iso="${IMAGE}-${version}.iso"
           skip=false
@@ -86,9 +108,45 @@ jobs:
           fi
           {
             echo "version=$version"
+            echo "digest=$digest"
             echo "iso=$iso"
             echo "skip=$skip"
           } >>"$GITHUB_OUTPUT"
+
+      # Only a CI-signed image goes into an ISO. cosign.pub comes from main,
+      # not from the ref being built.
+      - name: Checkout cosign.pub
+        if: steps.pick.outputs.skip != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          sparse-checkout: |
+            cosign.pub
+            scripts/verify-image.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Install cosign
+        if: steps.pick.outputs.skip != 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      # make-iso.sh pulls the version's tag and pins what it resolves to, so
+      # that must be the digest verified here (the tag never moves).
+      - name: Verify the image
+        if: steps.pick.outputs.skip != 'true'
+        env:
+          IMAGE: ${{ inputs.image }}
+          VERSION: ${{ steps.pick.outputs.version }}
+          DIGEST: ${{ steps.pick.outputs.digest }}
+        run: |
+          set -euo pipefail
+          repo="${IMAGE_REGISTRY}/${IMAGE}"
+          scripts/verify-image.sh "$repo" "$DIGEST" >/dev/null ||
+            { echo "::error::${repo}@${DIGEST} (stable ${VERSION}) does not verify against cosign.pub for this repository; no ISO is built from it."; exit 1; }
+          got=$(skopeo inspect --format '{{.Digest}}' "docker://${repo}:${VERSION}")
+          [ "$got" = "$DIGEST" ] || { echo "::error::${repo}:${VERSION} is ${got}, not the verified ${DIGEST}"; exit 1; }
 
       # About 35 GB at the peak: the image, its blobs, the live image, the
       # installer's build container, the squashfs and the ISO.
@@ -110,23 +168,37 @@ jobs:
         env:
           IMAGE: ${{ inputs.image }}
           VERSION: ${{ steps.pick.outputs.version }}
+          DIGEST: ${{ steps.pick.outputs.digest }}
           ISO: ${{ steps.pick.outputs.iso }}
         run: |
           set -euo pipefail
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
+          installer_commit=$(git -C installer rev-parse HEAD)
           podman --version
           df -h / "$RUNNER_TEMP"
           out="$RUNNER_TEMP/out"
           mkdir -p "$out"
           installer/iso/make-iso.sh -o "$RUNNER_TEMP/$ISO" "$IMAGE" "$VERSION"
+          # make-iso.sh looked the version tag up again; what it pinned
+          # (written beside the ISO) must still be the verified digest.
+          pinned=$(cat "$RUNNER_TEMP/$ISO.image")
+          [ "$pinned" = "${IMAGE_REGISTRY}/${IMAGE}@${DIGEST}" ] ||
+            { echo "::error::The ISO was built from '${pinned}', not the verified ${IMAGE_REGISTRY}/${IMAGE}@${DIGEST}; not uploading."; exit 1; }
           mv "$RUNNER_TEMP/$ISO" "$out/"
           cd "$out"
           sha256sum "$ISO" >"$ISO.sha256"
           jq -n --arg image "$IMAGE" --arg version "$VERSION" --arg file "$ISO" \
             --argjson size "$(stat -c %s "$ISO")" --arg sha256 "$(cut -d' ' -f1 "$ISO.sha256")" \
             --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{image: $image, version: $version, file: $file, size: $size, sha256: $sha256, date: $date}' \
+            --arg image_digest "$DIGEST" --arg installer_commit "$installer_commit" \
+            '{image: $image, version: $version, file: $file, size: $size, sha256: $sha256, date: $date, image_digest: $image_digest, installer_commit: $installer_commit}' \
             >"$IMAGE.json"
+          {
+            echo "### ${ISO} build"
+            echo
+            echo "- Image \`${DIGEST}\` (verified against cosign.pub)"
+            echo "- Installer commit \`${installer_commit}\`"
+          } >>"$GITHUB_STEP_SUMMARY"
           cat "$IMAGE.json"
           ls -la
           df -h /

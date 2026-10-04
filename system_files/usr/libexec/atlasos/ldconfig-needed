@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+# ExecCondition for ldconfig.service: exit 0 to rebuild /etc/ld.so.cache,
+# 1 to skip because it already matches the booted image's.
+set -u
+image=/usr/etc
+# Not an image-based boot, or the image has no cache: rebuild as usual.
+[ -s "$image/ld.so.cache" ] || exit 0
+cmp -s /etc/ld.so.cache "$image/ld.so.cache" || exit 0
+cmp -s /etc/ld.so.conf "$image/ld.so.conf" || exit 0
+# Library paths added (or changed) under /etc/ld.so.conf.d need a rebuild.
+diff -r -q /etc/ld.so.conf.d "$image/ld.so.conf.d" >/dev/null 2>&1 || exit 0
+echo "ld.so.cache already matches the image's; not rebuilding it"
+exit 1

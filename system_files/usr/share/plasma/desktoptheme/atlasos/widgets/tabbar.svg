@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Tab bars.
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+   .ColorScheme-HighlightedText { color:#ffffff; } .ColorScheme-ViewBackground { color:#ffffff; }
+   .ColorScheme-ButtonBackground { color:#e6e4f4; } .ColorScheme-ButtonText { color:#1b1748; }
+  </style>
+ </defs>
+ <g id="north-active-tab-topleft">
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-top">
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-topright">
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-left">
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-center">
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-right">
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-bottomleft">
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-bottom">
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="north-active-tab-bottomright">
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <rect id="north-active-tab-hint-top-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="north-active-tab-hint-bottom-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="north-active-tab-hint-left-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <rect id="north-active-tab-hint-right-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <g id="south-active-tab-topleft">
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-top">
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-topright">
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-left">
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-center">
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-right">
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-bottomleft">
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-bottom">
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="south-active-tab-bottomright">
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <rect id="south-active-tab-hint-top-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="south-active-tab-hint-bottom-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="south-active-tab-hint-left-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <rect id="south-active-tab-hint-right-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <g id="east-active-tab-topleft">
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-top">
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-topright">
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-left">
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-center">
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-right">
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-bottomleft">
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-bottom">
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="east-active-tab-bottomright">
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <rect id="east-active-tab-hint-top-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="east-active-tab-hint-bottom-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="east-active-tab-hint-left-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <rect id="east-active-tab-hint-right-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <g id="west-active-tab-topleft">
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-top">
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-topright">
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-left">
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-center">
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-right">
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-bottomleft">
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-bottom">
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <g id="west-active-tab-bottomright">
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.22"/>
+ </g>
+ <rect id="west-active-tab-hint-top-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="west-active-tab-hint-bottom-margin" x="0" y="0" width="1" height="4" fill="#000" opacity="0.004"/>
+ <rect id="west-active-tab-hint-left-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+ <rect id="west-active-tab-hint-right-margin" x="0" y="0" width="10" height="1" fill="#000" opacity="0.004"/>
+</svg>

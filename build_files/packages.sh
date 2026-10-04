@@ -8,11 +8,45 @@
 # day does (PACKAGES_DATE, so the repos' updates still arrive daily). Then
 # apps.sh, then build.sh.
 set -euxo pipefail
+: >/tmp/atlasos-step-start # (see cleanup.sh, "Times")
 
 # Every dnf call keeps its downloads, so the cache the Justfile and CI bind to
 # /var/cache/libdnf5 is worth saving. It never reaches the image: a build
 # volume is not part of any layer.
 dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
+
+### Third-party repos: pinned keys
+# Ghostty's COPR, Brave and mise are outside repos. Their .repo files are in
+# build_files/repos and their public keys in build_files/keys (downloaded once
+# over https, fingerprints pinned below), so nothing is trusted on first use
+# from the vendor's own server. vendor_repo checks the key against the pinned
+# fingerprints, then puts the key and the repo file where the .repo file's
+# gpgkey=file:// line expects them. Each repo goes again after its install.
+vendor_repo() {
+	local name=$1 key=$2 got want gnupg
+	shift 2
+	gnupg=$(mktemp -d)
+	# The primary key's fingerprint of every key block in the file.
+	got=$(GNUPGHOME=$gnupg gpg --batch --show-keys --with-colons "/ctx/keys/$key" |
+		awk -F: '$1 == "pub" { p = 1; next } $1 == "sub" { p = 0 } $1 == "fpr" && p { print $10; p = 0 }' |
+		sort | tr '\n' ' ')
+	rm -rf "$gnupg"
+	want=$(printf '%s\n' "$@" | sort | tr '\n' ' ')
+	if [ -z "$got" ] || [ "$got" != "$want" ]; then
+		echo "packages.sh: the $name key in build_files/keys is not the pinned one" >&2
+		echo "  pinned: $want" >&2
+		echo "  found:  $got" >&2
+		echo "  vendor rotated its key: check and update build_files/keys and the fingerprints in packages.sh" >&2
+		exit 1
+	fi
+	# dnf skips a repo whose key file is missing, so the paths must agree.
+	grep -qx "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-atlasos-$name" "/ctx/repos/$name.repo"
+	install -Dm644 "/ctx/keys/$key" "/etc/pki/rpm-gpg/RPM-GPG-KEY-atlasos-$name"
+	install -Dm644 "/ctx/repos/$name.repo" "/etc/yum.repos.d/$name.repo"
+}
+vendor_repo_remove() {
+	rm -f "/etc/yum.repos.d/$1.repo" "/etc/pki/rpm-gpg/RPM-GPG-KEY-atlasos-$1"
+}
 
 ### Packages
 
@@ -48,7 +82,9 @@ remove=(
 	krfb
 	krfb-libs
 	kwalletmanager5
+	# KWrite and the Kate library only it uses: Atlas Notepad is the editor.
 	kwrite
+	kate-libs
 	plasma-systemmonitor
 	plasma-welcome
 	plasma-welcome-fedora
@@ -62,10 +98,20 @@ remove=(
 	# Konsole and goes with it; systemd-coredump still records crashes.
 	konsole
 	plasma-drkonqi
-	# Wallpaper sets nothing depends on. The F44 set stays because
-	# kde-settings requires it.
+	# Wallpaper sets nothing depends on. (Fedora's own F44 set is removed at
+	# the end, past the dependency that holds it.)
 	fedora-workstation-backgrounds
 	plasma-workspace-wallpapers
+	# Fedora's bookmarks page, and the Chromium policy packages: all they
+	# install is the Plasma Integration extension for Chromium and Chrome,
+	# which Brave (it reads /etc/brave, not /etc/chromium or
+	# /usr/share/chromium) never loads. Nothing requires any of them.
+	fedora-bookmarks
+	fedora-chromium-config
+	fedora-chromium-config-kde
+	# Fedora Linux's entry for Discover and other app stores (the OS itself,
+	# with its release notes link): AtlasOS is not Fedora Linux 44.
+	fedora-appstream-metadata
 	# Left behind by the removals above, with nothing else using them:
 	# Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's
 	# and Partition Manager's libraries, and help pages without KHelpCenter.
@@ -92,6 +138,15 @@ remove=(
 	# KDE's push-notification service starts with every session; no app here
 	# uses it.
 	kunifiedpush
+	# mcelog, a daemon on every Intel machine, decodes hardware error reports
+	# through the old /dev/mcelog interface; the kernel already logs them to
+	# the journal, and AMD machines never ran it.
+	mcelog
+	# KDE Info Center (and System Settings' About page, which it carries):
+	# Atlas Monitor's System Info and Devices pages show the same, and the
+	# menu's About This Computer opens them. (kde-cli-tools' kinfo, which
+	# only prints what Info Center knows, says it isn't installed.)
+	kinfocenter
 )
 "${dnf[@]}" remove "${remove[@]}"
 # What only those used. rpm-ostree images don't record why a package was
@@ -114,14 +169,28 @@ systemctl enable power-profiles-daemon.service
 # (fontconfig and kdeglobals in system_files make them the defaults).
 "${dnf[@]}" install ibm-plex-sans-fonts jetbrains-mono-fonts
 
+# Papirus is the icon theme: Papirus for AtlasOS Light, Papirus-Dark (a
+# separate package, mostly links into Papirus) for AtlasOS Dark. Not
+# -light: that is a variant in Breeze's colours that AtlasOS doesn't use.
+# build.sh turns its folders violet.
+"${dnf[@]}" install papirus-icon-theme papirus-icon-theme-dark
+[ -f /usr/share/icons/Papirus/index.theme ]
+[ -f /usr/share/icons/Papirus-Dark/index.theme ]
+
 # Ghostty, the terminal, in place of Konsole. Fedora doesn't package it; this
 # is the COPR that Ghostty's own install guide points Fedora users to. The
 # repo goes again afterwards: the image is updated by rebuilding it, not by dnf.
-curl -fsSL --retry 3 -o /etc/yum.repos.d/ghostty.repo \
-	"https://copr.fedorainfracloud.org/coprs/scottames/ghostty/repo/fedora-$(rpm -E %fedora)/scottames-ghostty-fedora-$(rpm -E %fedora).repo"
+# Key: https://download.copr.fedorainfracloud.org/results/scottames/ghostty/pubkey.gpg
+# (COPR doesn't sign its repodata, so repo_gpgcheck=0; the packages are signed.)
+vendor_repo ghostty ghostty.gpg 2DEFB319CCC3F393B6DAEAB297C83CA0FEB5DAFB
 "${dnf[@]}" install ghostty
-rm /etc/yum.repos.d/ghostty.repo
-# Ghostty's package brings "Open Ghostty Here" to Dolphin's right-click menu.
+vendor_repo_remove ghostty
+# Ghostty's package adds "Open Ghostty Here" to Dolphin's right-click menu,
+# beside Dolphin's own "Open Terminal Here", which opens Ghostty there too
+# (/etc/xdg/kdeglobals TerminalApplication, a separate instance so it gets the
+# folder even with a Ghostty window open): one entry is enough. A plain rm, so the
+# build fails if the package moves it.
+rm /usr/share/kio/servicemenus/com.mitchellh.ghostty.desktop
 # Ctrl+Alt+T opens it, as it opened Konsole. Plasma takes launch shortcuts
 # from the desktop files in /usr/share/kglobalaccel.
 sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
@@ -131,14 +200,18 @@ sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
 # Brave Origin, the browser: Brave without its AI, crypto wallet, rewards,
 # VPN and news, free on Linux. It isn't on Flathub, so it comes unmodified
 # from Brave's own RPM repo, which goes again afterwards like Ghostty's.
-curl -fsSL --retry 3 -o /etc/yum.repos.d/brave-browser.repo \
-	https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+# Key: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc (three
+# release keys; the repodata and packages are signed).
+vendor_repo brave-browser brave.asc \
+	DBF1A116C220B8C7164F98230686B78420038257 \
+	47D32A74E9A9E013A4B4926C68D513D36A73CD96 \
+	B2A3DCA350E67256740DF904DE4EC67BE4B0DCA0
 # It installs into /opt, which on an image-based system is /var/opt: state,
 # not part of the image. So install it there, move it into /usr, and link
 # it back on every boot.
 mkdir -p /var/opt
 "${dnf[@]}" install brave-origin
-rm /etc/yum.repos.d/brave-browser.repo
+vendor_repo_remove brave-browser
 mkdir -p /usr/lib/opt
 mv /var/opt/brave.com /usr/lib/opt/
 rmdir /var/opt
@@ -152,38 +225,171 @@ rm -f /etc/cron.daily/brave-origin
 
 # Developer tools: AtlasOS is for developers. Containers (Podman with a
 # `docker` command and compose; toolbox and distrobox for mutable dev
-# environments), everyday command-line tools, debuggers and profilers, and
-# Kate as the text editor. Docker CE stays out: podman-docker answers to
-# `docker`, and Docker's daemon would run as root at all times.
+# environments), everyday command-line tools, debuggers and profilers. (The
+# text editor is Atlas Notepad, from apps.sh.) Docker CE stays out:
+# podman-docker answers to `docker`, and Docker's daemon would run as root at
+# all times.
 "${dnf[@]}" install \
 	podman-compose podman-docker toolbox distrobox \
-	git gh just jq ripgrep fd-find btop curl wget2-wget gdb strace perf \
-	kate
+	git gh just jq ripgrep fd-find curl wget2-wget gdb strace perf
+# Kvantum is the application style (AtlasOS themes in usr/share/Kvantum): the
+# Qt6 style plugin and its themes, 8 MiB installed, no Qt5.
+"${dnf[@]}" install kvantum
+[ -f /usr/lib64/qt6/plugins/styles/libkvantum.so ]
 # podman-docker would print a warning on every `docker` command.
 touch /etc/containers/nodocker
 
 # mise manages language versions (Node, Python, Go...) per user and project.
 # Fedora doesn't package it; this is mise's own signed RPM repo, which goes
 # again afterwards. /etc/profile.d/atlasos-mise.sh turns it on in shells.
-curl -fsSL --retry 3 -o /etc/yum.repos.d/mise.repo https://mise.jdx.dev/rpm/mise.repo
+# Key: https://mise.jdx.dev/gpg-key.pub
+vendor_repo mise mise.pub 24853EC9F655CE80B48E6C3A8B81C9D17413A06D
 "${dnf[@]}" install mise
-rm /etc/yum.repos.d/mise.repo
+vendor_repo_remove mise
+# None of the outside repos may be left behind.
+leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*mise*' -o -iname '*brave*' -o -iname '*nvidia-container*' \) -print)
+[ -z "$leftover" ] || {
+	echo "packages.sh: outside repos still in /etc/yum.repos.d: $leftover" >&2
+	exit 1
+}
+
+# Everyday apps, native RPMs so they take the AtlasOS Kvantum style and the
+# Papirus icons: Gwenview (images), Okular (PDFs and documents), Qalculate!
+# (the Qt calculator) and Haruna (video and audio). The image formats beyond
+# JPEG and PNG (HEIC, AVIF, WebP, JXL) come from kimageformats and
+# qt6-qtimageformats, and Dolphin's PDF and image previews from
+# kdegraphics-thumbnailers; named here because install_weak_deps=False would
+# leave out a weak dependency on them. Okular's PDF reader is its Poppler
+# generator, in okular-part. No office suite.
+"${dnf[@]}" install gwenview okular okular-part qalculate-qt haruna \
+	kf6-kimageformats qt6-qtimageformats kdegraphics-thumbnailers
+[ -f /usr/lib64/qt6/plugins/okular_generators/okularGenerator_poppler.so ]
+
+# Codecs and video decoding on the GPU. Fedora's ffmpeg, GStreamer and Mesa
+# leave out H.264, H.265 and the like; RPM Fusion's builds have them. Its
+# release packages add the repos here, and they are removed again below: the
+# image is updated by rebuilding it, not by dnf. dnf doesn't check the
+# signature of a package given by URL, and those come from whichever mirror
+# answers (a failed download is tried again, which picks another), so they
+# are checked here against RPM Fusion's keys from Fedora's own
+# distribution-gpg-keys (in the base image): the repo keys they then add are
+# RPM Fusion's.
+fedora=$(rpm -E %fedora)
+keys=/usr/share/distribution-gpg-keys/rpmfusion
+rpmfusion=$(mktemp -d)
+for repo in free nonfree; do
+	curl -fsSL --retry 5 --retry-all-errors --proto '=https' --tlsv1.2 -o "$rpmfusion/$repo.rpm" \
+		"https://mirrors.rpmfusion.org/$repo/fedora/rpmfusion-$repo-release-$fedora.noarch.rpm"
+	# A private rpm database holding only this repo's key: by now the system's
+	# holds Fedora's, Ghostty's, Brave's and mise's too, and a package signed
+	# by any of them would pass there.
+	rpmdb=$(mktemp -d)
+	rpmkeys --define "_dbpath $rpmdb" --import "$keys/RPM-GPG-KEY-rpmfusion-$repo-fedora-$fedora"
+	rpmkeys --define "_dbpath $rpmdb" --checksig "$rpmfusion/$repo.rpm" | grep -q ': digests signatures OK$' || {
+		echo "packages.sh: rpmfusion-$repo-release is not signed by RPM Fusion's key" >&2
+		rpmkeys --define "_dbpath $rpmdb" --checksig -v "$rpmfusion/$repo.rpm" >&2
+		exit 1
+	}
+	rm -rf "$rpmdb"
+	# This release's package, not an older one a mirror kept (also signed)
+	[ "$(rpm -qp --qf '%{NAME} %{VERSION}' "$rpmfusion/$repo.rpm")" = "rpmfusion-$repo-release $fedora" ] || {
+		echo "packages.sh: $repo.rpm is not rpmfusion-$repo-release $fedora" >&2
+		exit 1
+	}
+done
+"${dnf[@]}" install "$rpmfusion/free.rpm" "$rpmfusion/nonfree.rpm"
+rm -rf "$rpmfusion"
+# - ffmpeg in place of ffmpeg-free (the libav*-free libraries go with it),
+#   and the GStreamer plugins Haruna's and Qt's media backends use
+# - Cisco's real OpenH264 (from fedora-cisco-openh264, already configured)
+#   in place of the noopenh264 stub
+# - Intel's media driver with its nonfree parts (iHD, for Broadwell and newer)
+"${dnf[@]}" install --allowerasing \
+	ffmpeg gstreamer1-plugins-ugly gstreamer1-plugins-bad-freeworld \
+	gstreamer1-plugin-libav openh264 gstreamer1-plugin-openh264 \
+	intel-media-driver
+# Fedora's own iHD (12 MB, without those parts) is never loaded: libva looks
+# in RPM Fusion's dri-nonfree first.
+if rpm -q --quiet libva-intel-media-driver; then
+	"${dnf[@]}" remove libva-intel-media-driver
+fi
+[ -f /usr/lib64/dri-nonfree/iHD_drv_video.so ]
+# AMD's video decoding with H.264 and H.265, replacing the parts of
+# mesa-dri-drivers that leave them out. It must match Fedora's Mesa to the
+# exact version (it requires Mesa's libgallium of that version), and RPM Fusion
+# can be a few days late with a new Mesa. Then the build goes on without it:
+# Fedora's own radeonsi VA-API driver stays, and decodes only the free codecs
+# (VP9, AV1) on the GPU. Fedora 44 has no separate mesa-va-drivers package
+# to fall back to, and no freeworld VDPAU one.
+# Only a failure to find a matching package is let through; a signature or
+# download failure fails the build.
+if ! mesa_out=$("${dnf[@]}" install mesa-va-drivers-freeworld 2>&1); then
+	printf '%s\n' "$mesa_out" >&2
+	if ! grep -q 'Failed to resolve the transaction' <<<"$mesa_out" ||
+		! grep -qE 'Problem|nothing provides|cannot install|none of the providers' <<<"$mesa_out" ||
+		grep -qiE 'gpg|pgp|signature|checksum|digest|public key|key import' <<<"$mesa_out"; then
+		echo "packages.sh: installing mesa-va-drivers-freeworld failed for a reason other than a version mismatch" >&2
+		exit 1
+	fi
+	echo "packages.sh: WARNING: mesa-va-drivers-freeworld does not match Fedora's" \
+		"$(rpm -q mesa-dri-drivers) (RPM Fusion is behind); AMD GPUs decode" \
+		"H.264 and H.265 in software until it catches up" >&2
+else
+	printf '%s\n' "$mesa_out"
+fi
+# Every RPM Fusion repo goes again; the disabled steam and nvidia-driver files
+# Fedora ships (fedora-workstation-repositories) stay, as the NVIDIA image
+# uses the second.
+"${dnf[@]}" remove rpmfusion-free-release rpmfusion-nonfree-release
+if grep -q '^enabled=1' /etc/yum.repos.d/rpmfusion*.repo 2>/dev/null; then
+	echo "packages.sh: an RPM Fusion repo is still enabled" >&2
+	exit 1
+fi
+# Controller udev rules for Steam and the many pads that follow its rules.
+# From Fedora's own repos: installed after RPM Fusion is gone, which proves it.
+"${dnf[@]}" install steam-devices
+# The result: real ffmpeg and OpenH264, and a VA-API driver for AMD (radeonsi)
+# and Intel (iHD).
+for p in ffmpeg-free noopenh264; do
+	if rpm -q --quiet "$p"; then
+		echo "packages.sh: $p is still installed" >&2
+		exit 1
+	fi
+done
+rpm -q ffmpeg openh264 gstreamer1-plugin-openh264 intel-media-driver
+[ -f /usr/lib64/dri/radeonsi_drv_video.so ]
+[ -f /usr/lib64/dri-nonfree/iHD_drv_video.so ]
+[ -f /usr/lib64/dri-freeworld/radeonsi_drv_video.so ] ||
+	echo "packages.sh: WARNING: radeonsi has no freeworld VA-API driver" >&2
+
+# Printing: CUPS (in keep below, started on demand by its socket) and KDE's
+# printer settings (Fedora's plasma-print-manager).
+"${dnf[@]}" install plasma-print-manager
+systemctl enable cups.socket
+
+# The firewall's page in System Settings (firewalld's backend for it), so a
+# port can be opened without a terminal. firewall-config, a separate app,
+# stays out. The AtlasOS zone (build.sh) is what it starts from.
+"${dnf[@]}" install plasma-firewall-firewalld
 
 # The desktop the image promises. A removal above that took one of these with
 # it fails the build here instead of shipping a broken image.
 keep=(
-	plasma-workspace kwin ghostty brave-origin dolphin kate plasma-systemsettings kinfocenter
+	plasma-workspace plasma-desktop kwin ghostty brave-origin dolphin plasma-systemsettings
 	plasma-login-manager NetworkManager NetworkManager-wifi
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
 	plymouth zram-generator power-profiles-daemon xorg-x11-server-Xwayland
 	podman podman-compose podman-docker toolbox distrobox git gh just mise
+	gwenview okular qalculate-qt haruna ffmpeg openh264 steam-devices plasma-print-manager
+	firewalld plasma-firewall-firewalld
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
 )
 rpm -q "${keep[@]}"
 
 # Everyday names for the everyday apps, in every language (as macOS calls
-# its file manager Finder everywhere): Terminal, Files, Store and Notepad.
+# its file manager Finder everywhere): Terminal, Files and Store. (Atlas
+# Notepad is called Notepad already.)
 # Only the app's own entry is renamed, not its actions; searching the old
 # name still finds it. Ghostty's shortcut copy above is renamed with it.
 rename_app() { # desktop file, new name
@@ -209,7 +415,24 @@ rename_app /usr/share/applications/com.mitchellh.ghostty.desktop Terminal
 rename_app /usr/share/kglobalaccel/com.mitchellh.ghostty.desktop Terminal
 rename_app /usr/share/applications/org.kde.dolphin.desktop Files
 rename_app /usr/share/applications/org.kde.discover.desktop Store
-rename_app /usr/share/applications/org.kde.kate.desktop Notepad
+
+# Tools kept but left out of the app menu. Kvantum Manager would fight
+# kvantum-sync, which sets the theme from AtlasOS Light/Dark. Menu Editor
+# can't go (plasma-desktop requires it) and stays a right-click away on the
+# launcher ("Edit Applications").
+hide_app() { # desktop file
+	grep -q '^NoDisplay=' "$1" && {
+		echo "packages.sh: $1 already sets NoDisplay=" >&2
+		exit 1
+	}
+	sed -i '0,/^\[Desktop Entry\]$/ s//&\nNoDisplay=true/' "$1"
+	grep -qx 'NoDisplay=true' "$1" || {
+		echo "packages.sh: couldn't hide $1" >&2
+		exit 1
+	}
+}
+hide_app /usr/share/applications/kvantummanager.desktop
+hide_app /usr/share/applications/org.kde.kmenuedit.desktop
 
 ### KIO
 
@@ -241,8 +464,7 @@ rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
 
 # Fedora's plasma-setup rebuilt in AtlasOS's style (the plasma-setup stage of
 # the Containerfile, bound in at /plasma-setup-rpms; see
-# plasma-setup/build-rpm.sh). AtlasOS's launcher page beside it is in
-# system_files (org.atlasos.plasmasetup.launcher).
+# plasma-setup/build-rpm.sh).
 # Only the parts Kinoite has, with every repo off, as for KIO.
 ps=()
 for f in /plasma-setup-rpms/*.rpm; do

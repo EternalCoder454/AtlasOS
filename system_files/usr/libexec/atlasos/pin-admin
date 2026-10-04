@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+# Sets, removes or reports the PIN of the user who ran pkexec (PKEXEC_UID),
+# and nobody else's. Run through pkexec, which asks for the user's own
+# password (polkit action org.atlasos.pin.manage). The new PIN is read from
+# stdin, never from the command line.
+#   pin-admin set        PIN on stdin
+#   pin-admin remove
+#   pin-admin status     none | set | locked | retired; needs no root
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import pinlib  # noqa: E402
+
+
+def fail(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+cmd = sys.argv[1] if len(sys.argv) == 2 else ""
+if cmd == "status":
+    reply = pinlib.ask(f"status {os.getuid()}")
+    if reply not in ("none", "set", "locked", "retired"):
+        fail("The PIN service isn't answering.")
+    print(reply)
+    sys.exit(0)
+if cmd not in ("set", "remove"):
+    fail("usage: pin-admin set|remove|status", 2)
+
+if os.geteuid() != 0 or not os.environ.get("PKEXEC_UID", "").isdigit():
+    fail("pin-admin set and remove run through pkexec.")
+uid = int(os.environ["PKEXEC_UID"])
+if uid == 0:
+    fail("root has no PIN.")
+
+if cmd == "remove":
+    with pinlib.Store() as store:
+        store.remove(uid)
+    print("PIN removed.")
+    sys.exit(0)
+
+stamp = pinlib.account_stamp(uid)
+if stamp is None:
+    fail("This account's password is locked or empty, so a PIN can't be used for it.")
+pin = sys.stdin.buffer.readline(64).decode("ascii", "replace").rstrip("\r\n")
+why = pinlib.weakness(pin)
+if why:
+    fail(why, 2)
+hashed = pinlib.hash_pin(pin)
+with pinlib.Store() as store:
+    store.put(uid, {"hash": hashed, "fails": 0, "stamp": stamp,
+                    "life": 0, "life_at": int(time.time())})
+print("PIN set.")

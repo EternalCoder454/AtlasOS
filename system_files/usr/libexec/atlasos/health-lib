@@ -142,5 +142,48 @@ hc_first_stable() {
 	return 1
 }
 
-hc_greeter_pids() { pgrep -f '^/usr/libexec/plasma-login-greeter' || true; }
-hc_plasmashell_pids() { pgrep -x plasmashell || true; }
+# Pids of the running program $1 (a full path), optionally only of user $2.
+# Process names and command lines are whatever a process says it is, so the
+# program a pid runs is read from /proc/<pid>/exe: another user's process
+# named "plasmashell" can't pass a check (and keep a bad update). And only in
+# the host's mount namespace: in one of its own (any user can make one with
+# `unshare -Urm`), a process can mount anything over /usr/bin/plasmashell.
+hc_pids_of() { # path, [user]
+	local p name=${1##*/} host
+	# (unreadable, the comparison is left out: when in doubt, pass)
+	host=$(readlink /proc/1/ns/mnt 2>/dev/null) || host=
+	# pgrep matches the kernel's process name: the first 15 characters
+	for p in $(pgrep ${2:+-u "$2"} -x "${name:0:15}" || true); do
+		[ -z "$host" ] || [ "$(readlink "/proc/$p/ns/mnt" 2>/dev/null)" = "$host" ] || continue
+		# (a binary replaced since it started shows as "<path> (deleted)")
+		case $(readlink "/proc/$p/exe" 2>/dev/null) in
+		"$1" | "$1 (deleted)") echo "$p" ;;
+		esac
+	done
+	return 0
+}
+
+# Uids with a local Plasma session (Wayland or X11, class "user", desktop
+# KDE, not remote, not closing), from logind. Only these have a desktop to
+# check: a plasmashell any other user starts (a lingering user's service, a
+# cron job, an SSH login) is no session, and can't fail or pass the Plasma
+# check; nor is another desktop's session.
+hc_graphical_uids() {
+	local id uid class type remote state desktop k v
+	for id in $(timeout 10 loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
+		uid='' class='' type='' remote='' state='' desktop=''
+		while IFS='=' read -r k v; do
+			case $k in
+			User) uid=$v ;; Class) class=$v ;; Type) type=$v ;;
+			Remote) remote=$v ;; State) state=$v ;; Desktop) desktop=$v ;;
+			esac
+		done < <(timeout 10 loginctl show-session "$id" -p User -p Class -p Type -p Remote -p State -p Desktop 2>/dev/null)
+		case $type in wayland | x11) ;; *) continue ;; esac
+		case ${desktop,,} in kde | plasma | plasmawayland | plasmax11) ;; *) continue ;; esac
+		[ "$class" = user ] && [ "$remote" = no ] && [ "$state" != closing ] &&
+			[ -n "$uid" ] && echo "$uid"
+	done | sort -un
+	return 0
+}
+
+hc_greeter_pids() { hc_pids_of /usr/libexec/plasma-login-greeter plasmalogin; }

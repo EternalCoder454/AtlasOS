@@ -169,11 +169,12 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
        "ls -d -1 --color=never /usr/share/icons/Bibata-Modern-*/cursors /usr/share/icons/breeze_cursors 2>&1",
        r"(?s)\ABibata-Modern-(Ice|Classic)\n(?=.*^/usr/share/icons/Bibata-Modern-Classic/cursors$)"
        r"(?=.*^/usr/share/icons/Bibata-Modern-Ice/cursors$)(?=.*breeze_cursors.*No such file)")
-    ok("icons (Dracula) and Plasma style (AtlasOS)",
+    ok("icons (Papirus, violet folders) and Plasma style (AtlasOS)",
        "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file kdeglobals --group Icons --key Theme; "
        "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file plasmarc --group Theme --key name; "
-       "ls -d -1 --color=never /usr/share/icons/Dracula/index.theme /usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg",
-       r"\ADracula\natlasos\n/usr/share/icons/Dracula/index.theme\n/usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg$")
+       "ls -d -1 --color=never /usr/share/icons/Papirus/index.theme /usr/share/icons/Papirus-Dark/index.theme /usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg; "
+       "readlink /usr/share/icons/Papirus/48x48/places/folder.svg",
+       r"\APapirus(-Dark)?\natlasos\n/usr/share/icons/Papirus/index.theme\n/usr/share/icons/Papirus-Dark/index.theme\n/usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg\nfolder-violet.svg$")
 
     apps = [
         ("Ghostty", "ghostty", "(^|/)ghostty( |$)"),

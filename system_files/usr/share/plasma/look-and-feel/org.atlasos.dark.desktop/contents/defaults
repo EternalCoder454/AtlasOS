@@ -1,11 +1,11 @@
 [kdeglobals][KDE]
-widgetStyle=Breeze
+widgetStyle=kvantum
 
 [kdeglobals][General]
 ColorScheme=AtlasOSDark
 
 [kdeglobals][Icons]
-Theme=Dracula
+Theme=Papirus-Dark
 
 [plasmarc][Theme]
 name=atlasos
@@ -17,8 +17,8 @@ Image=AtlasOS
 cursorTheme=Bibata-Modern-Classic
 
 [kwinrc][org.kde.kdecoration2]
-library=org.kde.breeze
-theme=Breeze
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__AtlasOS-Dark
 
 [ksplashrc][KSplash]
 Theme=org.atlasos.dark.desktop

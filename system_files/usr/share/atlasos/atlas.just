@@ -24,9 +24,11 @@ info:
 channel name:
     #!/bin/bash
     set -euo pipefail
-    case "{{ name }}" in
+    # quote(): what was typed is data, never shell code
+    name={{ quote(name) }}
+    case "$name" in
     stable | testing) ;;
-    *) echo "atlas channel: the channel is stable or testing, not \"{{ name }}\"" >&2; exit 1 ;;
+    *) echo "atlas channel: the channel is stable or testing, not \"$name\"" >&2; exit 1 ;;
     esac
     # The newest deployment's image (a staged update's, if there is one), with
     # its tag replaced. Its signature setting stays. rpm-ostree, not bootc:
@@ -44,12 +46,12 @@ channel name:
     ghcr.io/eternalcoder454/atlasos | ghcr.io/eternalcoder454/atlasos-nvidia) ;;
     *) echo "atlas channel: $image is not an AtlasOS image" >&2; exit 1 ;;
     esac
-    if [ "$image" = "$repo:{{ name }}" ]; then
-        echo "Already following {{ name }}."
+    if [ "$image" = "$repo:$name" ]; then
+        echo "Already following $name."
         exit 0
     fi
-    rpm-ostree rebase "$kind$repo:{{ name }}"
-    echo "Restart to start using {{ name }}."
+    rpm-ostree rebase "$kind$repo:$name"
+    echo "Restart to start using $name."
 
 # Install Homebrew, for command-line tools Fedora doesn't package
 brew:
@@ -110,3 +112,33 @@ jetbrains-toolbox:
     # the terminal's session it quit at once.
     systemd-run --user --quiet --collect "$dir/bin/jetbrains-toolbox"
     echo "JetBrains Toolbox is starting; it is in the app menu from now on."
+
+# Sign-in PIN for the login and lock screens: set, remove or status
+pin action:
+    #!/bin/bash
+    set -euo pipefail
+    admin=/usr/libexec/atlasos/pin-admin
+    action={{ quote(action) }}
+    case "$action" in
+    status)
+        case $("$admin" status) in
+        none) echo "No PIN set." ;;
+        set) echo "A PIN is set." ;;
+        locked) echo "A PIN is set but locked after too many wrong tries; signing in with your password at the login screen unlocks it." ;;
+        retired) echo "Your PIN was turned off after too many wrong tries. Your password still works; set a new PIN with: atlas pin set" ;;
+        esac
+        ;;
+    remove)
+        pkexec "$admin" remove
+        ;;
+    set)
+        read -rsp "New PIN (4 to 8 digits): " pin; echo
+        read -rsp "Again: " again; echo
+        if [ "$pin" != "$again" ]; then
+            echo "atlas pin: the two PINs weren't the same" >&2
+            exit 1
+        fi
+        printf '%s\n' "$pin" | pkexec "$admin" set
+        ;;
+    *) echo "atlas pin: use set, remove or status, not \"$action\"" >&2; exit 1 ;;
+    esac

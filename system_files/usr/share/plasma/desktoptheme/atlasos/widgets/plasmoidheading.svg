@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Popup headings and footers (flat).
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="3" height="3" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+   .ColorScheme-HighlightedText { color:#ffffff; } .ColorScheme-ViewBackground { color:#ffffff; }
+   .ColorScheme-ButtonBackground { color:#e6e4f4; } .ColorScheme-ButtonText { color:#1b1748; }
+  </style>
+ </defs>
+ <g id="header-topleft">
+  <rect x="0" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-top">
+  <rect x="1" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-topright">
+  <rect x="2" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-left">
+  <rect x="0" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-center">
+  <rect x="1" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-right">
+  <rect x="2" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-bottomleft">
+  <rect x="0" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-bottom">
+  <rect x="1" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="header-bottomright">
+  <rect x="2" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-topleft">
+  <rect x="0" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-top">
+  <rect x="1" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-topright">
+  <rect x="2" y="0" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-left">
+  <rect x="0" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-center">
+  <rect x="1" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-right">
+  <rect x="2" y="1" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-bottomleft">
+  <rect x="0" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-bottom">
+  <rect x="1" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <g id="footer-bottomright">
+  <rect x="2" y="2" width="1" height="1" fill="#000" opacity="0.004"/>
+ </g>
+ <rect id="hint-stretch-borders" width="1" height="1" fill="#000" opacity="0.004"/>
+ <rect id="hint-top-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
+ <rect id="hint-bottom-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
+ <rect id="hint-left-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
+ <rect id="hint-right-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
+</svg>

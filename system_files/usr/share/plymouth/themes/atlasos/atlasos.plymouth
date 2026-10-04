@@ -1,11 +1,11 @@
 [Plymouth Theme]
 Name=AtlasOS
-Description=Fedora's spinner with the AtlasOS lockup
+Description=The AtlasOS boot splash: a spinner with the AtlasOS lockup
 ModuleName=two-step
 
 [two-step]
-Font=Cantarell 12
-TitleFont=Cantarell Light 30
+Font=IBM Plex Sans 12
+TitleFont=IBM Plex Sans Light 30
 ImageDir=/usr/share/plymouth/themes/atlasos
 DialogHorizontalAlignment=.5
 DialogVerticalAlignment=.382

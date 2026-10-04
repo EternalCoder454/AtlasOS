@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Switches: a pill bar that fills with the accent, and a round handle.
+  Made by scripts/plasma-style.py; change that and run it again rather than
+  editing this file.
+  SPDX-License-Identifier: Apache-2.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
+   .ColorScheme-Highlight { color:#6858e2; } .ColorScheme-NegativeText { color:#da4453; }
+   .ColorScheme-HighlightedText { color:#ffffff; } .ColorScheme-ViewBackground { color:#ffffff; }
+   .ColorScheme-ButtonBackground { color:#e6e4f4; } .ColorScheme-ButtonText { color:#1b1748; }
+  </style>
+ </defs>
+ <rect id="hint-bar-size" x="0" y="0" width="40" height="18" fill="#000" opacity="0.004"/>
+ <g id="inactive-left">
+  <rect x="0" y="0" width="9" height="18" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H9 A9 9 0 0 0 0 9 V9 A9 9 0 0 0 9 18 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.2"/>
+ </g>
+ <g id="inactive-center">
+  <rect x="9" y="0" width="22" height="18" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H31 V18 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.2"/>
+ </g>
+ <g id="inactive-right">
+  <rect x="31" y="0" width="9" height="18" fill="#000" opacity="0.004"/>
+  <path d="M31 0 H31 A9 9 0 0 1 40 9 V9 A9 9 0 0 1 31 18 H31 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.2"/>
+ </g>
+ <g id="active-left">
+  <rect x="0" y="0" width="9" height="18" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H9 A9 9 0 0 0 0 9 V9 A9 9 0 0 0 9 18 H9 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="active-center">
+  <rect x="9" y="0" width="22" height="18" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H31 V18 H9 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="1"/>
+ </g>
+ <g id="active-right">
+  <rect x="31" y="0" width="9" height="18" fill="#000" opacity="0.004"/>
+  <path d="M31 0 H31 A9 9 0 0 1 40 9 V9 A9 9 0 0 1 31 18 H31 Z" class="ColorScheme-Highlight" fill="currentColor" opacity="1"/>
+ </g>
+ <rect id="hint-stretch-borders" width="1" height="1" fill="#000" opacity="0.004"/>
+ <g id="handle">
+  <rect x="12.0" y="12.0" width="24" height="24" fill="#000" opacity="0.004"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z M13 24 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.22"/>
+ </g>
+ <g id="handle-shadow">
+  <rect x="6.0" y="6.0" width="36" height="36" fill="#000" opacity="0.004"/>
+  <path d="M11 25 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0Z" fill="#000" opacity="0.035"/>
+  <path d="M10 25 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0Z" fill="#000" opacity="0.035"/>
+  <path d="M9 25 a15 15 0 1 0 30 0 a15 15 0 1 0 -30 0Z" fill="#000" opacity="0.035"/>
+  <path d="M8 25 a16 16 0 1 0 32 0 a16 16 0 1 0 -32 0Z" fill="#000" opacity="0.035"/>
+  <path d="M7 25 a17 17 0 1 0 34 0 a17 17 0 1 0 -34 0Z" fill="#000" opacity="0.035"/>
+ </g>
+ <g id="handle-hover">
+  <rect x="12.0" y="12.0" width="24" height="24" fill="#000" opacity="0.004"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z M13 24 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.22"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.18"/>
+ </g>
+ <g id="handle-pressed">
+  <rect x="12.0" y="12.0" width="24" height="24" fill="#000" opacity="0.004"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" class="ColorScheme-ViewBackground" fill="currentColor" opacity="1"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z M13 24 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.22"/>
+  <path d="M12 24 a12 12 0 1 0 24 0 a12 12 0 1 0 -24 0Z" class="ColorScheme-Highlight" fill="currentColor" opacity="0.32"/>
+ </g>
+ <g id="handle-focus">
+  <rect x="9.0" y="9.0" width="30" height="30" fill="#000" opacity="0.004"/>
+  <path d="M9 24 a15 15 0 1 0 30 0 a15 15 0 1 0 -30 0Z M11 24 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0Z" class="ColorScheme-Highlight" fill="currentColor" fill-rule="evenodd" opacity="0.55"/>
+ </g>
+</svg>

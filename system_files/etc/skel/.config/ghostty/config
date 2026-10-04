@@ -1,0 +1,10 @@
+# Ghostty's settings on AtlasOS. New users get this file; it is yours to edit
+# (https://ghostty.org/docs/config). The AtlasOS themes are in
+# /usr/share/ghostty/themes and follow the system's light and dark setting.
+theme = light:AtlasOS Light,dark:AtlasOS Dark
+font-family = JetBrains Mono
+font-size = 11
+window-padding-x = 10
+window-padding-y = 8
+window-padding-balance = true
+cursor-style = bar

@@ -94,6 +94,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       # atlas-framework's source (main), the atlas-framework build context:
       # the Containerfile builds Atlas.Ui's RPMs from it, and the apps
@@ -120,6 +122,7 @@ jobs:
           ref: main
           path: atlas-updater
           token: ${{ secrets.ATLAS_UPDATER_TOKEN || github.token }}
+          persist-credentials: false
 
       # Atlas Monitor's source (main), the atlas-monitor build context. The
       # repository is public.
@@ -129,6 +132,17 @@ jobs:
           repository: EternalCoder454/atlasos-monitor
           ref: main
           path: atlas-monitor
+          persist-credentials: false
+
+      # Atlas Notepad's source (main), the atlas-notepad build context. The
+      # repository is public.
+      - name: Checkout Atlas Notepad
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-notepad
+          ref: main
+          path: atlas-notepad
+          persist-credentials: false
 
       # main publishes :testing, beta publishes :beta. (:stable and :latest
       # come from promote-stable.yml.) Pull requests and tags build and
@@ -152,6 +166,14 @@ jobs:
 
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
 
+          # skopeo's registry login, in a file only this job reads rather than
+          # on its command line, where other processes on the VPS runner could
+          # read the token. printf is a shell builtin: the token is in no argv.
+          auth="$RUNNER_TEMP/decide-auth.json"
+          trap 'rm -f "$auth"' EXIT
+          (umask 077; printf '{"auths":{"ghcr.io":{"auth":"%s"}}}\n' \
+            "$(printf '%s:%s' "$GITHUB_ACTOR" "$GH_TOKEN" | base64 -w0)" >"$auth")
+
           # The Kinoite build to use, by digest, so the image records exactly
           # what it was built on.
           digest=$(skopeo inspect --format '{{.Digest}}' "docker://${BASE_IMAGE}")
@@ -164,17 +186,36 @@ jobs:
           framework=$(git -C atlas-framework rev-parse HEAD)
           updater=$(git -C atlas-updater rev-parse HEAD)
           monitor=$(git -C atlas-monitor rev-parse HEAD)
+          notepad=$(git -C atlas-notepad rev-parse HEAD)
+
+          # The newest Brave in Brave's own repo: a trigger only (the build
+          # installs it through dnf, which verifies the signatures), so that
+          # a Brave security fix is built within a day, not whenever
+          # something else changes. If it can't be read, the scheduled run
+          # builds rather than risk missing a fix.
+          brave=""
+          if brave=$(scripts/brave-version.sh 2>"$RUNNER_TEMP/brave.err") &&
+             [[ "$brave" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+            :
+          else
+            brave=""
+            echo "::notice::Couldn't read Brave's newest version ($(tr '\n' ' ' <"$RUNNER_TEMP/brave.err")); a scheduled run builds."
+          fi
+
           if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
             # No published image yet (or the registry is down) means build.
             labels='{}'
-            if json=$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+            if json=$(skopeo inspect --authfile "$auth" \
               "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}" 2>/dev/null); then
               labels=$(jq -c '.Labels // {}' <<<"$json")
             fi
-            if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
+            if [ -n "$brave" ] &&
+               [ "$(jq -r '."org.atlasos.brave.version" // ""' <<<"$labels")" = "$brave" ] &&
+               [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
                [ "$(jq -r '."net.eterneon.atlas.framework.revision" // ""' <<<"$labels")" = "$framework" ] &&
                [ "$(jq -r '."net.eterneon.atlas.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
                [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.notepad.revision" // ""' <<<"$labels")" = "$notepad" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
             fi
@@ -183,7 +224,7 @@ jobs:
             # Its labels come from the atlasos image it was built on.
             if [ "$skip" = true ] && [ "$NVIDIA_KEY_SET" = true ]; then
               nv='{}'
-              if json=$(skopeo inspect --creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+              if json=$(skopeo inspect --authfile "$auth" \
                 "docker://${IMAGE_REGISTRY}/atlasos-nvidia:${tag}" 2>/dev/null); then
                 nv=$(jq -c '.Labels // {}' <<<"$json")
               fi
@@ -206,7 +247,7 @@ jobs:
           version=""
           if [ "$skip" != true ]; then
             tags=""
-            if out=$(skopeo list-tags --creds "${GITHUB_ACTOR}:${GH_TOKEN}" \
+            if out=$(skopeo list-tags --authfile "$auth" \
               "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" 2>"$RUNNER_TEMP/list-tags.err"); then
               tags=$(jq -r '.Tags[]?' <<<"$out")
             # A repository with no image yet has no tags; anything else is an
@@ -225,6 +266,8 @@ jobs:
             echo "framework=$framework"
             echo "updater=$updater"
             echo "monitor=$monitor"
+            echo "notepad=$notepad"
+            echo "brave=$brave"
             echo "skip=$skip"
             echo "date=$date"
             echo "version=$version"
@@ -269,8 +312,10 @@ jobs:
           ATLAS_FRAMEWORK_SRC: ${{ github.workspace }}/atlas-framework
           # this as the atlas-updater one,
           ATLAS_UPDATER_SRC: ${{ github.workspace }}/atlas-updater
-          # and this as the atlas-monitor one.
+          # this as the atlas-monitor one,
           ATLAS_MONITOR_SRC: ${{ github.workspace }}/atlas-monitor
+          # and this as the atlas-notepad one.
+          ATLAS_NOTEPAD_SRC: ${{ github.workspace }}/atlas-notepad
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
@@ -278,11 +323,50 @@ jobs:
             --label net.eterneon.atlas.framework.revision="${{ steps.decide.outputs.framework }}" \
             --label net.eterneon.atlas.updater.revision="${{ steps.decide.outputs.updater }}" \
             --label net.eterneon.atlas.monitor.revision="${{ steps.decide.outputs.monitor }}" \
+            --label net.eterneon.atlas.notepad.revision="${{ steps.decide.outputs.notepad }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages
           # nothing has downloaded for a month before it is saved.
           find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
+
+      # The Brave version the image holds, as the label the next Decide
+      # compares with Brave's repo: read from the built image, not from what
+      # Decide saw, since the build installs whatever the repo has by then.
+      # Only the image's metadata changes (no layer). A newer one than Decide
+      # saw is fine (Brave published meanwhile); an older or missing one is
+      # not what Decide's skip logic can trust, so it is called out.
+      - name: Label the Brave version and build time
+        if: steps.decide.outputs.skip != 'true'
+        env:
+          EXPECTED: ${{ steps.decide.outputs.brave }}
+        run: |
+          set -euo pipefail
+          ref="localhost/${IMAGE_NAME}:${{ steps.decide.outputs.tag }}"
+          have=$(podman run --rm --network=none --entrypoint rpm "$ref" -q --qf '%{VERSION}' brave-origin)
+          [[ "$have" =~ ^[0-9]+(\.[0-9]+)+$ ]] || { echo "::error::brave-origin in the image has no usable version: '$have'"; exit 1; }
+          if [ -n "$EXPECTED" ] && [ "$have" != "$EXPECTED" ]; then
+            newest=$(printf '%s\n%s\n' "$have" "$EXPECTED" | sort -V | tail -n 1)
+            if [ "$newest" = "$EXPECTED" ]; then
+              echo "::warning::The image has Brave ${have}, but the repo had ${EXPECTED} when this run started; the next scheduled run builds again."
+            else
+              echo "::notice::The image has Brave ${have}, newer than the ${EXPECTED} seen at the start."
+            fi
+          fi
+          ctx=$(mktemp -d)
+          printf 'FROM %s\n' "$ref" >"$ctx/Containerfile"
+          # org.atlasos.built: when this build ran (epoch seconds). The image's
+          # Created time is the commit's (SOURCE_DATE_EPOCH in rechunk), so the
+          # fast promotion's 24-hour soak goes by this instead. Signed with
+          # the rest of the config.
+          built=$(date -u +%s)
+          podman build --pull=never --label "org.atlasos.brave.version=${have}" \
+            --label "org.atlasos.built=${built}" \
+            --file "$ctx/Containerfile" --tag "$ref" "$ctx"
+          rm -rf "$ctx"
+          [ "$(podman image inspect --format '{{index .Labels "org.atlasos.brave.version"}}' "$ref")" = "$have" ]
+          [ "$(podman image inspect --format '{{index .Labels "org.atlasos.built"}}' "$ref")" = "$built" ]
+          echo "Brave ${have}" >>"$GITHUB_STEP_SUMMARY"
 
       # Smaller updates for users. Only for images that get pushed. Into an
       # OCI directory in the job's temporary directory, which the runner
@@ -290,6 +374,93 @@ jobs:
       - name: Rechunk
         if: steps.decide.outputs.skip != 'true' && steps.decide.outputs.push == 'true'
         run: just rechunk "${{ steps.decide.outputs.tag }}" "${IMAGE_NAME}" "${RUNNER_TEMP:?}/rechunked"
+
+      # What the image contains (an SPDX SBOM of its packages, from syft) and
+      # its known vulnerabilities (grype), before anything is pushed: a
+      # Critical vulnerability with a fix available stops the build, so it
+      # never reaches the tag. `just sbom` makes the SBOM and a full report
+      # (kept, with the SBOM, as the run's artifact); the gate reads the SBOM
+      # again with `--only-fixed --fail-on critical`, minus .grype.yaml's
+      # ignore list (a reason and an end date for every entry). The scanners
+      # are the container images Justfile pins by digest. grype has no Fedora
+      # data, so this covers the Go and Python modules built into programs,
+      # not the RPMs (Fedora's updates fix those; the daily build takes them).
+      # The vulnerability database is downloaded each time (3 tries); if it
+      # can't be, the build fails rather than push unchecked. Exit code 2 is
+      # grype's "a finding crossed the threshold", which is not retried.
+      - name: Scan atlasos
+        id: sbom
+        if: steps.decide.outputs.skip != 'true'
+        timeout-minutes: 45
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/sbom"
+          mkdir -p "$out"
+          for try in 1 2 3; do
+            just sbom "${{ steps.decide.outputs.tag }}" "$out" && break
+            [ "$try" -lt 3 ] || { echo "::error::The SBOM and vulnerability scan failed 3 times."; exit 1; }
+            sleep $((try * 30))
+          done
+          {
+            echo "### Vulnerabilities in atlasos:${{ steps.decide.outputs.tag }}"
+            echo
+            jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("- \(.[0]): \(length)") | .[]' \
+              "$out/vulnerabilities.json"
+          } >>"$GITHUB_STEP_SUMMARY"
+          # The gate only means something if the scan saw the image: "nothing
+          # found" must not be "nothing catalogued" (an empty mount, a syft
+          # change). The image has about 1,900 RPMs and 1,000 Go modules.
+          jq -e '[.packages[].externalRefs[]?.referenceLocator | select(startswith("pkg:rpm/"))] | length >= 1000' \
+            "$out/sbom.spdx.json" >/dev/null &&
+            jq -e '[.packages[].externalRefs[]?.referenceLocator | select(startswith("pkg:golang/"))] | length >= 100' \
+              "$out/sbom.spdx.json" >/dev/null ||
+            { echo "::error::The SBOM couldn't be read, or lists too few packages (under 1,000 RPMs or 100 Go modules): the scan didn't see the image."; exit 1; }
+          # The gate.
+          db=$(mktemp -d "$RUNNER_TEMP/grype-db.XXXXXX")
+          ignores=$(mktemp "$RUNNER_TEMP/grype-ignores.XXXXXX")
+          trap 'rm -rf "$db" "$ignores"' EXIT
+          grype=$(just --evaluate grype)
+          # grype matches against this release's data: the Fedora of BASE_IMAGE.
+          distro=fedora:44
+          # .grype.yaml without the ignores whose "until" date has passed.
+          scripts/grype-ignores.sh >"$ignores"
+          for try in 1 2 3; do
+            rc=0
+            podman run --rm --pull=missing --security-opt label=disable --user 0 \
+              --mount=type=bind,src="$out",target=/out,ro \
+              --mount=type=bind,src="$db",target=/db,rw \
+              --mount=type=bind,src="$ignores",target=/grype.yaml,ro \
+              -e GRYPE_DB_CACHE_DIR=/db -e GRYPE_DB_UPDATE_DOWNLOAD_TIMEOUT=10m \
+              "$grype" sbom:/out/sbom.spdx.json --distro "$distro" -c /grype.yaml \
+              --only-fixed --fail-on critical -o table >"$out/gate.txt" || rc=$?
+            [ "$rc" -ne 1 ] && break
+            [ "$try" -lt 3 ] || break
+            sleep $((try * 30))
+          done
+          {
+            echo
+            echo "Fixable vulnerabilities (gate, minus .grype.yaml):"
+            echo '```'
+            head -n 40 "$out/gate.txt"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          cat "$out/gate.txt"
+          if [ "$rc" -eq 2 ]; then
+            echo "::error::atlasos has a Critical vulnerability with a fix available (table above); not pushing."
+            exit 1
+          elif [ "$rc" -ne 0 ]; then
+            echo "::error::The vulnerability gate failed to run (grype exit $rc); not pushing."
+            exit 1
+          fi
+
+      - name: Upload the SBOM and scan
+        if: always() && steps.sbom.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-${{ steps.decide.outputs.tag }}
+          path: ${{ runner.temp }}/sbom/
+          retention-days: 30
+          if-no-files-found: ignore
 
       # Images are signed with the cosign key in the SIGNING_SECRET repository
       # secret (DEV.md). With cosign.pub in the repo, the image only accepts
@@ -395,52 +566,44 @@ jobs:
             --key env://COSIGN_PRIVATE_KEY \
             "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"
           # The key in the secret has to be the one the image checks with.
-          cosign verify --insecure-ignore-tlog=true --key cosign.pub \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}" >/dev/null
+          scripts/verify-image.sh "${IMAGE_REGISTRY}/${IMAGE_NAME}" "${{ steps.push.outputs.digest }}" >/dev/null
 
-      # What the image contains (an SPDX SBOM of its packages, from syft) and
-      # the known vulnerabilities in it (grype), as the run's artifacts and,
-      # for a signed image, as a signed attestation beside it on the registry
-      # (`cosign download attestation`; 20 MB, too big for the public
-      # transparency log, so it stays out of it). Reports only: a finding
-      # never fails the build. Both read the image Podman built, mounted, so
-      # neither needs disk space for a copy. See `just sbom` for what the scan
-      # covers.
-      - name: SBOM and vulnerability scan
-        id: sbom
-        if: steps.decide.outputs.skip != 'true'
-        continue-on-error: true
-        timeout-minutes: 25
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/sbom"
-          just sbom "${{ steps.decide.outputs.tag }}" "$RUNNER_TEMP/sbom"
-          {
-            echo "### Vulnerabilities in ${IMAGE_NAME}:${{ steps.decide.outputs.tag }}"
-            echo
-            jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("- \(.[0]): \(length)") | .[]' \
-              "$RUNNER_TEMP/sbom/vulnerabilities.json"
-          } >>"$GITHUB_STEP_SUMMARY"
-
-      - name: Upload the SBOM and scan
-        if: steps.sbom.outcome == 'success'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sbom-${{ steps.decide.outputs.tag }}
-          path: ${{ runner.temp }}/sbom/
-          retention-days: 30
-
+      # The SBOM, signed with the same key, beside the image on the registry
+      # (`cosign download attestation`), then checked against cosign.pub.
       - name: Attest the SBOM
-        if: steps.sbom.outcome == 'success' && steps.push.outcome == 'success' && steps.signing.outputs.enabled == 'true'
-        continue-on-error: true
+        if: steps.push.outcome == 'success' && steps.signing.outputs.enabled == 'true'
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        timeout-minutes: 25
         run: |
-          cosign attest -y --new-bundle-format=false --use-signing-config=false \
-            --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
-            --predicate "$RUNNER_TEMP/sbom/sbom.spdx.json" \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"
+          set -euo pipefail
+          ref="${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"
+          # 20 MB, too big for the public transparency log, so it stays out
+          # of it (as the signature does).
+          # 3 tries (a 20 MB upload): the image is already pushed and signed,
+          # and a rerun of the same commit skips the build, so this is the one
+          # chance to attest this digest.
+          for try in 1 2 3; do
+            timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
+              --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
+              --predicate "$RUNNER_TEMP/sbom/sbom.spdx.json" "$ref" && break
+            [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
+            sleep $((try * 30))
+          done
+          # Both images share the key, so check that what verifies names this
+          # image's digest (as scripts/verify-image.sh does for signatures).
+          trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
+          for try in 1 2 3; do
+            timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
+              --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
+            [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
+            sleep $((try * 30))
+          done
+          jq -e -s --arg d "${ref##*@sha256:}" \
+            'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
+            "$RUNNER_TEMP/attestation.json" >/dev/null ||
+            { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }
 
       # atlasos-nvidia: this image plus NVIDIA's driver (Containerfile.nvidia),
       # with the same tags. It builds on the image `just build` left in
@@ -489,6 +652,93 @@ jobs:
         if: steps.nvidia.outputs.enabled == 'true'
         run: just rechunk "${{ steps.decide.outputs.tag }}" "${NVIDIA_IMAGE}" "${RUNNER_TEMP:?}/rechunked"
 
+      # What the image contains (an SPDX SBOM of its packages, from syft) and
+      # its known vulnerabilities (grype), before anything is pushed: a
+      # Critical vulnerability with a fix available stops the build, so it
+      # never reaches the tag. `just sbom` makes the SBOM and a full report
+      # (kept, with the SBOM, as the run's artifact); the gate reads the SBOM
+      # again with `--only-fixed --fail-on critical`, minus .grype.yaml's
+      # ignore list (a reason and an end date for every entry). The scanners
+      # are the container images Justfile pins by digest. grype has no Fedora
+      # data, so this covers the Go and Python modules built into programs,
+      # not the RPMs (Fedora's updates fix those; the daily build takes them).
+      # The vulnerability database is downloaded each time (3 tries); if it
+      # can't be, the build fails rather than push unchecked. Exit code 2 is
+      # grype's "a finding crossed the threshold", which is not retried.
+      - name: Scan atlasos-nvidia
+        id: sbom-nvidia
+        if: steps.nvidia.outputs.enabled == 'true'
+        timeout-minutes: 45
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/sbom-nvidia"
+          mkdir -p "$out"
+          for try in 1 2 3; do
+            just sbom "${{ steps.decide.outputs.tag }}" "$out" atlasos-nvidia && break
+            [ "$try" -lt 3 ] || { echo "::error::The SBOM and vulnerability scan failed 3 times."; exit 1; }
+            sleep $((try * 30))
+          done
+          {
+            echo "### Vulnerabilities in atlasos-nvidia:${{ steps.decide.outputs.tag }}"
+            echo
+            jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("- \(.[0]): \(length)") | .[]' \
+              "$out/vulnerabilities.json"
+          } >>"$GITHUB_STEP_SUMMARY"
+          # The gate only means something if the scan saw the image: "nothing
+          # found" must not be "nothing catalogued" (an empty mount, a syft
+          # change). The image has about 1,900 RPMs and 1,000 Go modules.
+          jq -e '[.packages[].externalRefs[]?.referenceLocator | select(startswith("pkg:rpm/"))] | length >= 1000' \
+            "$out/sbom.spdx.json" >/dev/null &&
+            jq -e '[.packages[].externalRefs[]?.referenceLocator | select(startswith("pkg:golang/"))] | length >= 100' \
+              "$out/sbom.spdx.json" >/dev/null ||
+            { echo "::error::The SBOM couldn't be read, or lists too few packages (under 1,000 RPMs or 100 Go modules): the scan didn't see the image."; exit 1; }
+          # The gate.
+          db=$(mktemp -d "$RUNNER_TEMP/grype-db.XXXXXX")
+          ignores=$(mktemp "$RUNNER_TEMP/grype-ignores.XXXXXX")
+          trap 'rm -rf "$db" "$ignores"' EXIT
+          grype=$(just --evaluate grype)
+          # grype matches against this release's data: the Fedora of BASE_IMAGE.
+          distro=fedora:44
+          # .grype.yaml without the ignores whose "until" date has passed.
+          scripts/grype-ignores.sh >"$ignores"
+          for try in 1 2 3; do
+            rc=0
+            podman run --rm --pull=missing --security-opt label=disable --user 0 \
+              --mount=type=bind,src="$out",target=/out,ro \
+              --mount=type=bind,src="$db",target=/db,rw \
+              --mount=type=bind,src="$ignores",target=/grype.yaml,ro \
+              -e GRYPE_DB_CACHE_DIR=/db -e GRYPE_DB_UPDATE_DOWNLOAD_TIMEOUT=10m \
+              "$grype" sbom:/out/sbom.spdx.json --distro "$distro" -c /grype.yaml \
+              --only-fixed --fail-on critical -o table >"$out/gate.txt" || rc=$?
+            [ "$rc" -ne 1 ] && break
+            [ "$try" -lt 3 ] || break
+            sleep $((try * 30))
+          done
+          {
+            echo
+            echo "Fixable vulnerabilities (gate, minus .grype.yaml):"
+            echo '```'
+            head -n 40 "$out/gate.txt"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+          cat "$out/gate.txt"
+          if [ "$rc" -eq 2 ]; then
+            echo "::error::atlasos-nvidia has a Critical vulnerability with a fix available (table above); not pushing."
+            exit 1
+          elif [ "$rc" -ne 0 ]; then
+            echo "::error::The vulnerability gate failed to run (grype exit $rc); not pushing."
+            exit 1
+          fi
+
+      - name: Upload the SBOM and scan (NVIDIA)
+        if: always() && steps.sbom-nvidia.outcome != 'skipped'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-nvidia-${{ steps.decide.outputs.tag }}
+          path: ${{ runner.temp }}/sbom-nvidia/
+          retention-days: 30
+          if-no-files-found: ignore
+
       - name: Push NVIDIA
         id: push-nvidia
         if: steps.nvidia.outputs.enabled == 'true'
@@ -515,5 +765,37 @@ jobs:
           cosign sign -y --new-bundle-format=false --use-signing-config=false \
             --key env://COSIGN_PRIVATE_KEY \
             "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}@${{ steps.push-nvidia.outputs.digest }}"
-          cosign verify --insecure-ignore-tlog=true --key cosign.pub \
-            "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}@${{ steps.push-nvidia.outputs.digest }}" >/dev/null
+          scripts/verify-image.sh "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}" "${{ steps.push-nvidia.outputs.digest }}" >/dev/null
+
+      - name: Attest the NVIDIA SBOM
+        if: steps.push-nvidia.outcome == 'success' && steps.signing.outputs.enabled == 'true'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          ref="${IMAGE_REGISTRY}/${NVIDIA_IMAGE}@${{ steps.push-nvidia.outputs.digest }}"
+          # 3 tries (a 20 MB upload): the image is already pushed and signed,
+          # and a rerun of the same commit skips the build, so this is the one
+          # chance to attest this digest.
+          for try in 1 2 3; do
+            timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
+              --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
+              --predicate "$RUNNER_TEMP/sbom-nvidia/sbom.spdx.json" "$ref" && break
+            [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
+            sleep $((try * 30))
+          done
+          # Both images share the key, so check that what verifies names this
+          # image's digest (as scripts/verify-image.sh does for signatures).
+          trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
+          for try in 1 2 3; do
+            timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
+              --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
+            [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
+            sleep $((try * 30))
+          done
+          jq -e -s --arg d "${ref##*@sha256:}" \
+            'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
+            "$RUNNER_TEMP/attestation.json" >/dev/null ||
+            { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }

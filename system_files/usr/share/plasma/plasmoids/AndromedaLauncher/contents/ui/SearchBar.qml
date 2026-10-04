@@ -7,8 +7,11 @@ import org.kde.plasma.plasmoid 2.0
 
 Rectangle {
 
-    radius: 10
-    color: main.contrastBgColor
+    // AtlasOS: Atlas.Ui SearchField's pill.
+    radius: height / 2
+    color: Qt.alpha(Kirigami.Theme.textColor, textField.hovered && !textField.activeFocus ? 0.09 : 0.06)
+    border.width: textField.activeFocus ? 2 : 1
+    border.color: textField.activeFocus ? Qt.alpha(Kirigami.Theme.highlightColor, 0.7) : Qt.alpha(Kirigami.Theme.textColor, 0.1)
 
     property alias textField: textField
 
@@ -17,19 +20,25 @@ Rectangle {
         spacing: 0
         Kirigami.Icon {
             id: searchIcon
-            Layout.preferredWidth: 21
-            Layout.preferredHeight: 21
-            Layout.margins: 10
-            source: Qt.resolvedUrl('icons/feather/search.svg')
+            Layout.preferredWidth: Kirigami.Units.iconSizes.small
+            Layout.preferredHeight: Kirigami.Units.iconSizes.small
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.smallSpacing
+            source: "search"
             isMask: true
-            color: main.textColor
+            color: Kirigami.Theme.textColor
+            opacity: 0.55
         }
 
         TextField {
             id: textField
             Layout.fillHeight: true
             Layout.fillWidth: true
-            font.pointSize: 12
+            font: Kirigami.Theme.defaultFont
+            color: Kirigami.Theme.textColor
+            placeholderTextColor: Qt.alpha(Kirigami.Theme.textColor, 0.5)
+            selectionColor: Kirigami.Theme.highlightColor
+            selectedTextColor: Kirigami.Theme.highlightedTextColor
 
             placeholderText: i18n("Search...")
             background: Rectangle{

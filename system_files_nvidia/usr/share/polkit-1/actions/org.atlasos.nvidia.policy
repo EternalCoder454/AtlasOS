@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>AtlasOS</vendor>
+  <vendor_url>https://github.com/EternalCoder454/AtlasOS</vendor_url>
+
+  <!-- nvidia-enroll-key asks the firmware to trust the AtlasOS module key. That
+       is a change to what the machine boots, so it takes an administrator.
+       The helper takes one fixed argument and enrols only that one certificate. -->
+  <action id="org.atlasos.nvidia.enroll-key">
+    <description>Ask the firmware to trust the AtlasOS NVIDIA driver key</description>
+    <message>Authentication is required to set up the NVIDIA driver for Secure Boot</message>
+    <icon_name>security-medium</icon_name>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/atlasos/nvidia-enroll-key</annotate>
+  </action>
+</policyconfig>

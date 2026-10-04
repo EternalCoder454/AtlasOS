@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Fingerprint setup
+Comment=Offers to set up a fingerprint the first time a reader is found
+Exec=/usr/libexec/atlasos/fingerprint-setup
+OnlyShowIn=KDE;
+NoDisplay=true
+X-KDE-autostart-phase=2
+X-KDE-autostart-after=panel

@@ -10,3 +10,5 @@ scripts/
 branding/*.png
 # The NVIDIA module signing key reaches the build only as a secret mount.
 secrets/
+# Bytecode from running the Python helpers locally.
+**/__pycache__/

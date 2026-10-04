@@ -1,0 +1,11 @@
+[Unit]
+Description=Update the man page index after boot
+Documentation=https://github.com/EternalCoder454/AtlasOS
+
+[Timer]
+# Fedora runs it as part of reaching multi-user.target; build.sh moves it here.
+OnBootSec=10min
+Unit=fedora-atomic-desktop-mandb-update.service
+
+[Install]
+WantedBy=timers.target

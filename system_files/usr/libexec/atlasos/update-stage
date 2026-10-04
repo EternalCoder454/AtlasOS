@@ -19,6 +19,12 @@
 # A download that fails with a network error (a dropped connection, DNS, a
 # timeout, the registry busy) exits 75, which the service tries again in 15
 # minutes; any other failure waits for the next timer run.
+#
+# After staging, the staged image is checked against the booted one of the
+# same image: if it is older (the tag went back to an old build, which a
+# valid signature doesn't rule out), it is taken out again and the run
+# fails. update-stage-condition checks this before downloading, but it can
+# only ask the registry, which can answer differently by the time of the pull.
 ours='ghcr.io/eternalcoder454/atlasos ghcr.io/eternalcoder454/atlasos-nvidia'
 is_ours() {
 	for r in $ours; do
@@ -28,23 +34,105 @@ is_ours() {
 }
 key=/etc/pki/containers/atlasos.pub
 
-# Run the download `$@` and exit with its status, 75 for a network error
-# (the phrases atlas-system-helper retries; keep in step with its
-# helper::retry). Its stderr goes to the journal as it comes.
+# Is a staged image older than the booted one of the same image? Exits 0 when
+# not (or nothing is staged), 1 when it was older and is taken out again, 2
+# when that can't be told, which also takes it out (the next run tries again)
+# unless $1 is "failed": after a download that failed, an unreadable status
+# leaves things as they are. rpm-ostree's status shows both bootc and
+# rpm-ostree deployments; an image switched to (another channel, by Atlas
+# Updater) isn't compared. The status is read twice before giving up: right
+# after a pull rpm-ostreed can be busy.
+check_staged() {
+	st=
+	for try in 1 2; do
+		st=$(timeout 30 rpm-ostree status --json 2>/dev/null) && [ -n "$st" ] && break
+		st=
+		[ "$try" = 2 ] || sleep 10
+	done
+	if [ -z "$st" ] || ! older=$(cat /usr/share/atlasos/image-age.jq); then
+		[ "${1:-}" != failed ] || return 2
+		echo "could not read what was staged; taking it out again" >&2
+		rpm-ostree cleanup -p || echo "could not take the staged update out again: it is still staged" >&2
+		return 2
+	fi
+	# shellcheck disable=SC2016 # jq's own $variables
+	verdict=$(printf '%s' "$st" | jq -r "$older"'
+		def image: .["container-image-reference"] // ""
+			| sub("^ostree-remote-(image|registry):[^:]*:"; "ostree-x:")
+			| sub("^ostree-[a-z-]+:(docker://)?"; "");
+		def age: {version, timestamp: ((.["base-timestamp"] // .timestamp)
+			| if type == "number" then todate else null end)};
+		([.deployments[] | select(.staged)][0]) as $s
+		| ([.deployments[] | select(.booted)][0]) as $b
+		| if $s == null or $b == null or ($s | image) != ($b | image) then "ok"
+		  elif older($s | age; $b | age) then "older \($s.version // "?") \($b.version // "?")"
+		  else "ok" end' 2>/dev/null) || verdict=
+	case $verdict in
+	ok) return 0 ;;
+	older*)
+		# shellcheck disable=SC2086 # split into its three words
+		set -- $verdict
+		echo "the update staged ($2) is older than this version ($3): the tag went back to an old build; taking it out again" >&2
+		rpm-ostree cleanup -p || echo "could not take the staged update out again: it is still staged" >&2
+		return 1
+		;;
+	*)
+		[ "${1:-}" != failed ] || return 2
+		echo "could not tell whether the staged update is older than this version; taking it out again" >&2
+		rpm-ostree cleanup -p || echo "could not take the staged update out again: it is still staged" >&2
+		return 2
+		;;
+	esac
+}
+
+# Run the download `$@`, then check what it staged, and exit with its status:
+# 75 for a network error (the phrases atlas-system-helper retries; keep in
+# step with its helper::retry), 1 when the staged image was older. Its stderr
+# goes to the journal as it comes, and is kept in the service's own
+# RuntimeDirectory (root's alone: users can fill /tmp). What was staged is
+# checked whatever the download's status, even when that can't be read; an
+# older image found after a failed download makes it 1, nothing else changes
+# a failure's status (75 stays 75).
 fetch() {
-	err=$(mktemp) || exec "$@"
-	trap 'rm -f "$err" "$err.rc"' EXIT
+	if ! tmp=$(mktemp -d -p "${RUNTIME_DIRECTORY:-/run}"); then
+		"$@"
+		rc=$?
+		staged "$rc"
+	fi
+	trap 'rm -rf "$tmp"' EXIT
+	err=$tmp/out
 	{
 		"$@" 2>&1 >&3 3>&-
 		echo "$?" >"$err.rc"
 	} 3>&1 | tee "$err" >&2
 	rc=$(cat "$err.rc" 2>/dev/null) || rc=1
+	case $rc in '' | *[!0-9]*) rc=1 ;; esac
 	if [ "$rc" -ne 0 ] &&
 		! grep -qiE 'signature|denied|unauthorized|manifest unknown|no space left|min-free-space|read-only file system' "$err" &&
 		tail -n 3 "$err" | grep -qiE 'connection (reset|refused|closed|timed out|terminated)|broken pipe|i/o timeout|handshake timeout|operation timed out|socket i/o timed out|timeout was reached|deadline exceeded|name resolution|could not resolve host|name or service not known|server misbehaving|no such host|network is unreachable|no route to host|unexpected eof|: eof$|goaway|connection lost|(status:? ?|http )(429|50[0234])([^0-9]|$)|50[0234] (internal|bad gateway|service unavailable|gateway time)|429 too many|toomanyrequests'; then
 		rc=75
 	fi
+	staged "$rc"
+}
+
+# Check what was staged after a download that exited $1, and exit
+staged() {
+	rc=$1
+	if [ "$rc" -eq 0 ]; then
+		check_staged || rc=1
+	else
+		check_staged failed
+		[ $? -ne 1 ] || rc=1
+	fi
 	exit "$rc"
+}
+
+# A switch to the same image with signature checks (below), checked the same
+# way
+switch() {
+	"$@" || return 1
+	check_staged
+	exit
 }
 
 if timeout 30 bootc status --json 2>/dev/null |
@@ -54,7 +142,7 @@ if timeout 30 bootc status --json 2>/dev/null |
 	image=${origin#ostree-unverified-registry:}
 	if [ -f "$key" ] && [ "$image" != "$origin" ] && is_ours "$image"; then
 		echo "moving to signature-checked updates for $image"
-		rpm-ostree rebase "ostree-image-signed:docker://$image" && exit 0
+		switch rpm-ostree rebase "ostree-image-signed:docker://$image"
 		echo "could not move to signature-checked updates; updating as before"
 	fi
 	fetch rpm-ostree upgrade
@@ -65,7 +153,7 @@ spec=$(timeout 30 bootc status --json 2>/dev/null |
 		and (.transport // "registry") == "registry") | .image' 2>/dev/null)
 if [ -f "$key" ] && [ -n "$spec" ] && is_ours "$spec"; then
 	echo "moving to signature-checked updates for $spec"
-	bootc switch --quiet --enforce-container-sigpolicy "$spec" && exit 0
+	switch bootc switch --quiet --enforce-container-sigpolicy "$spec"
 	echo "could not move to signature-checked updates; updating as before"
 fi
 fetch bootc upgrade --quiet
