@@ -3,11 +3,13 @@ Description=Look for AtlasOS updates in the background
 Documentation=https://github.com/EternalCoder454/AtlasOS
 
 [Timer]
-# About an hour after boot, then every 6 hours the system stays up. The random
-# delay spreads the load on the registry.
-OnBootSec=1h
+# 15 minutes after boot (an hour left a computer used for shorter sessions
+# without its updates; the download runs at idle priority), then every 6
+# hours the system stays up. The random delay spreads the load on the
+# registry.
+OnBootSec=15min
 OnUnitActiveSec=6h
-RandomizedDelaySec=30min
+RandomizedDelaySec=15min
 # (Only calendar timers catch up after being off; this is harmless here.)
 Persistent=true
 
