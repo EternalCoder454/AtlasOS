@@ -155,6 +155,16 @@ remove=(
 	mariadb-connector-c-config python3-shiboken6 python3-boto3 python3-botocore \
 	python3-s3transfer python3-jmespath
 
+# NVIDIA's GSP firmware (about 100 MB, already xz-compressed, so it costs the
+# ISO the same) only serves nouveau on GeForce 16 / RTX 20 and newer. Atlas
+# Updater moves those machines to atlasos-nvidia, whose driver brings its own
+# GSP firmware, so the base image leaves it out. Older cards keep their small
+# nouveau firmware.
+# The gsp entries are directories or links to another chip's; a link left
+# pointing into a removed one goes too.
+find /usr/lib/firmware/nvidia -name gsp -prune -exec rm -rf {} +
+find /usr/lib/firmware/nvidia -xtype l -delete
+
 # power-profiles-daemon in place of TuneD and its PPD bridge: the same power
 # profiles in Plasma's battery applet and in powerdevil, for about 5 MiB
 # instead of 50.
