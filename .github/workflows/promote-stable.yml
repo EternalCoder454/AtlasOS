@@ -8,7 +8,7 @@ name: Promote stable
 # (iso.yml).
 # Every other day, a fast path for security updates: the newest per-build
 # testing image that has been in testing for 24 hours and has a newer kernel
-# or Brave than stable (scripts/pick-fast-promotion.sh) goes through the very
+# than stable (scripts/pick-fast-promotion.sh) goes through the very
 # same verification, copy and release steps. No ISOs on that path: they are
 # weekly, and an install updates to :stable on its first run anyway.
 on:

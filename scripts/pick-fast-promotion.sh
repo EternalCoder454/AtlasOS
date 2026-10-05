@@ -7,17 +7,17 @@
 #     org.atlasos.built label (the image's Created time is the commit's, not
 #     the build's), so every stable build soaked in testing a day; an image
 #     without that label counts as too young;
-#   - carries a newer kernel (label ostree.linux) or a newer Brave (label
-#     org.atlasos.brave.version) than :stable, and none older;
+#   - carries a newer kernel (label ostree.linux) than :stable, not an older
+#     one (Brave, the other component once, is no longer in the image);
 #   - has a version label that sorts after :stable's, so :stable never moves
 #     backwards;
 #   - was built from the commit :stable was built from or a descendant of it
 #     (org.opencontainers.image.revision, git merge-base --is-ancestor), so a
 #     revert of the repo's own commits is never promoted. A candidate that
 #     fails this is passed over, like one failing verification.
-# A Brave or kernel label missing on stable says nothing, so it never
-# triggers; one missing on the candidate while stable has one stops the pick
-# (it can't be shown not to roll that back). Stable without a usable revision
+# A kernel label missing on stable says nothing, so it never triggers; one
+# missing on the candidate while stable has one stops the pick (it can't be
+# shown not to roll that back). Stable without a usable revision
 # label is an error (fail closed), and so is a stable commit that is not in
 # the checkout (history rewritten). No :stable at all finds nothing.
 #
@@ -76,7 +76,6 @@ fi
 sjson=$(sk "docker://${repo}@${sdigest}")
 s_ver=$(label org.opencontainers.image.version "$sjson")
 s_kernel=$(label ostree.linux "$sjson")
-s_brave=$(label org.atlasos.brave.version "$sjson")
 s_rev=$(label org.opencontainers.image.revision "$sjson")
 [[ "$s_ver" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "stable has no usable version label '$s_ver'" >&2; exit 1; }
 [[ "$s_rev" =~ ^[0-9a-f]{40}$ ]] ||
@@ -145,30 +144,23 @@ for v in $versions; do
   cand=$v
   c_digest=$d
   c_kernel=$(label ostree.linux "$json")
-  c_brave=$(label org.atlasos.brave.version "$json")
   break
 done
 
 [ -n "$cand" ] || none "no testing build newer than stable ${s_ver} has been in testing for ${min_age} hours (${young} newer but younger, ${unverified} failing verification, ${regressed} not descending from stable's commit)"
 
-# Never backwards in either component.
-if [ -n "$s_brave" ] && [ -z "$c_brave" ]; then
-  none "${cand} has no Brave version label and stable ${s_ver} has one; not promoting"
-fi
+# Never backwards.
 if [ -n "$s_kernel" ] && [ -z "$c_kernel" ]; then
   none "${cand} has no kernel label and stable ${s_ver} has one; not promoting"
 fi
-if newer "$s_kernel" "$c_kernel" || newer "$s_brave" "$c_brave"; then
-  none "${cand} has an older kernel or Brave than stable ${s_ver}; not promoting"
+if newer "$s_kernel" "$c_kernel"; then
+  none "${cand} has an older kernel than stable ${s_ver}; not promoting"
 fi
 reason=""
 if newer "$c_kernel" "$s_kernel"; then
   reason="kernel ${c_kernel%.x86_64}"
 fi
-if newer "$c_brave" "$s_brave"; then
-  reason="${reason:+${reason} and }Brave ${c_brave}"
-fi
-[ -n "$reason" ] || none "${cand} has the same kernel (${c_kernel:-unknown}) and Brave (${c_brave:-unknown}) as stable ${s_ver}; left for the weekly promotion"
+[ -n "$reason" ] || none "${cand} has the same kernel (${c_kernel:-unknown}) as stable ${s_ver}; left for the weekly promotion"
 [[ "$reason" =~ ^[A-Za-z0-9._\ :+-]+$ ]] || { echo "unexpected characters in '$reason'" >&2; exit 1; }
 
 echo "found=true"
