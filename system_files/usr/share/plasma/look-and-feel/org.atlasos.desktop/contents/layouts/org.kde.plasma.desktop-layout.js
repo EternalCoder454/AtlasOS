@@ -79,6 +79,13 @@ menus.addWidget("org.kde.plasma.appmenu");
 menus.addWidget("org.atlasos.appmenu");
 
 var middle = island("center");
+// A panel puts a gap between its last widget and an empty filler after it,
+// so a lone clock sits that gap's half left of the island's centre. A 1 px
+// spacer before it gets the same gap on the left.
+var spacer = middle.addWidget("org.kde.plasma.panelspacer");
+spacer.currentConfigGroup = ["General"];
+spacer.writeConfig("expanding", false);
+spacer.writeConfig("length", 1);
 var clock = middle.addWidget("org.kde.plasma.digitalclock");
 clock.currentConfigGroup = ["Appearance"];
 clock.writeConfig("showDate", true);

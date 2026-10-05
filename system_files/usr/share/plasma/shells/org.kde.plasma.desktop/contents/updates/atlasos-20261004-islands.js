@@ -83,6 +83,14 @@ if (bar) {
     menus.addWidget("org.atlasos.appmenu");
 
     var middle = island("center", screen);
+    // A 1 px spacer before the clock centres it (see the look-and-feel
+    // layout); atlasos-20261005-clock-centre.js then leaves it alone
+    var spacer = middle.addWidget("org.kde.plasma.panelspacer");
+    if (spacer) {
+        spacer.currentConfigGroup = ["General"];
+        spacer.writeConfig("expanding", false);
+        spacer.writeConfig("length", 1);
+    }
     var clock = middle.addWidget("org.kde.plasma.digitalclock");
     var oldClock = bar.widgets("org.kde.plasma.digitalclock")[0];
     var dateFormat = "ddd MMM d"; // Fri Oct 2
