@@ -17,17 +17,19 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 # atlas-system-helper (the root helper, called atlas-core before 0.1.0-2),
 # built by the atlas-apps stage (at /atlas-rpms), Atlas Monitor (the
 # monitor-app stage, at /atlas-monitor-rpms) and Atlas Notepad (the
-# notepad-app stage, at /atlas-notepad-rpms); nothing is copied into the
+# notepad-app stage, at /atlas-notepad-rpms) and Atlas Settings (the
+# settings-app stage, at /atlas-settings-rpms); nothing is copied into the
 # image. They are required parts of the system: the build fails without them,
 # and their protected.d files (atlas-framework.conf from atlas-ui, atlas.conf
-# from atlas-system-helper, atlas-monitor.conf, atlas-notepad.conf) stop dnf
+# from atlas-system-helper, atlas-monitor.conf, atlas-notepad.conf,
+# atlas-settings.conf) stop dnf
 # removing them.
 "${dnf[@]}" install /atlas-framework-rpms/*.rpm
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -36,10 +38,13 @@ fi
 [ -f /etc/dnf/protected.d/atlas.conf ]
 [ -f /etc/dnf/protected.d/atlas-monitor.conf ]
 [ -f /etc/dnf/protected.d/atlas-notepad.conf ]
+[ -f /etc/dnf/protected.d/atlas-settings.conf ]
 # The default apps (mimeapps.list), launcher favourites and the menu name
 # these.
 [ -f /usr/share/applications/net.eterneon.atlas.notepad.desktop ]
 [ -f /usr/share/applications/net.eterneon.atlas.monitor.desktop ]
+[ -f /usr/share/applications/net.eterneon.atlas.settings.desktop ]
+[ -x /usr/bin/atlas-settings ]
 # Atlas Monitor takes Plasma System Monitor's shortcuts (Ctrl+Shift+Esc,
 # Ctrl+Esc); packages.sh removes that app.
 [ -f /usr/share/kglobalaccel/net.eterneon.atlas.monitor.desktop ]

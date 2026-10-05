@@ -77,6 +77,19 @@ RUN --mount=type=cache,target=/var/cache/atlas-notepad-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Settings, built the same way from the build context named
+# "atlas-settings". It sits beside systemsettings and every KDE KCM and
+# replaces none of them.
+FROM registry.fedoraproject.org/fedora:44 AS settings-app
+COPY --from=atlas-settings --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-settings-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    CARGO_HOME=/var/cache/atlas-settings-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
@@ -167,6 +180,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
     --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
     --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
+    --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 

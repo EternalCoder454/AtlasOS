@@ -9,3 +9,4 @@ framework    EternalCoder454/atlas-framework   7a114a112bd1fff4fe3d6facc81b0a81e
 updater      EternalCoder454/atlasos-updater   79c56bf3fb1b6424abefd98911081f2996802ad6
 monitor      EternalCoder454/atlasos-monitor   4405c8b3b695885f304631c46a8670392d854d60
 notepad      EternalCoder454/atlasos-notepad   1adc2393be13e4f8bbeb7d7eb4f9577b0e9f61e2
+settings     EternalCoder454/atlasos-settings  bbcb3b4b845140f44b17ccea3b42c8cb1e4c05f0  v0.1.0

@@ -83,13 +83,13 @@ label is the AtlasOS commit the image was built from,
   stable lists the newest commits). Older releases are plain `44.YYYYMMDD`.
 - **Atlas apps are system components.** `atlas-system-helper` (called
   `atlas-core` before 0.1.0-2), `atlas-updater`, `atlas-monitor` and
-  `atlas-notepad`, and the framework they share (`atlas-ui`, the Atlas.Ui
+  `atlas-notepad`, `atlas-settings`, and the framework they share (`atlas-ui`, the Atlas.Ui
   QML module in `/usr/lib64/qt6/qml/Atlas/Ui`, with `atlas-symbols-fonts`
   and the `atlas-symbols` gallery), are RPMs built into the image under
   `/usr`, so Discover (its backends here are Flatpak and fwupd, no
   PackageKit) has no way to uninstall them, and
   `/etc/dnf/protected.d/atlas-framework.conf` (from `atlas-ui`), `atlas.conf`
-  (from `atlas-system-helper`), `atlas-monitor.conf` and `atlas-notepad.conf`
+  (from `atlas-system-helper`), `atlas-monitor.conf`, `atlas-notepad.conf` and `atlas-settings.conf`
   stop dnf removing them. The build fails without them. Root can still run
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
@@ -762,9 +762,9 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
 Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad) come from their own repositories, each passed to `podman build` as a
-named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor` and
-`atlas-notepad`. atlas-framework's `framework` stage makes the RPMs; the app
+Notepad, Atlas Settings) come from their own repositories, each passed to `podman build` as a
+named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad` and
+`atlas-settings`. atlas-framework's `framework` stage makes the RPMs; the app
 stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
 before the apps. Atlas.Ui changes go there, never into an app.
 
@@ -780,7 +780,7 @@ exactly what it holds.
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
   instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC` or `ATLAS_NOTEPAD_SRC` at it.
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC` or `ATLAS_SETTINGS_SRC` at it.
 - Each build records the commits in the `net.eterneon.atlas.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
@@ -862,7 +862,8 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 `ATLAS_FRAMEWORK_TOKEN` secret), `EternalCoder454/atlasos-updater` as the
 `atlas-updater` one (if private, with a token in `ATLAS_UPDATER_TOKEN`),
 `EternalCoder454/atlasos-monitor` as `atlas-monitor`, and
-`EternalCoder454/atlasos-notepad` as `atlas-notepad`.
+`EternalCoder454/atlasos-notepad` as `atlas-notepad`, and
+`EternalCoder454/atlasos-settings` as `atlas-settings`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default

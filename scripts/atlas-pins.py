@@ -37,13 +37,13 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCK = ROOT / "atlas-apps.lock"
-NAMES = ("framework", "updater", "monitor", "notepad")
+NAMES = ("framework", "updater", "monitor", "notepad", "settings")
 REPO = re.compile(r"EternalCoder454/[A-Za-z0-9][A-Za-z0-9._-]{0,99}(?<!\.git)")
 SHA = re.compile(r"[0-9a-f]{40}")
 TAG = re.compile(r"v[0-9]{1,4}(?:\.[0-9]{1,4}){1,3}(?:-[0-9A-Za-z.]{1,40})?")
 MAX_BODY = 20_000_000  # a compare's first page carries the changed files too
 DEADLINE = 60  # seconds for one whole answer, however slowly it trickles in
-LOG_PAGES = 1  # 100 commits: four apps stay inside a pull request body's 65536 characters
+LOG_PAGES = 1  # 100 commits: five apps stay inside a pull request body's 65536 characters
 # compare()'s word for a commit that doesn't come after another, in a sentence.
 RELATION = {"behind": "older than", "diverged": "on a different branch from", "identical": "the same as"}
 LINE = re.compile(

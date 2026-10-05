@@ -30,8 +30,8 @@ build tag="latest" *args:
     # the Containerfile builds RPMs from: the commits pinned in
     # atlas-apps.lock, fetched into build/pinned/ (CI checks the same commits
     # out). To build a local checkout instead while working on an app, point
-    # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC or
-    # ATLAS_NOTEPAD_SRC at it; the image's label then names that checkout's
+    # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC,
+    # ATLAS_NOTEPAD_SRC or ATLAS_SETTINGS_SRC at it; the image's label then names that checkout's
     # commit, so it can't pass for a pinned build.
     app_source() { # name, the variable's value (empty: the pin)
         if [ -n "$2" ]; then
@@ -47,7 +47,8 @@ build tag="latest" *args:
     updater=$(app_source updater "${ATLAS_UPDATER_SRC:-}")
     monitor=$(app_source monitor "${ATLAS_MONITOR_SRC:-}")
     notepad=$(app_source notepad "${ATLAS_NOTEPAD_SRC:-}")
-    for dir in "$framework" "$updater" "$monitor" "$notepad"; do
+    settings=$(app_source settings "${ATLAS_SETTINGS_SRC:-}")
+    for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings"; do
         [ -d "$dir/packaging" ] || { echo "No app source (packaging/) at '$dir'" >&2; exit 1; }
     done
     # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
@@ -63,11 +64,13 @@ build tag="latest" *args:
     copy_source "$updater" build/updater-src
     copy_source "$monitor" build/monitor-src
     copy_source "$notepad" build/notepad-src
+    copy_source "$settings" build/settings-src
     podman build --pull=newer \
         --build-context atlas-framework=build/framework-src \
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
         --build-context atlas-notepad=build/notepad-src \
+        --build-context atlas-settings=build/settings-src \
         --security-opt label=disable \
         --volume "$dnf_cache:/var/cache/libdnf5" \
         --build-arg IMAGE_VERSION="$version" \
@@ -78,6 +81,7 @@ build tag="latest" *args:
         --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.notepad.revision="$(git -C "$notepad" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.atlas.settings.revision="$(git -C "$settings" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \
@@ -102,7 +106,7 @@ pins-update name="":
     #!/usr/bin/env bash
     set -euo pipefail
     names={{ quote(name) }}
-    [ -n "$names" ] || names="framework updater monitor notepad"
+    [ -n "$names" ] || names="framework updater monitor notepad settings"
     for n in $names; do
         newest=$(scripts/atlas-pins.py latest "$n")
         read -r sha tag <<<"$newest"
