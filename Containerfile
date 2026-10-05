@@ -30,7 +30,7 @@ RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf -y install git-core && \
     git -C /src init -q && git -C /src add -A -f && \
-    GIT_AUTHOR_DATE=@0 GIT_COMMITTER_DATE=@0 git -C /src \
+    GIT_AUTHOR_DATE='1970-01-01T00:00:01Z' GIT_COMMITTER_DATE='1970-01-01T00:00:01Z' git -C /src \
         -c user.name=AtlasOS -c user.email=build@atlasos.invalid commit -qm pin
 RUN --mount=type=cache,target=/var/cache/atlas-framework-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
