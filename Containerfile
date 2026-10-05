@@ -129,7 +129,7 @@ RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/atlas-explorer-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms ATLAS_RPM_WORKTREE=1 \
     CARGO_HOME=/var/cache/atlas-explorer-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
