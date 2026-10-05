@@ -110,7 +110,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           scripts/atlas-pins.py verify
-          for n in framework updater monitor notepad settings; do
+          for n in framework updater monitor notepad settings wizard; do
             sha=$(scripts/atlas-pins.py get "$n")
             echo "$n=$sha" >>"$GITHUB_OUTPUT"
           done
@@ -171,6 +171,15 @@ jobs:
           path: atlas-settings
           persist-credentials: false
 
+      # Atlas Wizard's source (pinned), the atlas-wizard build context.
+      - name: Checkout Atlas Wizard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-wizard
+          ref: ${{ steps.pins.outputs.wizard }}
+          path: atlas-wizard
+          persist-credentials: false
+
       # main publishes :testing, beta publishes :beta. (:stable and :latest
       # come from promote-stable.yml.) Pull requests and tags build and
       # lint but never push.
@@ -215,8 +224,9 @@ jobs:
           monitor=$(git -C atlas-monitor rev-parse HEAD)
           notepad=$(git -C atlas-notepad rev-parse HEAD)
           settings=$(git -C atlas-settings rev-parse HEAD)
+          wizard=$(git -C atlas-wizard rev-parse HEAD)
           # What was checked out is what atlas-apps.lock pins, or nothing runs.
-          for n in framework updater monitor notepad settings; do
+          for n in framework updater monitor notepad settings wizard; do
             [ "$(git -C "atlas-$n" rev-parse HEAD)" = "$(scripts/atlas-pins.py get "$n")" ] ||
               { echo "::error::atlas-$n isn't at its pinned commit"; exit 1; }
           done
@@ -250,6 +260,7 @@ jobs:
                [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
                [ "$(jq -r '."net.eterneon.atlas.notepad.revision" // ""' <<<"$labels")" = "$notepad" ] &&
                [ "$(jq -r '."net.eterneon.atlas.settings.revision" // ""' <<<"$labels")" = "$settings" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.wizard.revision" // ""' <<<"$labels")" = "$wizard" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
             fi
@@ -302,6 +313,7 @@ jobs:
             echo "monitor=$monitor"
             echo "notepad=$notepad"
             echo "settings=$settings"
+            echo "wizard=$wizard"
             echo "brave=$brave"
             echo "skip=$skip"
             echo "date=$date"
@@ -351,8 +363,10 @@ jobs:
           ATLAS_MONITOR_SRC: ${{ github.workspace }}/atlas-monitor
           # this as the atlas-notepad one,
           ATLAS_NOTEPAD_SRC: ${{ github.workspace }}/atlas-notepad
-          # and this as the atlas-settings one.
+          # this as the atlas-settings one,
           ATLAS_SETTINGS_SRC: ${{ github.workspace }}/atlas-settings
+          # and this as the atlas-wizard one.
+          ATLAS_WIZARD_SRC: ${{ github.workspace }}/atlas-wizard
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
@@ -362,6 +376,7 @@ jobs:
             --label net.eterneon.atlas.monitor.revision="${{ steps.decide.outputs.monitor }}" \
             --label net.eterneon.atlas.notepad.revision="${{ steps.decide.outputs.notepad }}" \
             --label net.eterneon.atlas.settings.revision="${{ steps.decide.outputs.settings }}" \
+            --label net.eterneon.atlas.wizard.revision="${{ steps.decide.outputs.wizard }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages

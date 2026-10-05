@@ -90,6 +90,21 @@ RUN --mount=type=cache,target=/var/cache/atlas-settings-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-settings-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Wizard, the first-run setup (replaces plasma-setup), built the same
+# way from the build context named "atlas-wizard". Its build-rpm.sh wants a
+# git checkout for HEAD, which the copy leaves out, so it builds the tree it is
+# given (ATLAS_RPM_WORKTREE=1): the pinned commit, which CI and `just build`
+# check out or copy, labelled in the image's net.eterneon.atlas.wizard.revision.
+FROM registry.fedoraproject.org/fedora:44 AS wizard-app
+COPY --from=atlas-wizard --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-wizard-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms ATLAS_RPM_WORKTREE=1 \
+    CARGO_HOME=/var/cache/atlas-wizard-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
@@ -102,20 +117,6 @@ COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     drop-build-deps.sh /kio/build-rpm.sh /out
-
-# The first-run wizard in AtlasOS's style (see
-# build_files/plasma-setup/build-rpm.sh): Fedora's plasma-setup, rebuilt at
-# the version the base image has.
-FROM ${BASE_IMAGE} AS base-plasma-setup
-RUN rpm -q plasma-setup --qf '%{VERSION}-%{RELEASE}' >/plasma-setup-nvr
-
-FROM registry.fedoraproject.org/fedora:44 AS plasma-setup
-COPY --from=base-plasma-setup /plasma-setup-nvr /plasma-setup-nvr
-COPY build_files/plasma-setup /plasma-setup
-COPY build_files/drop-build-deps.sh /usr/local/bin/
-RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    drop-build-deps.sh /plasma-setup/build-rpm.sh /out
 
 # The SELinux modules (selinux/: the PIN verifier's, see DEV.md "PIN sign-in",
 # and atlasos_bootc, bootc's install_t from services, see DEV.md "SELinux"),
@@ -171,7 +172,6 @@ ARG BASE_IMAGE
 ARG PACKAGES_DATE=
 RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     --mount=type=bind,from=kio,source=/out,target=/kio-rpms \
-    --mount=type=bind,from=plasma-setup,source=/out,target=/plasma-setup-rpms \
     --mount=type=tmpfs,dst=/tmp \
     PACKAGES_DATE="${PACKAGES_DATE}" /ctx/packages.sh
 
@@ -181,6 +181,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
     --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
     --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
+    --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 

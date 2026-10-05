@@ -65,7 +65,7 @@ jobs:
           # One app's trouble doesn't hold back the others: each runs in its
           # own subshell with -e, and the job fails at the end if any did.
           # (The subshell isn't an `if` condition: bash ignores -e in one.)
-          for n in framework updater monitor notepad settings; do
+          for n in framework updater monitor notepad settings wizard; do
             set +e
             (
               set -euo pipefail

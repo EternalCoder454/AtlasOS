@@ -65,7 +65,7 @@ for size in $sizes; do
 		-fill "#1B1748" -colorize 35% \
 		-quality 90 "$out/wallpapers/AtlasOS-Login/contents/images/$size.jpg"
 done
-# The first-run wizard (plasma-setup) ignores the wallpaper setting and loads
+# The first-run wizard of earlier images (plasma-setup) ignored the wallpaper setting and loads
 # these two files, by name, from wallpapers/Default, which points here (the
 # dark ones once AtlasOS Dark is chosen).
 for size in 5120x2880 1440x2960; do

@@ -10,7 +10,7 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/atlasos"
 done_file="$state/fingerprint-setup-done"
 
 # The wizard's own session, and the login before the wizard has finished.
-[ "$(id -un)" = plasma-setup ] && exit 0
+[ "$(id -un)" = atlas-setup ] && exit 0
 [ -e /etc/plasma-setup-done ] || exit 0
 [ -e "$done_file" ] && exit 0
 

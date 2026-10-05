@@ -31,7 +31,7 @@ build tag="latest" *args:
     # atlas-apps.lock, fetched into build/pinned/ (CI checks the same commits
     # out). To build a local checkout instead while working on an app, point
     # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC,
-    # ATLAS_NOTEPAD_SRC or ATLAS_SETTINGS_SRC at it; the image's label then names that checkout's
+    # ATLAS_NOTEPAD_SRC, ATLAS_SETTINGS_SRC or ATLAS_WIZARD_SRC at it; the image's label then names that checkout's
     # commit, so it can't pass for a pinned build.
     app_source() { # name, the variable's value (empty: the pin)
         if [ -n "$2" ]; then
@@ -48,7 +48,8 @@ build tag="latest" *args:
     monitor=$(app_source monitor "${ATLAS_MONITOR_SRC:-}")
     notepad=$(app_source notepad "${ATLAS_NOTEPAD_SRC:-}")
     settings=$(app_source settings "${ATLAS_SETTINGS_SRC:-}")
-    for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings"; do
+    wizard=$(app_source wizard "${ATLAS_WIZARD_SRC:-}")
+    for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings" "$wizard"; do
         [ -d "$dir/packaging" ] || { echo "No app source (packaging/) at '$dir'" >&2; exit 1; }
     done
     # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
@@ -65,12 +66,14 @@ build tag="latest" *args:
     copy_source "$monitor" build/monitor-src
     copy_source "$notepad" build/notepad-src
     copy_source "$settings" build/settings-src
+    copy_source "$wizard" build/wizard-src
     podman build --pull=newer \
         --build-context atlas-framework=build/framework-src \
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
         --build-context atlas-notepad=build/notepad-src \
         --build-context atlas-settings=build/settings-src \
+        --build-context atlas-wizard=build/wizard-src \
         --security-opt label=disable \
         --volume "$dnf_cache:/var/cache/libdnf5" \
         --build-arg IMAGE_VERSION="$version" \
@@ -82,6 +85,7 @@ build tag="latest" *args:
         --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.notepad.revision="$(git -C "$notepad" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.settings.revision="$(git -C "$settings" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.atlas.wizard.revision="$(git -C "$wizard" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \
@@ -106,7 +110,7 @@ pins-update name="":
     #!/usr/bin/env bash
     set -euo pipefail
     names={{ quote(name) }}
-    [ -n "$names" ] || names="framework updater monitor notepad settings"
+    [ -n "$names" ] || names="framework updater monitor notepad settings wizard"
     for n in $names; do
         newest=$(scripts/atlas-pins.py latest "$n")
         read -r sha tag <<<"$newest"
@@ -342,7 +346,7 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh build_files/kio/*.sh build_files/plasma-setup/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/atlasos/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/atlasos/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
     shellcheck -s sh branding/render.sh system_files/usr/bin/atlas system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
     just --unstable --fmt --check --justfile system_files/usr/share/atlasos/atlas.just
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/atlasos/pinlib.py

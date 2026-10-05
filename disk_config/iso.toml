@@ -18,7 +18,7 @@ enable = [
   "org.fedoraproject.Anaconda.Modules.Services",
   "org.fedoraproject.Anaconda.Modules.Timezone"
 ]
-# No user accounts in the installer: the first-run wizard (plasma-setup)
+# No user accounts in the installer: the first-run wizard (Atlas Wizard)
 # creates the first account, and only an account it creates gets the Light or
 # Dark look chosen there. (It skips that step when a user already exists.)
 disable = [

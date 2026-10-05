@@ -106,8 +106,10 @@ hc_skip_unless_plasmalogin() {
 	[ "$(systemctl show -p LoadState --value plasmalogin.service 2>/dev/null)" != masked ] ||
 		hc_pass "skipped, plasmalogin.service is masked"
 	# The first-run wizard runs before the display manager, with no greeter.
-	if [ -f /usr/lib/systemd/system/plasma-setup.service ] && [ ! -e /etc/plasma-setup-done ]; then
-		hc_pass "skipped, first-run setup (plasma-setup) has not finished"
+	# (Atlas Wizard writes both markers when it finishes.)
+	if [ -f /usr/lib/systemd/system/atlas-wizard-boot.service ] &&
+		[ ! -e /etc/atlasos/setup-done ] && [ ! -e /etc/plasma-setup-done ]; then
+		hc_pass "skipped, first-run setup (Atlas Wizard) has not finished"
 	fi
 	hc_skip_without_rollback
 }

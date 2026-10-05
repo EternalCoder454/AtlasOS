@@ -83,13 +83,13 @@ label is the AtlasOS commit the image was built from,
   stable lists the newest commits). Older releases are plain `44.YYYYMMDD`.
 - **Atlas apps are system components.** `atlas-system-helper` (called
   `atlas-core` before 0.1.0-2), `atlas-updater`, `atlas-monitor` and
-  `atlas-notepad`, `atlas-settings`, and the framework they share (`atlas-ui`, the Atlas.Ui
+  `atlas-notepad`, `atlas-settings`, `atlas-wizard`, and the framework they share (`atlas-ui`, the Atlas.Ui
   QML module in `/usr/lib64/qt6/qml/Atlas/Ui`, with `atlas-symbols-fonts`
   and the `atlas-symbols` gallery), are RPMs built into the image under
   `/usr`, so Discover (its backends here are Flatpak and fwupd, no
   PackageKit) has no way to uninstall them, and
   `/etc/dnf/protected.d/atlas-framework.conf` (from `atlas-ui`), `atlas.conf`
-  (from `atlas-system-helper`), `atlas-monitor.conf`, `atlas-notepad.conf` and `atlas-settings.conf`
+  (from `atlas-system-helper`), `atlas-monitor.conf`, `atlas-notepad.conf`, `atlas-settings.conf` and `atlas-wizard.conf`
   stop dnf removing them. The build fails without them. Root can still run
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
@@ -160,8 +160,7 @@ healthy machine. Every check passes ("skipped") when:
 
 - there is no rollback deployment (greenboot's `bootc rollback` fails with one,
   so a failure could only reboot in a loop: a fresh install);
-- login and Plasma: first-run setup is not done (`/etc/plasma-setup-done` is
-  missing, the wizard runs before the display manager, with no greeter), the
+- login and Plasma: first-run setup is not done (neither `/etc/atlasos/setup-done` nor `/etc/plasma-setup-done` exists, the wizard runs before the display manager, with no greeter), the
   boot isn't graphical (`systemd.unit=`, `single`, `1`-`4`, `rescue`,
   `emergency`), the default target isn't `graphical.target`, the display manager
   isn't plasmalogin or it is masked, or at the end there is no `/dev/dri/card*`.
@@ -337,7 +336,7 @@ sudo bootc status                       # booted / staged / rollback
   (`nvidia/build.sh` for NVIDIA). The build refuses a key that doesn't match
   ("vendor rotated its key"); then check the new key, replace the file and
   update the fingerprint. The repo and key are removed again after the
-  install. Fedora's own koji downloads (KIO, plasma-setup, kernel-devel) are
+  install. Fedora's own koji downloads (KIO, kernel-devel) are
   taken from koji's `data/signed` copies and checked against Fedora's
   release key before use.
   Key expiry, for diagnosing a future build failure: mise 2028-01-02,
@@ -473,46 +472,26 @@ stops applying; drop the stage once Fedora ships the fix.
 
 ## First-run setup
 
-The wizard on first boot is Fedora's `plasma-setup`, rebuilt the same way as
-KIO (the `plasma-setup` stage, `build_files/plasma-setup/`, release
-`.atlas1`) with `plasma-setup-atlasos-style.patch` on top of Fedora's own
-patches. Its frame is compiled into the program, which is why it is a rebuild
-and not a theme. The patch:
+The wizard on first boot is Atlas Wizard (`atlas-wizard`, built from the
+`wizard-app` stage, pinned like the other apps). It replaces Fedora's
+`plasma-setup`, which `packages.sh` removes. Its design is in the wizard
+repository's `docs/DESIGN.md`. In short:
 
-- gives it the Atlas apps' look: buttons with Atlas.Ui's 4 px corners and
-  the step forward in the accent colour, step dots, big bold titles, a
-  rounder card with a shadow,
-  rounded sections behind the lists, and a welcome screen with the AtlasOS
-  logo and one accent button;
-- turns "Dark Theme" into an **Appearance** page with AtlasOS Light and Dark
-  as pictures of the desktop, applying AtlasOS's Global Themes. Fedora's patch
-  applies Fedora's themes, which AtlasOS removes, so choosing Dark used to do
-  nothing. The wizard cross-fades to the new look (not under reduced
-  motion): it pictures the window with `grabToImage` (taken of the page's
-  highest ancestor that QML made, since the window's root items refuse it),
-  lays the picture over the wizard and fades it out once the theme has
-  applied. Without a picture it simply switches;
-- falls back to the light wallpaper picture when a wallpaper has no dark one;
-- adds the components AtlasOS's own pages use (`AtlasButton`, `ChoiceCard`,
-  `DesktopPreview`, `SectionBackground` in `org.kde.plasmasetup.components`);
-- skips what Atlas Installer already asked. The installer writes
-  `/etc/atlasos/installer.ini` (`[Installer]` with `Version=1`, `Language`,
-  `KeyboardLayout`, `KeyboardVariant` and `Network=true|false`). The
-  **Language** page is left out when `Language` is set, and **Keyboard** when
-  `KeyboardLayout` is set: the installer also wrote `locale.conf` and
-  `00-keyboard.conf`, and the login screen and new users' desktops take theirs
-  from localed. Plasma-setup only writes `kxkbrc` for its own user. **Wi-Fi**
-  is left out when `Network=true` and NetworkManager reports full
-  connectivity as the wizard starts. An Anaconda install has no such file and
-  sees every page.
+- `atlas-wizard-boot.service` (enabled by the RPM's preset and again in
+  `apps.sh`) runs before the display manager on every boot. With no done
+  marker it writes a plasmalogin autologin drop-in
+  (`/etc/plasmalogin.conf.d/99-atlas-wizard.conf`) for the locked
+  `atlas-setup` user (a sysusers.d user of the RPM) and its `atlas-wizard`
+  session; once setup is done it removes it and locks the user again. After
+  repeated failures it starts a text-mode fallback instead.
+- Setup is done when `/etc/atlasos/setup-done` exists. The wizard also writes
+  `/etc/plasma-setup-done`, which health-lib, `pin-setup`,
+  `fingerprint-setup` and `nvidia-key-setup` still read, and an existing
+  `/etc/plasma-setup-done` counts as done.
 
 To see the wizard again in a VM:
-`sudo rm /etc/plasma-setup-done` and reboot.
-
-To change the patch: clone plasma-setup at the base image's version, apply
-Fedora's patches from the source RPM, then the AtlasOS patch, edit, commit
-and `git format-patch -1`. The build fails when the patch no longer applies to
-a new version.
+`sudo rm /etc/atlasos/setup-done /etc/plasma-setup-done` and reboot.
+Test VMs skip it by creating both markers (`vmctl.py`, `vmswitch.py`).
 
 ## Fingerprint readers and smart cards
 
@@ -528,7 +507,7 @@ through the /etc merge, as long as nobody changed authselect locally.
 
 Asking to set one up is `/usr/libexec/atlasos/fingerprint-setup`, an XDG
 autostart (`/etc/xdg/autostart/atlasos-fingerprint-setup.desktop`). It is not a
-wizard page: the wizard runs as its own `plasma-setup` user before the account
+wizard page: the wizard runs as its own `atlas-setup` user before the account
 exists, and enrolling needs the account. At login, once the wizard is done, it
 asks fprintd (`Manager.GetDevices`) for readers; with one and no finger
 enrolled it shows a kdialog and, on "Set Up Fingerprint", opens System
@@ -746,7 +725,6 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `branding/source/` | The AtlasOS logo SVGs (copies, never edited) |
 | `branding/cursors/` | Bibata cursors, as a tarball with its license |
 | `branding/wallpaper.jpg`, `wallpaper-dark.jpg` | The wallpaper and its night picture for Dark, 4K copies of the originals; the light one also blurred for the login screen |
-| `build_files/plasma-setup/` | The first-run wizard rebuilt in AtlasOS's style (see First-run setup) |
 | `branding/render.sh` | Renders icons, splash images and wallpapers (plain and blurred) at build time |
 | `disk_config/` | bootc-image-builder configs, and the kickstart for the stock baseline VM |
 | `scripts/` | `bib.sh` (disk images), `vm.sh`, `vmctl.py` and `vmswitch.py` (test VMs) |
@@ -762,9 +740,9 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
 Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad, Atlas Settings) come from their own repositories, each passed to `podman build` as a
-named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad` and
-`atlas-settings`. atlas-framework's `framework` stage makes the RPMs; the app
+Notepad, Atlas Settings, Atlas Wizard) come from their own repositories, each passed to `podman build` as a
+named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad`,
+`atlas-settings` and `atlas-wizard`. atlas-framework's `framework` stage makes the RPMs; the app
 stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
 before the apps. Atlas.Ui changes go there, never into an app.
 
@@ -780,7 +758,7 @@ exactly what it holds.
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
   instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC` or `ATLAS_SETTINGS_SRC` at it.
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC` or `ATLAS_WIZARD_SRC` at it.
 - Each build records the commits in the `net.eterneon.atlas.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
@@ -862,8 +840,9 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 `ATLAS_FRAMEWORK_TOKEN` secret), `EternalCoder454/atlasos-updater` as the
 `atlas-updater` one (if private, with a token in `ATLAS_UPDATER_TOKEN`),
 `EternalCoder454/atlasos-monitor` as `atlas-monitor`, and
-`EternalCoder454/atlasos-notepad` as `atlas-notepad`, and
-`EternalCoder454/atlasos-settings` as `atlas-settings`.
+`EternalCoder454/atlasos-notepad` as `atlas-notepad`,
+`EternalCoder454/atlasos-settings` as `atlas-settings`, and
+`EternalCoder454/atlasos-wizard` as `atlas-wizard`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default

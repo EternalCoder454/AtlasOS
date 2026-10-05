@@ -102,7 +102,7 @@ new_code() {
 
 if [ "$mode" = --first-login ]; then
 	# The wizard's own session, and the login before the wizard has finished.
-	[ "$(id -un)" = plasma-setup ] && exit 0
+	[ "$(id -un)" = atlas-setup ] && exit 0
 	[ -e /etc/plasma-setup-done ] || exit 0
 	nvidia_present || exit 0
 	secure_boot_on || exit 0

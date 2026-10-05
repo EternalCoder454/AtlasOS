@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Turns stock Fedora Kinoite into AtlasOS, part 1 of 4: packages. Runs in the
-# Containerfile's first RUN step on the base image, with the patched KIO and
-# plasma-setup RPMs at /kio-rpms and /plasma-setup-rpms. Its own step, with
+# Containerfile's first RUN step on the base image, with the patched KIO
+# RPMs at /kio-rpms. Its own step, with
 # nothing else from the repository bound in, so a change to system_files,
 # branding or the Atlas apps doesn't reinstall every package: Podman reuses
 # this step until the base image, this script or those RPMs change, or the
@@ -475,20 +475,17 @@ rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
 
 ### First-run wizard
 
-# Fedora's plasma-setup rebuilt in AtlasOS's style (the plasma-setup stage of
-# the Containerfile, bound in at /plasma-setup-rpms; see
-# plasma-setup/build-rpm.sh).
-# Only the parts Kinoite has, with every repo off, as for KIO.
-ps=()
-for f in /plasma-setup-rpms/*.rpm; do
-	rpm -q "$(rpm -qp --qf '%{NAME}' "$f")" >/dev/null 2>&1 && ps+=("$f")
-done
-[ ${#ps[@]} -gt 0 ]
-"${dnf[@]}" --disablerepo='*' upgrade "${ps[@]}"
-rpm -q plasma-setup | grep -q '\.atlas1\.' || {
-	echo "packages.sh: plasma-setup is not AtlasOS's build" >&2
+# Fedora's plasma-setup is not part of AtlasOS: Atlas Wizard (apps.sh) is the
+# first-run setup. Kinoite ships it, so it goes here, and the build fails if
+# it is still there or if removing it took the desktop with it.
+if rpm -q --quiet plasma-setup; then
+	"${dnf[@]}" remove plasma-setup
+fi
+if rpm -q --quiet plasma-setup; then
+	echo "packages.sh: plasma-setup is still installed" >&2
 	exit 1
-}
+fi
+rpm -q plasma-workspace plasma-login-manager kwin >/dev/null
 
 
 ### Boot health checks

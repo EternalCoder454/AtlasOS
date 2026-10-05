@@ -179,14 +179,14 @@ def main() -> None:
     con.sudo("dmesg -n 1", password)
     shot(con, password, "plasmalogin", a.outdir / "login-screen.png")
     first_boot = con.run(
-        "systemctl is-active plasma-setup.service; ls /etc/plasma-setup-done 2>&1"
+        "systemctl is-active atlas-wizard-boot.service; ls /etc/atlasos/setup-done /etc/plasma-setup-done 2>&1"
     )
     con.sudo(
         "mkdir -p /etc/plasmalogin.conf.d && "
         f"printf \"[Autologin]\\nUser={USER}\\nSession=plasma\\n\" "
         ">/etc/plasmalogin.conf.d/zz-vmtest-autologin.conf && "
-        "touch /etc/plasma-setup-done && "
-        "systemctl stop plasma-setup.service; systemctl restart plasmalogin.service",
+        "mkdir -p /etc/atlasos && touch /etc/atlasos/setup-done /etc/plasma-setup-done && "
+        "rm -f /etc/plasmalogin.conf.d/99-atlas-wizard.conf; systemctl restart plasmalogin.service",
         password,
     )
     frames(a.domain, a.outdir, "splash", 25)
@@ -202,7 +202,7 @@ def main() -> None:
 
     sections = {
         "os-release": "cat /etc/os-release",
-        "plasma-setup before login": None,
+        "first-run setup before login": None,
         "free -h": "free -h",
         "free -m": "free -m",
         "meminfo": "head -n 25 /proc/meminfo",
