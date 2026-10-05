@@ -116,6 +116,18 @@ systemctl enable atlas-record-boot.service
 [ "$(systemctl is-enabled atlas-record-boot.service)" = enabled ]
 [ "$(systemctl is-enabled atlas-system-helper.service 2>&1 || true)" != enabled ]
 [ -f /usr/share/dbus-1/system-services/net.eterneon.atlas.SystemHelper.service ]
+# Hardware drivers (Atlas Updater 0.2.0): the timer checks the machine's
+# hardware and moves it to the image its GPU needs (atlasos-nvidia). That is
+# never left to the user, so it is on here and not only by the RPM's preset.
+systemctl enable atlas-drivers.timer
+[ "$(systemctl is-enabled atlas-drivers.timer)" = enabled ]
+# Firmware: fwupd's metadata refresh feeds Atlas Updater's firmware page.
+# Discover's fwupd backend (a plugin in plasma-discover-libs, not a package of
+# its own) would offer the same updates a second time, so it goes.
+systemctl enable fwupd-refresh.timer
+[ "$(systemctl is-enabled fwupd-refresh.timer)" = enabled ]
+rm -f /usr/lib64/qt6/plugins/discover/fwupd-backend.so
+[ -z "$(find /usr/lib64/qt6/plugins/discover -name '*fwupd*' -print -quit)" ]
 # greenboot's units. The package's scriptlets enable nothing while building.
 # The boot counter in GRUB reaches existing installs through
 # atlasos-grub-greenboot.service (see the README).
