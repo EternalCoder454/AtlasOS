@@ -52,7 +52,7 @@ fi
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,
 # so the image never depends on the scriptlet having run in a container.
-rpm -q --provides atlas-wizard | grep -qxF 'user(atlas-setup)'
+rpm -q --provides atlas-wizard | grep -q '^user(atlas-setup)\( \|$\)'
 [ -f /usr/lib/systemd/system/atlas-wizard-boot.service ]
 [ -x /usr/libexec/atlas-wizard-boot ]
 [ -f /usr/share/wayland-sessions/atlas-wizard.desktop ]
