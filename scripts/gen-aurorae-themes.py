@@ -6,7 +6,7 @@ after changing the numbers or colours below, then rebuild the image.
     python3 scripts/gen-aurorae-themes.py
 
 Rounded-square caption buttons (Klassy style): a 26 px square, 7 px corners, in a 32 px square cell,
-10 px between circles, a 9 px glyph with a 1.6 px round stroke. The square is a
+4 px between cells, a 9 px glyph with a 1.6 px round stroke. The square is a
 faint tint of the glyph colour at rest, accent on hover, solid red for close. Title bar colours are the [Colors:Header]
 colours of system_files/usr/share/color-schemes/AtlasOS{Light,Dark}.colors.
 """
