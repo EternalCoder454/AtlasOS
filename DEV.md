@@ -755,28 +755,49 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 
 Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
-The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), is
-built first from its own repository, the named build context
-`atlas-framework`: `../Atlas Framework` or `$ATLAS_FRAMEWORK_SRC`, with its
-commit in `net.eterneon.atlas.framework.revision`. Its `framework` stage
-makes the RPMs; the app stages build against them (`ATLAS_LOCAL_RPMS`), and
-`apps.sh` installs them before the apps. Atlas.Ui changes go there, never
-into an app.
+The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
+Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
+Notepad) come from their own repositories, each passed to `podman build` as a
+named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor` and
+`atlas-notepad`. atlas-framework's `framework` stage makes the RPMs; the app
+stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
+before the apps. Atlas.Ui changes go there, never into an app.
 
-The Atlas apps are built from another repository, passed to `podman build` as
-the named build context `atlas-updater`. `just build` uses `../Atlas Updater`
-(next to this repo), or `$ATLAS_UPDATER_SRC`; it needs
-`packaging/build-rpm.sh` there. Its commit goes in the
-`net.eterneon.atlas.updater.revision` label. Atlas Monitor comes from a third,
-the build context `atlas-monitor`: `../AtlasOS Monitor` or
-`$ATLAS_MONITOR_SRC`, with its commit in `net.eterneon.atlas.monitor.revision`.
-Atlas Notepad comes from a fourth, the build context `atlas-notepad`:
-`../AtlasOS Text Editor` or `$ATLAS_NOTEPAD_SRC`, with its commit in
-`net.eterneon.atlas.notepad.revision`.
+### App pins
+
+Which commit of each goes in the image is pinned in `atlas-apps.lock`, one
+line per app: name, repository, the full commit, and its release tag when it
+has one. An app's new version reaches the image only through a commit here
+that moves its pin, never because its main branch moved, so a new app or
+framework release doesn't make a new image by itself, and every image says
+exactly what it holds.
+
+- `just build` fetches each pinned commit into `build/pinned/<name>` (reused
+  while it still is the pin) and builds from there. To build a local checkout
+  instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC` or `ATLAS_NOTEPAD_SRC` at it.
+- Each build records the commits in the `net.eterneon.atlas.<name>.revision`
+  labels, so a build from a local checkout can't pass for a pinned one.
+- `just pins` lists the pins and checks each: it must be on its repository's
+  default branch (a commit that only exists in a fork can still be fetched
+  through the parent by its hash) and match its release tag.
+- `just pins-update [name]` moves pins forward to each app's newest release
+  (or its main branch's head for an app with no releases), lists the commits
+  each brings, and refuses to move a pin back or sideways. Build, VM-test and
+  commit `atlas-apps.lock` after.
+- The "Update Atlas app pins" workflow does the same daily on the
+  `pins/update` branch and opens a pull request with the commit lists; its
+  test build runs from there. Merging it is what puts the new apps in
+  `testing`. It needs an `ATLAS_PINS_TOKEN` secret or the "Allow GitHub
+  Actions to create and approve pull requests" setting (see the workflow).
+- `scripts/atlas-pins.py` does the work; `set --force` exists only for an
+  app that rewrote its history so the old pin is gone.
 
 | Command | Does |
 |---|---|
 | `just build` | Build `localhost/atlasos:latest` with rootless Podman |
+| `just pins` | List the Atlas app pins and check them |
+| `just pins-update [name]` | Move the pins forward to each app's newest version |
 | `just build-nvidia` | Build `localhost/atlasos-nvidia:latest` on top of it (needs the module signing key) |
 | `just qcow2` | VM disk `build/atlasos.qcow2` (bootc-image-builder; **sudo**) |
 | `just iso` | Live installer ISO `build/atlasos.iso` of the published `:stable`, made with AtlasOS Installer (see below) |
@@ -829,14 +850,14 @@ can't `bootc upgrade` afterwards, since its image source was the share.
 and pull requests (build only), daily, and by hand. Builds of `main` and tags
 run on the self-hosted runner on the VPS while it is online, everything else
 on GitHub's runners; [CI.md](CI.md) has the routing, the caches and build
-times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out
-`EternalCoder454/atlas-framework` (`main`) as the `atlas-framework` build
-context (if private, with a token in the `ATLAS_FRAMEWORK_TOKEN` secret),
-`EternalCoder454/atlasos-updater` (`main`) as the `atlas-updater` build context
-(if that repository is private, put a token that can read it in the
-`ATLAS_UPDATER_TOKEN` secret), `EternalCoder454/atlasos-monitor` (`main`)
-as the `atlas-monitor` one, and `EternalCoder454/atlasos-notepad` (`main`) as
-the `atlas-notepad` one.
+times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out the
+commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
+`scripts/atlas-pins.py verify`: `EternalCoder454/atlas-framework` as the
+`atlas-framework` build context (if private, with a token in the
+`ATLAS_FRAMEWORK_TOKEN` secret), `EternalCoder454/atlasos-updater` as the
+`atlas-updater` one (if private, with a token in `ATLAS_UPDATER_TOKEN`),
+`EternalCoder454/atlasos-monitor` as `atlas-monitor`, and
+`EternalCoder454/atlasos-notepad` as `atlas-notepad`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default

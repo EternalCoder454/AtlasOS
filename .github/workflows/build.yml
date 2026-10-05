@@ -97,7 +97,25 @@ jobs:
         with:
           persist-credentials: false
 
-      # atlas-framework's source (main), the atlas-framework build context:
+      # The Atlas apps and atlas-framework go in at the commits pinned in
+      # atlas-apps.lock (`just pins`), never at whatever their main branch
+      # holds when a build starts: an app's new version reaches the image
+      # only through a commit here that moves its pin. Each pin must be on
+      # its repository's main branch (a commit that only exists in a fork
+      # can still be fetched through the parent by its hash) and match its
+      # release tag where it has one.
+      - name: Read the Atlas app pins
+        id: pins
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/atlas-pins.py verify
+          for n in framework updater monitor notepad; do
+            sha=$(scripts/atlas-pins.py get "$n")
+            echo "$n=$sha" >>"$GITHUB_OUTPUT"
+          done
+
+      # atlas-framework's source (pinned), the atlas-framework build context:
       # the Containerfile builds Atlas.Ui's RPMs from it, and the apps
       # against them. If the repository is private, store a token that can
       # read it in the ATLAS_FRAMEWORK_TOKEN secret.
@@ -105,42 +123,42 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlas-framework
-          ref: main
+          ref: ${{ steps.pins.outputs.framework }}
           path: atlas-framework
           token: ${{ secrets.ATLAS_FRAMEWORK_TOKEN || github.token }}
           # Only the checkout needs the token: don't leave it in .git/config
           # on the self-hosted runner.
           persist-credentials: false
 
-      # The Atlas apps' source (Atlas Updater and atlas-core, main): the
+      # The Atlas apps' source (Atlas Updater and atlas-system-helper, pinned): the
       # Containerfile builds their RPMs from it. If the repository is private,
       # store a token that can read it in the ATLAS_UPDATER_TOKEN secret.
       - name: Checkout Atlas Updater
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-updater
-          ref: main
+          ref: ${{ steps.pins.outputs.updater }}
           path: atlas-updater
           token: ${{ secrets.ATLAS_UPDATER_TOKEN || github.token }}
           persist-credentials: false
 
-      # Atlas Monitor's source (main), the atlas-monitor build context. The
+      # Atlas Monitor's source (pinned), the atlas-monitor build context. The
       # repository is public.
       - name: Checkout Atlas Monitor
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-monitor
-          ref: main
+          ref: ${{ steps.pins.outputs.monitor }}
           path: atlas-monitor
           persist-credentials: false
 
-      # Atlas Notepad's source (main), the atlas-notepad build context. The
+      # Atlas Notepad's source (pinned), the atlas-notepad build context. The
       # repository is public.
       - name: Checkout Atlas Notepad
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-notepad
-          ref: main
+          ref: ${{ steps.pins.outputs.notepad }}
           path: atlas-notepad
           persist-credentials: false
 
@@ -187,6 +205,11 @@ jobs:
           updater=$(git -C atlas-updater rev-parse HEAD)
           monitor=$(git -C atlas-monitor rev-parse HEAD)
           notepad=$(git -C atlas-notepad rev-parse HEAD)
+          # What was checked out is what atlas-apps.lock pins, or nothing runs.
+          for n in framework updater monitor notepad; do
+            [ "$(git -C "atlas-$n" rev-parse HEAD)" = "$(scripts/atlas-pins.py get "$n")" ] ||
+              { echo "::error::atlas-$n isn't at its pinned commit"; exit 1; }
+          done
 
           # The newest Brave in Brave's own repo: a trigger only (the build
           # installs it through dnf, which verifies the signatures), so that

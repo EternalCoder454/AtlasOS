@@ -1,0 +1,225 @@
+name: Update Atlas app pins
+
+# Daily, and by hand: moves the pins in atlas-apps.lock forward to each Atlas
+# app's newest release (or its main branch's head, for an app with no
+# releases yet) on the pins/update branch, and opens a pull request that
+# lists what each one brings. Nothing reaches the image until that pull
+# request is merged. When main already has every newest pin, an open pull
+# request is closed.
+#
+# Opening the pull request needs one of:
+# - an ATLAS_PINS_TOKEN secret: a fine-grained token for this repository
+#   with Contents and Pull requests read and write. Its pull request starts
+#   build.yml like any other.
+# - Settings > Actions > General > "Allow GitHub Actions to create and
+#   approve pull requests", for the workflow token. Such a pull request
+#   doesn't start other workflows, so this job starts a test build of the
+#   branch itself (build.yml publishes only from main and beta).
+# Without either the job fails at "Open the pull request" and says so;
+# `just pins-update` does the same by hand.
+on:
+  schedule:
+    - cron: "20 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-pins
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # pipefail, so a failed step in a pipeline fails the step.
+    shell: bash
+
+jobs:
+  update:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # push pins/update
+      pull-requests: write # open, update or close its pull request
+      actions: write # start build.yml on the branch
+    env:
+      BRANCH: pins/update
+      BOT: 41898282+github-actions[bot]@users.noreply.github.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          # The push step passes its token itself.
+          persist-credentials: false
+
+      - name: Move the pins
+        id: move
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body="$RUNNER_TEMP/body.md"
+          printf 'New versions of the Atlas apps for the image, from `atlas-apps.lock`.\n\n' >"$body"
+          moved="" failed=""
+          # One app's trouble doesn't hold back the others: each runs in its
+          # own subshell with -e, and the job fails at the end if any did.
+          # (The subshell isn't an `if` condition: bash ignores -e in one.)
+          for n in framework updater monitor notepad; do
+            set +e
+            (
+              set -euo pipefail
+              newest=$(scripts/atlas-pins.py latest "$n")
+              read -r sha tag <<<"$newest"
+              # The pin as "commit release-or-dash": a release cut at the
+              # pinned commit changes the second part only.
+              cur=$(scripts/atlas-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')
+              [ "$sha $tag" != "$cur" ] || exit 0
+              read -r old _ <<<"$cur"
+              repo=$(scripts/atlas-pins.py repo "$n")
+              # The entry is written before `set`, and added to the body after
+              # it: a failure never leaves the lock moved without its entry.
+              entry="$RUNNER_TEMP/entry-$n.md"
+              if [ "$sha" = "$old" ]; then
+                printf '### %s: `%s` is now release %s\n\n' "$n" "${sha:0:7}" "$tag" >"$entry"
+              else
+                list=$(scripts/atlas-pins.py log "$n" "$sha")
+                [ -n "$list" ] || { echo "::error::$n: no commits listed from $old to $sha"; exit 1; }
+                {
+                  printf '### %s: `%s` → `%s`%s\n\n' "$n" "${old:0:7}" "${sha:0:7}" \
+                    "$([ "$tag" = - ] || printf ' (%s)' "$tag")"
+                  printf '[Compare](https://github.com/%s/compare/%s...%s)\n\n' "$repo" "$old" "$sha"
+                  # A code block: commit subjects are other people's text, and
+                  # here they can't mention anyone, link or hide what follows.
+                  printf '```text\n%s\n```\n\n' "$list"
+                } >"$entry"
+              fi
+              scripts/atlas-pins.py set "$n" "$sha" "$tag"
+              cat "$entry" >>"$body"
+            )
+            rc=$?
+            set -e
+            if [ "$rc" != 0 ]; then
+              failed="$failed $n"
+              continue
+            fi
+            [ "$(scripts/atlas-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')" = \
+              "$(git show HEAD:atlas-apps.lock | awk -v n="$n" '$1 == n { print $3, ($4 == "" ? "-" : $4) }')" ] ||
+              moved="$moved $n"
+          done
+          printf 'Merge after the test build of this branch passes and the image is checked in a VM.\n' >>"$body"
+          echo "moved=${moved# }" >>"$GITHUB_OUTPUT"
+          echo "body=$body" >>"$GITHUB_OUTPUT"
+          if [ -n "$failed" ]; then
+            echo "::error::Couldn't move the pins of:$failed (see above)"
+            echo "failed=${failed# }" >>"$GITHUB_OUTPUT"
+          elif [ -z "$moved" ]; then
+            echo "Every pin is at its app's newest version." >>"$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Push the branch
+        id: push
+        if: steps.move.outputs.moved != ''
+        env:
+          MOVED: ${{ steps.move.outputs.moved }}
+          TOKEN: ${{ secrets.ATLAS_PINS_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          b64=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          auth="AUTHORIZATION: basic $b64"
+          echo "::add-mask::$b64"
+          echo "::add-mask::$auth"
+          # What the branch holds now: nothing, or the bot's earlier bump.
+          # ls-remote exits 2 for a branch that isn't there; any other
+          # failure (network, permissions) must not read as "absent".
+          tip=""
+          rc=0
+          git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1 || rc=$?
+          if [ "$rc" = 0 ]; then
+            git fetch -q origin "refs/heads/$BRANCH" || { echo "::error::Couldn't fetch $BRANCH from origin."; exit 1; }
+            tip=$(git rev-parse FETCH_HEAD)
+            authors=$(git log --format=%ae "HEAD..$tip")
+            others=$(printf '%s\n' "$authors" | grep -vFx -e "$BOT" -e '' || true)
+            if [ -n "$others" ]; then
+              echo "::error::$BRANCH has commits that aren't this workflow's. Merge or delete the branch, and the next run starts it again."
+              exit 1
+            fi
+            # The same pins as last time: nothing to push or build again.
+            if git diff --quiet "$tip" -- atlas-apps.lock; then
+              echo "same=true" >>"$GITHUB_OUTPUT"
+              exit 0
+            fi
+          elif [ "$rc" != 2 ]; then
+            echo "::error::Couldn't look up $BRANCH on origin (git ls-remote exit $rc)."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "$BOT"
+          git switch -c "$BRANCH"
+          git commit -q -m "Pin newer Atlas apps: $MOVED" atlas-apps.lock
+          # Replaces only the tip fetched above, never a commit pushed since.
+          # The token goes in through the environment, not the command line.
+          GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0="$auth" \
+            git push --force-with-lease="refs/heads/$BRANCH:$tip" origin "HEAD:refs/heads/$BRANCH"
+
+      - name: Open the pull request
+        if: steps.move.outputs.moved != ''
+        env:
+          GH_TOKEN: ${{ secrets.ATLAS_PINS_TOKEN || secrets.GITHUB_TOKEN }}
+          MOVED: ${{ steps.move.outputs.moved }}
+          BODY: ${{ steps.move.outputs.body }}
+        run: |
+          title="Pin newer Atlas apps: $MOVED"
+          pr=$(gh pr list --head "$BRANCH" --base main --state open --limit 100 --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file "$BODY"
+          elif ! gh pr create --head "$BRANCH" --base main --title "$title" --body-file "$BODY"; then
+            echo "::error::GitHub didn't let this workflow open a pull request. Add an ATLAS_PINS_TOKEN secret, or turn on Settings > Actions > General > \"Allow GitHub Actions to create and approve pull requests\" (see the top of this workflow), or open one from the $BRANCH branch by hand."
+            exit 1
+          fi
+
+      - name: Test-build the branch
+        # A pull request opened or pushed with ATLAS_PINS_TOKEN starts
+        # build.yml itself; one from the workflow token doesn't.
+        if: steps.move.outputs.moved != '' && steps.push.outputs.same != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAS_PAT: ${{ secrets.ATLAS_PINS_TOKEN != '' }}
+        run: |
+          if [ "$HAS_PAT" = true ]; then
+            echo "The pull request starts its own build."
+          else
+            gh workflow run build.yml --ref "$BRANCH"
+          fi
+
+      - name: Close a stale pull request
+        # main caught up (say, through `just pins-update`): the open pull
+        # request has nothing left to bring.
+        if: steps.move.outputs.moved == '' && steps.move.outputs.failed == ''
+        env:
+          GH_TOKEN: ${{ secrets.ATLAS_PINS_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          pr=$(gh pr list --head "$BRANCH" --base main --state open --limit 100 --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
+          [ -n "$pr" ] || exit 0
+          # Delete the branch only when every commit on it is the bot's.
+          del=--delete-branch
+          note="main already pins every Atlas app's newest version."
+          if git fetch -q origin "refs/heads/$BRANCH"; then
+            authors=$(git log --format=%ae "HEAD..FETCH_HEAD")
+            others=$(printf '%s\n' "$authors" | grep -vFx -e "$BOT" -e '' || true)
+          else
+            others=unknown
+          fi
+          if [ -n "$others" ]; then
+            del=""
+            note="$note The $BRANCH branch has commits that aren't this workflow's (or couldn't be checked), so it was kept."
+          fi
+          # shellcheck disable=SC2086
+          gh pr close "$pr" $del --comment "$note"
+
+      - name: Report apps whose pins couldn't move
+        if: steps.move.outputs.failed != ''
+        env:
+          FAILED: ${{ steps.move.outputs.failed }}
+        run: |
+          echo "::error::Couldn't move the pins of: $FAILED"
+          exit 1

@@ -1,0 +1,11 @@
+# The Atlas apps and atlas-framework that go in the image, each pinned to one
+# commit. CI and `just build` build exactly these; nothing follows a branch.
+# Change a pin with `just pins-update [name]` (or the "Update Atlas app pins"
+# workflow's pull request), never by hand-typing a hash; scripts/atlas-pins.py
+# checks the file.
+#
+# name       GitHub repository                 commit (40 hex)                           release
+framework    EternalCoder454/atlas-framework   b09455f51ec7ab68c9b47d61a8b2f8bfaf99a178  v1.3.0
+updater      EternalCoder454/atlasos-updater   bdece892f8220db3a89b536a68a0271a66216b28
+monitor      EternalCoder454/atlasos-monitor   c85ebb20d75a9048f88ac8b5d76ac4d9c0b77922
+notepad      EternalCoder454/atlasos-notepad   6cce4a09044c3341a20ec40319e33d4114cd51fa

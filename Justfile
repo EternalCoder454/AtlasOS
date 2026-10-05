@@ -26,24 +26,30 @@ build tag="latest" *args:
     # CI passes IMAGE_VERSION (44.YYYYMMDD-N) so the image and its pushed tag
     # carry the same version; a local build is the plain 44.YYYYMMDD.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
-    # The Atlas apps' source (Atlas Updater and atlas-system-helper): a named build
-    # context, so the Containerfile can build their RPMs. CI points it at a
-    # checkout of EternalCoder454/atlasos-updater.
-    updater="${ATLAS_UPDATER_SRC:-../Atlas Updater}"
-    [ -d "$updater/packaging" ] || { echo "Atlas Updater source not found at '$updater' (set ATLAS_UPDATER_SRC)" >&2; exit 1; }
-    # atlas-framework's source (Atlas.Ui, which the apps are built against):
-    # the build context named "atlas-framework". CI points it at a checkout of
-    # EternalCoder454/atlas-framework.
-    framework="${ATLAS_FRAMEWORK_SRC:-../Atlas Framework}"
-    [ -d "$framework/packaging" ] || { echo "atlas-framework source not found at '$framework' (set ATLAS_FRAMEWORK_SRC)" >&2; exit 1; }
-    # Atlas Monitor's source: the build context named "atlas-monitor". CI
-    # points it at a checkout of EternalCoder454/atlasos-monitor.
-    monitor="${ATLAS_MONITOR_SRC:-../AtlasOS Monitor}"
-    [ -d "$monitor/packaging" ] || { echo "Atlas Monitor source not found at '$monitor' (set ATLAS_MONITOR_SRC)" >&2; exit 1; }
-    # Atlas Notepad's source: the build context named "atlas-notepad". CI
-    # points it at a checkout of EternalCoder454/atlasos-notepad.
-    notepad="${ATLAS_NOTEPAD_SRC:-../AtlasOS Text Editor}"
-    [ -d "$notepad/packaging" ] || { echo "Atlas Notepad source not found at '$notepad' (set ATLAS_NOTEPAD_SRC)" >&2; exit 1; }
+    # The Atlas apps' and atlas-framework's source, each a named build context
+    # the Containerfile builds RPMs from: the commits pinned in
+    # atlas-apps.lock, fetched into build/pinned/ (CI checks the same commits
+    # out). To build a local checkout instead while working on an app, point
+    # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC or
+    # ATLAS_NOTEPAD_SRC at it; the image's label then names that checkout's
+    # commit, so it can't pass for a pinned build.
+    app_source() { # name, the variable's value (empty: the pin)
+        if [ -n "$2" ]; then
+            printf '%s\n' "$2"
+        else
+            # `|| exit 1`: set -e doesn't reach inside $(...), and a failed
+            # fetch would otherwise build whatever build/pinned/ held before.
+            scripts/atlas-pins.py fetch "$1" "build/pinned/$1" >&2 || exit 1
+            printf '%s\n' "build/pinned/$1"
+        fi
+    }
+    framework=$(app_source framework "${ATLAS_FRAMEWORK_SRC:-}")
+    updater=$(app_source updater "${ATLAS_UPDATER_SRC:-}")
+    monitor=$(app_source monitor "${ATLAS_MONITOR_SRC:-}")
+    notepad=$(app_source notepad "${ATLAS_NOTEPAD_SRC:-}")
+    for dir in "$framework" "$updater" "$monitor" "$notepad"; do
+        [ -d "$dir/packaging" ] || { echo "No app source (packaging/) at '$dir'" >&2; exit 1; }
+    done
     # Only the files git keeps (tracked, plus new ones it doesn't ignore) go
     # in: a local checkout's target/ is many GB, and podman would copy all of
     # it each build and rebuild the RPMs whenever a cargo build touched it.
@@ -77,6 +83,36 @@ build tag="latest" *args:
         --label containers.bootc=1 \
         {{ args }} \
         --tag "{{ image }}:{{ tag }}" .
+
+# Each pin must be on its repository's main branch, and match its release tag
+# where it has one.
+# Show and check the Atlas app pins (atlas-apps.lock)
+[group('Build')]
+pins:
+    @scripts/atlas-pins.py list
+    @scripts/atlas-pins.py verify
+
+# Each moves to its newest release, or its main branch's head for an app with
+# no releases yet, and the commits it brings are listed. A pin never moves
+# back. Then build, test and commit atlas-apps.lock.
+# Move the Atlas app pins forward (all, or the one named)
+[group('Build')]
+pins-update name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    names={{ quote(name) }}
+    [ -n "$names" ] || names="framework updater monitor notepad"
+    for n in $names; do
+        newest=$(scripts/atlas-pins.py latest "$n")
+        read -r sha tag <<<"$newest"
+        if [ "$sha" = "$(scripts/atlas-pins.py get "$n")" ]; then
+            echo "$n: up to date"
+            continue
+        fi
+        echo "$n: what the new pin brings"
+        scripts/atlas-pins.py log "$n" "$sha" | sed 's/^/  /'
+        scripts/atlas-pins.py set "$n" "$sha" "$tag"
+    done
 
 # Build the NVIDIA image (localhost/atlasos-nvidia) on top of a built AtlasOS
 # image with the same tag. Needs the module signing key: secrets/nvidia-signing.key
@@ -305,7 +341,9 @@ lint:
     just --unstable --fmt --check --justfile system_files/usr/share/atlasos/atlas.just
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/atlasos/pinlib.py
     python3 -m py_compile system_files/usr/libexec/atlasos/pin-admin system_files/usr/libexec/atlasos/pin-daemon
-    rm -rf system_files/usr/libexec/atlasos/__pycache__
+    python3 -m py_compile scripts/atlas-pins.py
+    scripts/atlas-pins.py list >/dev/null
+    rm -rf system_files/usr/libexec/atlasos/__pycache__ scripts/__pycache__
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory
