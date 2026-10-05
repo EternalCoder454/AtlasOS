@@ -31,7 +31,7 @@ build tag="latest" *args:
     # atlas-apps.lock, fetched into build/pinned/ (CI checks the same commits
     # out). To build a local checkout instead while working on an app, point
     # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC,
-    # ATLAS_NOTEPAD_SRC, ATLAS_SETTINGS_SRC, ATLAS_WIZARD_SRC, ATLAS_STORE_SRC, ATLAS_EXPLORER_SRC, ATLAS_ARCHIVE_SRC or ATLAS_INSTALLER_SRC at it; the image's label then names that checkout's
+    # ATLAS_NOTEPAD_SRC, ATLAS_SETTINGS_SRC, ATLAS_WIZARD_SRC, ATLAS_STORE_SRC, ATLAS_EXPLORER_SRC, ATLAS_ARCHIVE_SRC, ATLAS_LAUNCHER_SRC or ATLAS_INSTALLER_SRC at it; the image's label then names that checkout's
     # commit, so it can't pass for a pinned build.
     app_source() { # name, the variable's value (empty: the pin)
         if [ -n "$2" ]; then
@@ -52,8 +52,9 @@ build tag="latest" *args:
     store=$(app_source store "${ATLAS_STORE_SRC:-}")
     explorer=$(app_source explorer "${ATLAS_EXPLORER_SRC:-}")
     archive=$(app_source archive "${ATLAS_ARCHIVE_SRC:-}")
+    launcher=$(app_source launcher "${ATLAS_LAUNCHER_SRC:-}")
     installer=$(app_source installer "${ATLAS_INSTALLER_SRC:-}")
-    for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings" "$wizard" "$store" "$explorer" "$archive"; do
+    for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings" "$wizard" "$store" "$explorer" "$archive" "$launcher"; do
         [ -d "$dir/packaging" ] || { echo "No app source (packaging/) at '$dir'" >&2; exit 1; }
     done
     [ -x "$installer/firstboot/install.sh" ] || { echo "No installer source (firstboot/install.sh) at '$installer'" >&2; exit 1; }
@@ -79,6 +80,7 @@ build tag="latest" *args:
     copy_source "$store" build/store-src
     copy_source "$explorer" build/explorer-src
     copy_source "$archive" build/archive-src
+    copy_source "$launcher" build/launcher-src
     copy_source "$installer" build/installer-src
     podman build --pull=newer \
         --build-context atlas-framework=build/framework-src \
@@ -90,6 +92,7 @@ build tag="latest" *args:
         --build-context atlas-store=build/store-src \
         --build-context atlas-explorer=build/explorer-src \
         --build-context atlas-archive=build/archive-src \
+        --build-context atlas-launcher=build/launcher-src \
         --build-context atlas-installer=build/installer-src \
         --security-opt label=disable \
         --volume "$dnf_cache:/var/cache/libdnf5" \
@@ -106,6 +109,7 @@ build tag="latest" *args:
         --label net.eterneon.atlas.store.revision="$(git -C "$store" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.explorer.revision="$(git -C "$explorer" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.archive.revision="$(git -C "$archive" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.atlas.launcher.revision="$(git -C "$launcher" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label net.eterneon.atlas.installer.revision="$(git -C "$installer" rev-parse HEAD 2>/dev/null || echo unknown)" \
         --label org.opencontainers.image.title=AtlasOS \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
@@ -131,7 +135,7 @@ pins-update name="":
     #!/usr/bin/env bash
     set -euo pipefail
     names={{ quote(name) }}
-    [ -n "$names" ] || names="framework updater monitor notepad settings wizard store explorer archive installer"
+    [ -n "$names" ] || names="framework updater monitor notepad settings wizard store explorer archive launcher installer"
     for n in $names; do
         newest=$(scripts/atlas-pins.py latest "$n")
         read -r sha tag <<<"$newest"

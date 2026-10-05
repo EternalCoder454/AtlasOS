@@ -14,7 +14,7 @@
 // apps. Running apps have a short underline. Its look (the see-through
 // rounded plate, the icon spacing, the hover tile and the underline) is the
 // AtlasOS Plasma style's, made by scripts/plasma-style.py for this height
-// (60 px: 48 px icons). The launcher is Andromeda.
+// (60 px: 48 px icons). The launcher is Atlas Launcher.
 
 var desktopsArray = desktopsForActivity(currentActivity());
 for (var j = 0; j < desktopsArray.length; j++) {
@@ -34,10 +34,8 @@ dock.opacity = "translucent";
 // "automatically hide and show the Dock": apps get the whole screen.
 dock.hiding = "autohide";
 
-var launcher = dock.addWidget("AndromedaLauncher");
-launcher.currentConfigGroup = ["General"];
-launcher.writeConfig("launcherPosition", 1); // centred over the dock
-launcher.writeConfig("icon", "atlasos");
+// Atlas Launcher's dock button: it opens the launcher (atlas-launcher).
+dock.addWidget("net.eterneon.atlas.launcher.button");
 
 dock.addWidget("org.atlasos.dockseparator");
 

@@ -1,0 +1,13 @@
+# AtlasOS's default pinned apps for Atlas Launcher, in the dock's order: one
+# desktop file id per line, or preferred://browser, preferred://filemanager,
+# preferred://terminal. Apps that aren't installed are skipped (no browser is
+# preinstalled). Replaces the package's list (build.sh copies system_files after
+# apps.sh). A user's own list is ~/.config/atlas-launcher/pinned.list.
+preferred://browser
+net.eterneon.atlas.explorer.desktop
+net.eterneon.atlas.store.desktop
+org.kde.discover.desktop
+net.eterneon.atlas.settings.desktop
+com.mitchellh.ghostty.desktop
+net.eterneon.atlas.notepad.desktop
+net.eterneon.atlas.monitor.desktop

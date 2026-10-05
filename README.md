@@ -208,8 +208,7 @@ template, [bootc](https://bootc-dev.github.io/bootc/),
 [JetBrains Mono](https://www.jetbrains.com/lp/mono/),
 [Bibata](https://github.com/ful1e5/Bibata_Cursor),
 [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme),
-[Kvantum](https://github.com/tsujan/Kvantum),
-and [Andromeda Launcher](https://github.com/EliverLara/AndromedaLauncher).
+[Kvantum](https://github.com/tsujan/Kvantum).
 
 ## License
 

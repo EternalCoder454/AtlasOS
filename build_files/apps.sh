@@ -30,8 +30,8 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm /atlas-archive-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer atlas-archive
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm /atlas-archive-rpms/*.rpm /atlas-launcher-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer atlas-archive atlas-launcher
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -76,6 +76,15 @@ if rpm -q --quiet ark ark-libs; then
 	echo "apps.sh: ark is still installed beside atlas-archive" >&2
 	exit 1
 fi
+# Atlas Launcher replaces Andromeda: the binary, its user unit (enabled in
+# build.sh), the D-Bus activation file, the dock button plasmoid and the
+# default pins (system_files overrides the list later, in build.sh).
+[ -x /usr/bin/atlas-launcher ]
+[ -f /usr/lib/systemd/user/atlas-launcher.service ]
+[ -f /usr/share/dbus-1/services/net.eterneon.atlas.launcher.service ]
+[ -d /usr/share/plasma/plasmoids/net.eterneon.atlas.launcher.button ]
+[ -f /etc/xdg/atlas-launcher/pinned.list ]
+[ -f /usr/share/applications/net.eterneon.atlas.launcher.desktop ]
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,

@@ -418,15 +418,19 @@ sudo bootc status                       # booted / staged / rollback
   launcher (Plasma opens the first one it finds). Both bars are
   see-through, with a strong blur and a little noise behind them like
   Windows 11's acrylic (`[Effect-blur]` in `/etc/xdg/kwinrc`, which the
-  menus and popups share). The launcher is [Andromeda
-  Launcher](https://github.com/EliverLara/AndromedaLauncher), vendored in
-  `system_files/usr/share/plasma/plasmoids/` (GPL, with an
-  `ATLASOS-CHANGES.md`), themed to AtlasOS. (A Classic launcher, Simple
-  Kickoff, was dropped; a settings update swaps it out of existing docks.)
+  menus and popups share). The launcher is Atlas Launcher
+  (`EternalCoder454/atlasos-launcher`, built from its pinned commit): its dock
+  button plasmoid (`net.eterneon.atlas.launcher.button`) is the dock's first
+  item, `atlas-launcher.service` (enabled for every user by `build.sh`) runs
+  it, and `[ModifierOnlyShortcuts] Meta=` in `/etc/xdg/kwinrc` opens it. Its
+  default pins are `/etc/xdg/atlas-launcher/pinned.list` (from system_files,
+  over the package's). (Andromeda Launcher and Simple Kickoff are gone; the
+  `atlasos-20261005-launcher.js` update swaps them, Kickoff and Kicker out of
+  existing panels and copies their favourites into the button's `ImportPins`.)
   The launcher's search is the only search: KRunner (Alt+Space) is retired
   by `build.sh`, which deletes its program, shortcuts file and D-Bus
   activation and masks `plasma-krunner.service` (the KRunner library and
-  its plugins stay; Andromeda runs them in its own process, and Settings'
+  its plugins stay; Atlas Launcher runs them in its own process, and Settings'
   Plasma Search page still picks them). Notifications drop down at the top
   centre (`PopupPosition=TopCenter`, added to `/etc/xdg/plasmanotifyrc` by
   `build.sh`), sliding down from the top edge, just under the clock island;
@@ -738,9 +742,9 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
 Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad, Atlas Settings, Atlas Wizard, Atlas Explorer (Files, the default file manager), Atlas Archive (replaces Ark), Atlas Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
+Notepad, Atlas Settings, Atlas Wizard, Atlas Explorer (Files, the default file manager), Atlas Archive (replaces Ark), Atlas Launcher (replaces Andromeda), Atlas Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
 named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad`,
-`atlas-settings`, `atlas-wizard`, `atlas-store`, `atlas-explorer` and `atlas-installer` (no RPM: its `firstboot/` is bound into the
+`atlas-settings`, `atlas-wizard`, `atlas-store`, `atlas-explorer`, `atlas-archive`, `atlas-launcher` and `atlas-installer` (no RPM: its `firstboot/` is bound into the
 `apps.sh` step, which runs `install.sh`). atlas-framework's `framework` stage makes the RPMs; the app
 stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
 before the apps. Atlas.Ui changes go there, never into an app.
@@ -757,7 +761,7 @@ exactly what it holds.
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
   instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC`, `ATLAS_STORE_SRC`, `ATLAS_EXPLORER_SRC`, `ATLAS_ARCHIVE_SRC` or `ATLAS_INSTALLER_SRC` at it.
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC`, `ATLAS_STORE_SRC`, `ATLAS_EXPLORER_SRC`, `ATLAS_ARCHIVE_SRC`, `ATLAS_LAUNCHER_SRC` or `ATLAS_INSTALLER_SRC` at it.
 - Each build records the commits in the `net.eterneon.atlas.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
@@ -844,7 +848,8 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 `EternalCoder454/atlasos-wizard` as `atlas-wizard`,
 `EternalCoder454/atlasos-store` as `atlas-store`,
 `EternalCoder454/atlasos-explorer` as `atlas-explorer`,
-`EternalCoder454/atlasos-archive` as `atlas-archive`, and
+`EternalCoder454/atlasos-archive` as `atlas-archive`,
+`EternalCoder454/atlasos-launcher` as `atlas-launcher`, and
 `EternalCoder454/atlasos-installer` as `atlas-installer`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.

@@ -204,8 +204,13 @@ if grep -q '^\[Notifications\]' /etc/xdg/plasmanotifyrc; then
 fi
 printf '\n# AtlasOS (build.sh): see there.\n[Notifications]\nPopupPosition=TopCenter\n' >>/etc/xdg/plasmanotifyrc
 
+# Atlas Launcher's user unit (installed by apps.sh) runs it at every login, so
+# its search and Meta key answer at once.
+systemctl --global enable atlas-launcher.service
+[ "$(systemctl --global is-enabled atlas-launcher.service)" = enabled ]
+
 # KRunner, Plasma's separate search bar (Alt+Space), is retired: the
-# launcher's search is the one search. Andromeda runs KRunner's plugins in its
+# launcher's search is the one search. Atlas Launcher runs KRunner's plugins in its
 # own process through the KRunner library, which stays, with the plugins.
 # Without its global-shortcuts file kglobalaccel gives KRunner no keys
 # (Alt+Space, Alt+F2, Search, Alt+Shift+F2); without the program, its D-Bus
