@@ -110,7 +110,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           scripts/atlas-pins.py verify
-          for n in framework updater monitor notepad settings wizard store installer; do
+          for n in framework updater monitor notepad settings wizard store explorer installer; do
             sha=$(scripts/atlas-pins.py get "$n")
             echo "$n=$sha" >>"$GITHUB_OUTPUT"
           done
@@ -189,6 +189,15 @@ jobs:
           path: atlas-store
           persist-credentials: false
 
+      # Atlas Explorer's source (pinned), the atlas-explorer build context.
+      - name: Checkout Atlas Explorer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-explorer
+          ref: ${{ steps.pins.outputs.explorer }}
+          path: atlas-explorer
+          persist-credentials: false
+
       # Atlas Installer's source (pinned): its firstboot/ files, the
       # atlas-installer build context (no RPM).
       - name: Checkout Atlas Installer
@@ -245,9 +254,10 @@ jobs:
           settings=$(git -C atlas-settings rev-parse HEAD)
           wizard=$(git -C atlas-wizard rev-parse HEAD)
           store=$(git -C atlas-store rev-parse HEAD)
+          explorer=$(git -C atlas-explorer rev-parse HEAD)
           installer=$(git -C atlas-installer rev-parse HEAD)
           # What was checked out is what atlas-apps.lock pins, or nothing runs.
-          for n in framework updater monitor notepad settings wizard store installer; do
+          for n in framework updater monitor notepad settings wizard store explorer installer; do
             [ "$(git -C "atlas-$n" rev-parse HEAD)" = "$(scripts/atlas-pins.py get "$n")" ] ||
               { echo "::error::atlas-$n isn't at its pinned commit"; exit 1; }
           done
@@ -267,6 +277,7 @@ jobs:
                [ "$(jq -r '."net.eterneon.atlas.settings.revision" // ""' <<<"$labels")" = "$settings" ] &&
                [ "$(jq -r '."net.eterneon.atlas.wizard.revision" // ""' <<<"$labels")" = "$wizard" ] &&
                [ "$(jq -r '."net.eterneon.atlas.store.revision" // ""' <<<"$labels")" = "$store" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.explorer.revision" // ""' <<<"$labels")" = "$explorer" ] &&
                [ "$(jq -r '."net.eterneon.atlas.installer.revision" // ""' <<<"$labels")" = "$installer" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
@@ -322,6 +333,7 @@ jobs:
             echo "settings=$settings"
             echo "wizard=$wizard"
             echo "store=$store"
+            echo "explorer=$explorer"
             echo "installer=$installer"
             echo "skip=$skip"
             echo "date=$date"
@@ -377,6 +389,8 @@ jobs:
           ATLAS_WIZARD_SRC: ${{ github.workspace }}/atlas-wizard
           # this as the atlas-store one,
           ATLAS_STORE_SRC: ${{ github.workspace }}/atlas-store
+          # this as the atlas-explorer one,
+          ATLAS_EXPLORER_SRC: ${{ github.workspace }}/atlas-explorer
           # and this as the atlas-installer one.
           ATLAS_INSTALLER_SRC: ${{ github.workspace }}/atlas-installer
         run: |
@@ -390,6 +404,7 @@ jobs:
             --label net.eterneon.atlas.settings.revision="${{ steps.decide.outputs.settings }}" \
             --label net.eterneon.atlas.wizard.revision="${{ steps.decide.outputs.wizard }}" \
             --label net.eterneon.atlas.store.revision="${{ steps.decide.outputs.store }}" \
+            --label net.eterneon.atlas.explorer.revision="${{ steps.decide.outputs.explorer }}" \
             --label net.eterneon.atlas.installer.revision="${{ steps.decide.outputs.installer }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"

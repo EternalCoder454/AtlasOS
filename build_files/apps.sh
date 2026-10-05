@@ -24,14 +24,14 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 # image. They are required parts of the system: the build fails without them,
 # and their protected.d files (atlas-framework.conf from atlas-ui, atlas.conf
 # from atlas-system-helper, atlas-monitor.conf, atlas-notepad.conf,
-# atlas-settings.conf, atlas-wizard.conf, atlas-store.conf) stop dnf
+# atlas-settings.conf, atlas-wizard.conf, atlas-store.conf, atlas-explorer.conf) stop dnf
 # removing them.
 "${dnf[@]}" install /atlas-framework-rpms/*.rpm
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -43,6 +43,7 @@ fi
 [ -f /etc/dnf/protected.d/atlas-settings.conf ]
 [ -f /etc/dnf/protected.d/atlas-wizard.conf ]
 [ -f /etc/dnf/protected.d/atlas-store.conf ]
+[ -f /etc/dnf/protected.d/atlas-explorer.conf ]
 # The default apps (mimeapps.list), launcher favourites and the menu name
 # these.
 [ -f /usr/share/applications/net.eterneon.atlas.notepad.desktop ]
@@ -52,6 +53,20 @@ fi
 # Atlas Store sits beside Discover (the default for Flatpak links and RPM files).
 [ -f /usr/share/applications/net.eterneon.atlas.store.desktop ]
 [ -x /usr/bin/atlas-store ]
+# Atlas Explorer (Files) is the default file manager (inode/directory in
+# mimeapps.list) and owns org.freedesktop.FileManager1. Dolphin stays installed
+# but its service file for that name goes, so it can't be started for it. The
+# index service is D-Bus activated (no preset, not started at login).
+[ -f /usr/share/applications/net.eterneon.atlas.explorer.desktop ]
+[ -x /usr/bin/atlas-explorer ]
+[ -x /usr/bin/atlas-explorer-indexd ]
+[ -x /usr/bin/atlas-explorer-search ]
+[ -f /usr/share/dbus-1/services/net.eterneon.atlas.explorer.Search.service ]
+[ -f /usr/lib/systemd/user/atlas-explorer-indexd.service ]
+[ -f /usr/share/dbus-1/services/org.freedesktop.FileManager1.service ]
+rm -f /usr/share/dbus-1/services/org.kde.dolphin.FileManager1.service
+[ "$(grep -l '^Name=org.freedesktop.FileManager1$' /usr/share/dbus-1/services/*.service)" = /usr/share/dbus-1/services/org.freedesktop.FileManager1.service ]
+grep -q atlas-explorer /usr/share/dbus-1/services/org.freedesktop.FileManager1.service
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,

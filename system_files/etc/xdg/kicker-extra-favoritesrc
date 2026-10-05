@@ -1,5 +1,5 @@
 # The start menu's favourites for new users. Replaces Fedora's list, which
 # names Kontact, KWrite and Konsole, none of which AtlasOS has.
 [General]
-Prepend=preferred://browser;systemsettings.desktop;org.kde.dolphin.desktop;com.mitchellh.ghostty.desktop;net.eterneon.atlas.store.desktop;org.kde.discover.desktop
+Prepend=preferred://browser;systemsettings.desktop;net.eterneon.atlas.explorer.desktop;com.mitchellh.ghostty.desktop;net.eterneon.atlas.store.desktop;org.kde.discover.desktop
 IgnoreDefaults=true

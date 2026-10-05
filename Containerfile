@@ -119,6 +119,19 @@ RUN --mount=type=cache,target=/var/cache/atlas-store-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-store-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Explorer (Files), the file manager and its index service, built the same
+# way from the build context named "atlas-explorer"; the pinned commit is
+# labelled in net.eterneon.atlas.explorer.revision.
+FROM registry.fedoraproject.org/fedora:44 AS explorer-app
+COPY --from=atlas-explorer --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-explorer-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    CARGO_HOME=/var/cache/atlas-explorer-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
@@ -197,6 +210,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
     --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
     --mount=type=bind,from=store-app,source=/out,target=/atlas-store-rpms \
+    --mount=type=bind,from=explorer-app,source=/out,target=/atlas-explorer-rpms \
     --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh

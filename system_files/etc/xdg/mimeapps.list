@@ -4,6 +4,7 @@
 # Ahead of Fedora's lists, which name Firefox and KWrite, and of a browser's
 # own claim on PDFs and images.
 [Default Applications]
+inode/directory=net.eterneon.atlas.explorer.desktop
 text/plain=net.eterneon.atlas.notepad.desktop
 text/markdown=net.eterneon.atlas.notepad.desktop
 text/x-readme=net.eterneon.atlas.notepad.desktop
