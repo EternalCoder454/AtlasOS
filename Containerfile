@@ -168,7 +168,7 @@ ARG BASE_IMAGE
 # keep it between builds. Without that bind, dnf just downloads as usual.
 # PACKAGES_DATE (today, from `just build`) reruns the packages step once a
 # day even when nothing else changed, so updates from Fedora and the
-# third-party repos (Brave above all) never wait for a new base image.
+# third-party repos never wait for a new base image.
 ARG PACKAGES_DATE=
 RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     --mount=type=bind,from=kio,source=/out,target=/kio-rpms \
@@ -182,6 +182,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
     --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
     --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
+    --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 

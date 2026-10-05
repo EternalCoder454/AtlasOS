@@ -62,6 +62,10 @@ them off the VPS's other services (see
 
 ### Security fast path
 
+> Brave is no longer preinstalled (the installer's "Choose your apps" step
+> offers it), so the build no longer reads Brave's repo or sets
+> `org.atlasos.brave.version`; the paragraphs below about it are history.
+
 A Brave or kernel fix should not wait for Saturday. Two parts:
 
 - **The build notices Brave.** The daily scheduled build skips only when

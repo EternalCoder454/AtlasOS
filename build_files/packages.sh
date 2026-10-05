@@ -16,7 +16,7 @@ set -euxo pipefail
 dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 
 ### Third-party repos: pinned keys
-# Ghostty's COPR, Brave and mise are outside repos. Their .repo files are in
+# Ghostty's COPR and NVIDIA's container toolkit are outside repos. Their .repo files are in
 # build_files/repos and their public keys in build_files/keys (downloaded once
 # over https, fingerprints pinned below), so nothing is trusted on first use
 # from the vendor's own server. vendor_repo checks the key against the pinned
@@ -91,7 +91,8 @@ remove=(
 	firewall-config # the Firewall app; firewalld itself stays
 	kde-partitionmanager
 	kdebugsettings
-	# The browser is Brave Origin (below).
+	# No browser is preinstalled: the installer's "Choose your apps" step
+	# offers Brave and Firefox.
 	firefox
 	firefox-langpacks
 	# The terminal is Ghostty (below). DrKonqi, KDE's crash reporter, needs
@@ -104,8 +105,8 @@ remove=(
 	plasma-workspace-wallpapers
 	# Fedora's bookmarks page, and the Chromium policy packages: all they
 	# install is the Plasma Integration extension for Chromium and Chrome,
-	# which Brave (it reads /etc/brave, not /etc/chromium or
-	# /usr/share/chromium) never loads. Nothing requires any of them.
+	# which a Chromium browser the user adds later doesn't need here. Nothing
+	# requires any of them.
 	fedora-bookmarks
 	fedora-chromium-config
 	fedora-chromium-config-kde
@@ -207,41 +208,16 @@ sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
 	/usr/share/applications/com.mitchellh.ghostty.desktop \
 	>/usr/share/kglobalaccel/com.mitchellh.ghostty.desktop
 
-# Brave Origin, the browser: Brave without its AI, crypto wallet, rewards,
-# VPN and news, free on Linux. It isn't on Flathub, so it comes unmodified
-# from Brave's own RPM repo, which goes again afterwards like Ghostty's.
-# Key: https://brave-browser-rpm-release.s3.brave.com/brave-core.asc (three
-# release keys; the repodata and packages are signed).
-vendor_repo brave-browser brave.asc \
-	DBF1A116C220B8C7164F98230686B78420038257 \
-	47D32A74E9A9E013A4B4926C68D513D36A73CD96 \
-	B2A3DCA350E67256740DF904DE4EC67BE4B0DCA0
-# It installs into /opt, which on an image-based system is /var/opt: state,
-# not part of the image. So install it there, move it into /usr, and link
-# it back on every boot.
-mkdir -p /var/opt
-"${dnf[@]}" install brave-origin
-vendor_repo_remove brave-browser
-mkdir -p /usr/lib/opt
-mv /var/opt/brave.com /usr/lib/opt/
-rmdir /var/opt
-echo "L /var/opt/brave.com - - - - /usr/lib/opt/brave.com" >/usr/lib/tmpfiles.d/atlasos-brave.conf
-# Its daily job puts the repo back to update it; the image does that.
-rm -f /etc/cron.daily/brave-origin
-# The default browser in /etc/xdg names this launcher; its scriptlets must not
-# have put the repo back.
-[ -f /usr/share/applications/brave-origin.desktop ]
-[ ! -e /etc/yum.repos.d/brave-browser.repo ]
-
 # Developer tools: AtlasOS is for developers. Containers (Podman with a
 # `docker` command and compose; toolbox and distrobox for mutable dev
-# environments), everyday command-line tools, debuggers and profilers. (The
-# text editor is Atlas Notepad, from apps.sh.) Docker CE stays out:
+# environments) and everyday command-line tools. gh, just, mise, gdb, strace
+# and perf are not preinstalled: the installer's "Choose your apps" step
+# offers them. (The text editor is Atlas Notepad, from apps.sh.) Docker CE stays out:
 # podman-docker answers to `docker`, and Docker's daemon would run as root at
 # all times.
 "${dnf[@]}" install \
 	podman-compose podman-docker toolbox distrobox \
-	git gh just jq ripgrep fd-find curl wget2-wget gdb strace perf
+	git jq ripgrep fd-find curl wget2-wget
 # Kvantum is the application style (AtlasOS themes in usr/share/Kvantum): the
 # Qt6 style plugin and its themes, 8 MiB installed, no Qt5.
 "${dnf[@]}" install kvantum
@@ -249,15 +225,8 @@ rm -f /etc/cron.daily/brave-origin
 # podman-docker would print a warning on every `docker` command.
 touch /etc/containers/nodocker
 
-# mise manages language versions (Node, Python, Go...) per user and project.
-# Fedora doesn't package it; this is mise's own signed RPM repo, which goes
-# again afterwards. /etc/profile.d/atlasos-mise.sh turns it on in shells.
-# Key: https://mise.jdx.dev/gpg-key.pub
-vendor_repo mise mise.pub 24853EC9F655CE80B48E6C3A8B81C9D17413A06D
-"${dnf[@]}" install mise
-vendor_repo_remove mise
 # None of the outside repos may be left behind.
-leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*mise*' -o -iname '*brave*' -o -iname '*nvidia-container*' \) -print)
+leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*nvidia-container*' \) -print)
 [ -z "$leftover" ] || {
 	echo "packages.sh: outside repos still in /etc/yum.repos.d: $leftover" >&2
 	exit 1
@@ -294,7 +263,7 @@ for repo in free nonfree; do
 	curl -fsSL --retry 5 --retry-all-errors --proto '=https' --tlsv1.2 -o "$rpmfusion/$repo.rpm" \
 		"https://mirrors.rpmfusion.org/$repo/fedora/rpmfusion-$repo-release-$fedora.noarch.rpm"
 	# A private rpm database holding only this repo's key: by now the system's
-	# holds Fedora's, Ghostty's, Brave's and mise's too, and a package signed
+	# holds Fedora's, Ghostty's too, and a package signed
 	# by any of them would pass there.
 	rpmdb=$(mktemp -d)
 	rpmkeys --define "_dbpath $rpmdb" --import "$keys/RPM-GPG-KEY-rpmfusion-$repo-fedora-$fedora"
@@ -388,17 +357,25 @@ systemctl enable cups.socket
 # The desktop the image promises. A removal above that took one of these with
 # it fails the build here instead of shipping a broken image.
 keep=(
-	plasma-workspace plasma-desktop kwin ghostty brave-origin dolphin plasma-systemsettings
+	plasma-workspace plasma-desktop kwin ghostty dolphin plasma-systemsettings
 	plasma-login-manager NetworkManager NetworkManager-wifi
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
 	plymouth zram-generator power-profiles-daemon xorg-x11-server-Xwayland
-	podman podman-compose podman-docker toolbox distrobox git gh just mise
+	podman podman-compose podman-docker toolbox distrobox git
 	gwenview okular qalculate-qt haruna plasma-camera ffmpeg openh264 steam-devices plasma-print-manager
 	firewalld plasma-firewall-firewalld
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
 )
 rpm -q "${keep[@]}"
+# What the installer's "Choose your apps" step offers is not preinstalled:
+# none of these may be in the image (or pulled back as a dependency).
+for pkg in brave-origin brave-browser firefox gh just mise gdb strace perf; do
+	if rpm -q --quiet "$pkg"; then
+		echo "packages.sh: $pkg is installed; it is offered at first boot instead" >&2
+		exit 1
+	fi
+done
 
 # Everyday names for the everyday apps, in every language (as macOS calls
 # its file manager Finder everywhere): Terminal, Files and Store. (Atlas

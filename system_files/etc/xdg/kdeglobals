@@ -9,8 +9,8 @@ widgetStyle=kvantum
 AnimationDurationFactor=0.7071
 
 # IBM Plex Sans for the interface and JetBrains Mono for fixed-width text
-# (Noto stays as the fallback for scripts they don't cover); Ghostty and
-# Brave Origin as the terminal and browser. The colour scheme's colours are
+# (Noto stays as the fallback for scripts they don't cover); Ghostty as
+# the terminal. The colour scheme's colours are
 # appended at build time by build.sh.
 # The terminal is a command, not Ghostty's desktop file: that file starts
 # Ghostty single-instance, so with a Ghostty window already open, "Open
@@ -20,7 +20,6 @@ AnimationDurationFactor=0.7071
 [General]
 ColorScheme=AtlasOSLight
 TerminalApplication=ghostty --gtk-single-instance=false
-BrowserApplication=brave-origin.desktop
 fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 font=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 menuFont=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1

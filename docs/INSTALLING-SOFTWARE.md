@@ -10,7 +10,7 @@ doesn't work on the system itself. Here's what to use instead, best first.
 | A desktop app (browser, chat, office, games, editors) | Store, which installs Flatpaks from Flathub |
 | A command-line tool | Homebrew (`atlas brew` sets it up), or a Toolbox |
 | A Fedora package, or a whole dev environment with `dnf` | Toolbox or Distrobox |
-| A version of Node, Python, Go, Rust... per project | mise (already installed) |
+| A version of Node, Python, Go, Rust... per project | mise (offered in the installer's "Choose your apps" step) |
 | A service or database for development | Podman (`docker` works too) |
 | Something that has to be part of the system (a driver, a shell) | `rpm-ostree install`, as a last resort |
 
@@ -63,7 +63,7 @@ new one.
 
 ## Language versions: mise
 
-[mise](https://mise.jdx.dev) is already installed and switches Node, Python,
+[mise](https://mise.jdx.dev) is offered in the installer's "Choose your apps" step and switches Node, Python,
 Go, Rust, Java and many more per project:
 
 ```sh

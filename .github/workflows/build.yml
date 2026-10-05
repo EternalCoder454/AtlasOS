@@ -110,7 +110,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           scripts/atlas-pins.py verify
-          for n in framework updater monitor notepad settings wizard; do
+          for n in framework updater monitor notepad settings wizard installer; do
             sha=$(scripts/atlas-pins.py get "$n")
             echo "$n=$sha" >>"$GITHUB_OUTPUT"
           done
@@ -180,6 +180,16 @@ jobs:
           path: atlas-wizard
           persist-credentials: false
 
+      # Atlas Installer's source (pinned): its firstboot/ files, the
+      # atlas-installer build context (no RPM).
+      - name: Checkout Atlas Installer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: EternalCoder454/atlasos-installer
+          ref: ${{ steps.pins.outputs.installer }}
+          path: atlas-installer
+          persist-credentials: false
+
       # main publishes :testing, beta publishes :beta. (:stable and :latest
       # come from promote-stable.yml.) Pull requests and tags build and
       # lint but never push.
@@ -225,25 +235,12 @@ jobs:
           notepad=$(git -C atlas-notepad rev-parse HEAD)
           settings=$(git -C atlas-settings rev-parse HEAD)
           wizard=$(git -C atlas-wizard rev-parse HEAD)
+          installer=$(git -C atlas-installer rev-parse HEAD)
           # What was checked out is what atlas-apps.lock pins, or nothing runs.
-          for n in framework updater monitor notepad settings wizard; do
+          for n in framework updater monitor notepad settings wizard installer; do
             [ "$(git -C "atlas-$n" rev-parse HEAD)" = "$(scripts/atlas-pins.py get "$n")" ] ||
               { echo "::error::atlas-$n isn't at its pinned commit"; exit 1; }
           done
-
-          # The newest Brave in Brave's own repo: a trigger only (the build
-          # installs it through dnf, which verifies the signatures), so that
-          # a Brave security fix is built within a day, not whenever
-          # something else changes. If it can't be read, the scheduled run
-          # builds rather than risk missing a fix.
-          brave=""
-          if brave=$(scripts/brave-version.sh 2>"$RUNNER_TEMP/brave.err") &&
-             [[ "$brave" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
-            :
-          else
-            brave=""
-            echo "::notice::Couldn't read Brave's newest version ($(tr '\n' ' ' <"$RUNNER_TEMP/brave.err")); a scheduled run builds."
-          fi
 
           if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
             # No published image yet (or the registry is down) means build.
@@ -252,15 +249,14 @@ jobs:
               "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}" 2>/dev/null); then
               labels=$(jq -c '.Labels // {}' <<<"$json")
             fi
-            if [ -n "$brave" ] &&
-               [ "$(jq -r '."org.atlasos.brave.version" // ""' <<<"$labels")" = "$brave" ] &&
-               [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
+            if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
                [ "$(jq -r '."net.eterneon.atlas.framework.revision" // ""' <<<"$labels")" = "$framework" ] &&
                [ "$(jq -r '."net.eterneon.atlas.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
                [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
                [ "$(jq -r '."net.eterneon.atlas.notepad.revision" // ""' <<<"$labels")" = "$notepad" ] &&
                [ "$(jq -r '."net.eterneon.atlas.settings.revision" // ""' <<<"$labels")" = "$settings" ] &&
                [ "$(jq -r '."net.eterneon.atlas.wizard.revision" // ""' <<<"$labels")" = "$wizard" ] &&
+               [ "$(jq -r '."net.eterneon.atlas.installer.revision" // ""' <<<"$labels")" = "$installer" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
             fi
@@ -314,7 +310,7 @@ jobs:
             echo "notepad=$notepad"
             echo "settings=$settings"
             echo "wizard=$wizard"
-            echo "brave=$brave"
+            echo "installer=$installer"
             echo "skip=$skip"
             echo "date=$date"
             echo "version=$version"
@@ -365,8 +361,10 @@ jobs:
           ATLAS_NOTEPAD_SRC: ${{ github.workspace }}/atlas-notepad
           # this as the atlas-settings one,
           ATLAS_SETTINGS_SRC: ${{ github.workspace }}/atlas-settings
-          # and this as the atlas-wizard one.
+          # this as the atlas-wizard one,
           ATLAS_WIZARD_SRC: ${{ github.workspace }}/atlas-wizard
+          # and this as the atlas-installer one.
+          ATLAS_INSTALLER_SRC: ${{ github.workspace }}/atlas-installer
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
@@ -377,35 +375,20 @@ jobs:
             --label net.eterneon.atlas.notepad.revision="${{ steps.decide.outputs.notepad }}" \
             --label net.eterneon.atlas.settings.revision="${{ steps.decide.outputs.settings }}" \
             --label net.eterneon.atlas.wizard.revision="${{ steps.decide.outputs.wizard }}" \
+            --label net.eterneon.atlas.installer.revision="${{ steps.decide.outputs.installer }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages
           # nothing has downloaded for a month before it is saved.
           find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
 
-      # The Brave version the image holds, as the label the next Decide
-      # compares with Brave's repo: read from the built image, not from what
-      # Decide saw, since the build installs whatever the repo has by then.
-      # Only the image's metadata changes (no layer). A newer one than Decide
-      # saw is fine (Brave published meanwhile); an older or missing one is
-      # not what Decide's skip logic can trust, so it is called out.
-      - name: Label the Brave version and build time
+      # The build time as a label, set on the built image: only its metadata
+      # changes (no layer).
+      - name: Label the build time
         if: steps.decide.outputs.skip != 'true'
-        env:
-          EXPECTED: ${{ steps.decide.outputs.brave }}
         run: |
           set -euo pipefail
           ref="localhost/${IMAGE_NAME}:${{ steps.decide.outputs.tag }}"
-          have=$(podman run --rm --network=none --entrypoint rpm "$ref" -q --qf '%{VERSION}' brave-origin)
-          [[ "$have" =~ ^[0-9]+(\.[0-9]+)+$ ]] || { echo "::error::brave-origin in the image has no usable version: '$have'"; exit 1; }
-          if [ -n "$EXPECTED" ] && [ "$have" != "$EXPECTED" ]; then
-            newest=$(printf '%s\n%s\n' "$have" "$EXPECTED" | sort -V | tail -n 1)
-            if [ "$newest" = "$EXPECTED" ]; then
-              echo "::warning::The image has Brave ${have}, but the repo had ${EXPECTED} when this run started; the next scheduled run builds again."
-            else
-              echo "::notice::The image has Brave ${have}, newer than the ${EXPECTED} seen at the start."
-            fi
-          fi
           ctx=$(mktemp -d)
           printf 'FROM %s\n' "$ref" >"$ctx/Containerfile"
           # org.atlasos.built: when this build ran (epoch seconds). The image's
@@ -413,13 +396,10 @@ jobs:
           # fast promotion's 24-hour soak goes by this instead. Signed with
           # the rest of the config.
           built=$(date -u +%s)
-          podman build --pull=never --label "org.atlasos.brave.version=${have}" \
-            --label "org.atlasos.built=${built}" \
+          podman build --pull=never --label "org.atlasos.built=${built}" \
             --file "$ctx/Containerfile" --tag "$ref" "$ctx"
           rm -rf "$ctx"
-          [ "$(podman image inspect --format '{{index .Labels "org.atlasos.brave.version"}}' "$ref")" = "$have" ]
           [ "$(podman image inspect --format '{{index .Labels "org.atlasos.built"}}' "$ref")" = "$built" ]
-          echo "Brave ${have}" >>"$GITHUB_STEP_SUMMARY"
 
       # Smaller updates for users. Only for images that get pushed. Into an
       # OCI directory in the job's temporary directory, which the runner

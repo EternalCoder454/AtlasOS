@@ -315,9 +315,7 @@ sudo bootc status                       # booted / staged / rollback
   helper), Flathub, Ghostty as the terminal (Ctrl+Alt+T), from the
   [scottames/ghostty](https://copr.fedorainfracloud.org/coprs/scottames/ghostty/)
   COPR that Ghostty's install guide points to, since Fedora doesn't package
-  it; Brave Origin as the browser, from
-  [Brave's own RPM repository](https://brave.com/linux/) (it isn't on
-  Flathub); IBM Plex Sans for the interface and JetBrains Mono for terminals
+  it; IBM Plex Sans for the interface and JetBrains Mono for terminals
   and code. Dolphin's "Open Terminal Here" (and Shift+F4) opens
   Ghostty; Ghostty's own duplicate "Open Ghostty Here" entry is removed. Native RPMs for the everyday apps, so
   they take the Kvantum style and Papirus icons: Gwenview, Okular,
@@ -328,10 +326,10 @@ sudo bootc status                       # booted / staged / rollback
   toolbar icons (`/etc/xdg/okularrc`). Haruna and Qalculate! read only their
   own `~/.config` files, so AtlasOS can't set their defaults system-wide;
   Haruna's hardware decoding is on (`auto`) by default anyway.
-- **Third-party repos (Ghostty's COPR, Brave, mise, NVIDIA's container
+- **Third-party repos (Ghostty's COPR, NVIDIA's container
   toolkit):** never trusted on first use. Each repo's `.repo` file is in
   `build_files/repos` (`gpgcheck=1`, and `repo_gpgcheck=1` where the vendor
-  signs its repodata: Brave, mise, NVIDIA; COPR doesn't) and its public key
+  signs its repodata: NVIDIA; COPR doesn't) and its public key
   in `build_files/keys`, with the key's fingerprint pinned in `packages.sh`
   (`nvidia/build.sh` for NVIDIA). The build refuses a key that doesn't match
   ("vendor rotated its key"); then check the new key, replace the file and
@@ -339,8 +337,8 @@ sudo bootc status                       # booted / staged / rollback
   install. Fedora's own koji downloads (KIO, kernel-devel) are
   taken from koji's `data/signed` copies and checked against Fedora's
   release key before use.
-  Key expiry, for diagnosing a future build failure: mise 2028-01-02,
-  Ghostty 2030-05-15 (UTC), Brave 2032-12-24, 2035-03-15 and 2035-07-27,
+  Key expiry, for diagnosing a future build failure:
+  Ghostty 2030-05-15 (UTC),
   NVIDIA's primary key never (its signing subkey expired in 2021; the
   primary signs the repodata).
 - **Codecs and video decoding:** `ffmpeg` replaces `ffmpeg-free`, with
@@ -740,9 +738,10 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
 Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad, Atlas Settings, Atlas Wizard) come from their own repositories, each passed to `podman build` as a
+Notepad, Atlas Settings, Atlas Wizard, and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
 named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad`,
-`atlas-settings` and `atlas-wizard`. atlas-framework's `framework` stage makes the RPMs; the app
+`atlas-settings`, `atlas-wizard` and `atlas-installer` (no RPM: its `firstboot/` is bound into the
+`apps.sh` step, which runs `install.sh`). atlas-framework's `framework` stage makes the RPMs; the app
 stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
 before the apps. Atlas.Ui changes go there, never into an app.
 
@@ -758,7 +757,7 @@ exactly what it holds.
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
   instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC` or `ATLAS_WIZARD_SRC` at it.
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC` or `ATLAS_INSTALLER_SRC` at it.
 - Each build records the commits in the `net.eterneon.atlas.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
@@ -842,7 +841,8 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 `EternalCoder454/atlasos-monitor` as `atlas-monitor`, and
 `EternalCoder454/atlasos-notepad` as `atlas-notepad`,
 `EternalCoder454/atlasos-settings` as `atlas-settings`, and
-`EternalCoder454/atlasos-wizard` as `atlas-wizard`.
+`EternalCoder454/atlasos-wizard` as `atlas-wizard`, and
+`EternalCoder454/atlasos-installer` as `atlas-installer`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default

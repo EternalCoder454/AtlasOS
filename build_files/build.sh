@@ -530,10 +530,11 @@ if find "${icon_themes[@]}" -path '*/places/*' -type l \( -lname 'folder-blue[-.
 	echo "build.sh: the folder links above are still blue" >&2
 	exit 1
 fi
-# Apps AtlasOS ships whose own icons are in other styles (Brave's under the
-# name brave-origin, Ghostty's a photo-like screen): Papirus's for them too,
+# Apps AtlasOS ships whose own icons are in other styles (Ghostty's a
+# photo-like screen): Papirus's for them too,
 # in every size directory that has the icon and lacks one under that name.
-for alias in brave-origin:brave-browser com.mitchellh.ghostty:utilities-terminal; do
+# shellcheck disable=SC2043 # a list of one: add the next app's alias here
+for alias in com.mitchellh.ghostty:utilities-terminal; do
 	[ -e "/usr/share/icons/Papirus/48x48/apps/${alias#*:}.svg" ]
 	while IFS= read -r -d '' dir; do
 		if [ -e "$dir/${alias#*:}.svg" ] && [ ! -e "$dir/${alias%%:*}.svg" ]; then
@@ -541,7 +542,6 @@ for alias in brave-origin:brave-browser com.mitchellh.ghostty:utilities-terminal
 		fi
 	done < <(find "${icon_themes[@]}" -type d -name apps -print0)
 done
-[ -e /usr/share/icons/Papirus/48x48/apps/brave-origin.svg ]
 [ -e /usr/share/icons/Papirus-Dark/16x16/apps/com.mitchellh.ghostty.svg ]
 # Every user must be able to read them (tar keeps the archive's modes).
 if find "${icon_themes[@]}" /usr/share/icons/Bibata-Modern-* ! -type l ! -perm -o=r | grep .; then

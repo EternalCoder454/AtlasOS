@@ -65,10 +65,10 @@ rolls itself back.
 - [Ghostty](https://ghostty.org) as the terminal (Ctrl+Alt+T), with
   "Open Terminal Here" in Dolphin.
 - Podman with a `docker` command and compose, Toolbox and Distrobox for
-  mutable dev environments, and [mise](https://mise.jdx.dev) for Node,
-  Python, Go and friends.
-- git, gh, just, jq, ripgrep, fd, gdb, strace and perf, already there
-  (Atlas Monitor in place of btop).
+  mutable dev environments.
+- git, jq, ripgrep and fd, already there (Atlas Monitor in place of btop).
+  gh, [mise](https://mise.jdx.dev), just, a debug toolbox and VS Code are
+  offered in the installer's "Choose your apps" step, as are Brave and Firefox.
 - Atlas Notepad as the text editor, and file watch limits raised for big projects.
 - `atlas`, a command menu for the rest: Homebrew, Docker tools on Podman,
   JetBrains Toolbox, the update channel. Where each kind of software goes:
@@ -76,8 +76,8 @@ rolls itself back.
 
 **Less stuff, on purpose**
 - No Akonadi, no Baloo indexer, no KDE Connect, no pile of apps you'll never
-  open. Brave Origin replaces Firefox, and Flathub is set up for everything
-  else.
+  open. No browser is preinstalled (pick Brave or Firefox in the installer),
+  and Flathub is set up for everything else.
 - No telemetry. Crash reports are **off** by default, and if you turn them on
   you see every report in full and decide each time. See
   [PRIVACY.md](docs/PRIVACY.md).
@@ -182,7 +182,7 @@ every item was built and tested in a virtual machine before it was ticked off.
 That includes broken updates on purpose, to watch the automatic rollback do
 its job.
 
-The decisions are mine: Ghostty over Konsole, Brave Origin over Firefox,
+The decisions are mine: Ghostty over Konsole, no preinstalled browser,
 keeping every animation people can actually see, and the menu bar plus
 dock combo. The test reports are in [docs/](docs/) if you want the
 details.

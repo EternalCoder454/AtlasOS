@@ -37,7 +37,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LOCK = ROOT / "atlas-apps.lock"
-NAMES = ("framework", "updater", "monitor", "notepad", "settings", "wizard")
+NAMES = ("framework", "updater", "monitor", "notepad", "settings", "wizard", "installer")
 REPO = re.compile(r"EternalCoder454/[A-Za-z0-9][A-Za-z0-9._-]{0,99}(?<!\.git)")
 SHA = re.compile(r"[0-9a-f]{40}")
 TAG = re.compile(r"v[0-9]{1,4}(?:\.[0-9]{1,4}){1,3}(?:-[0-9A-Za-z.]{1,40})?")

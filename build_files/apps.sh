@@ -62,6 +62,26 @@ if rpm -q --quiet plasma-setup; then
 	echo "apps.sh: plasma-setup is still installed beside atlas-wizard" >&2
 	exit 1
 fi
+# The installer's first-boot apps step (no RPM): the Installer's firstboot/
+# files, bound in at /atlas-firstboot. It installs what the "Choose your apps"
+# page picked (browser, developer tools) on the first boot after setup.
+/atlas-firstboot/install.sh /
+[ -x /usr/libexec/atlasos/atlas-first-boot-apps ]
+[ -f /usr/share/atlasos/first-boot-apps.json ]
+[ -f /usr/lib/systemd/system/atlas-first-boot-apps.service ]
+[ -f /usr/lib/systemd/user/atlas-first-boot-apps.service ]
+[ -e /usr/lib/systemd/system/multi-user.target.wants/atlas-first-boot-apps.service ]
+[ -e /usr/lib/systemd/user/graphical-session.target.wants/atlas-first-boot-apps.service ]
+[ -f /etc/profile.d/atlas-mise.sh ]
+# What the script runs: python3, gdbus (glib2), toolbox, curl and flatpak, and
+# Flathub as a system remote (the remotes.d file Flatpak adds on first use).
+for tool in python3 gdbus toolbox curl flatpak; do
+	command -v "$tool" >/dev/null || {
+		echo "apps.sh: $tool is missing; the first-boot apps step needs it" >&2
+		exit 1
+	}
+done
+[ -f /usr/share/flatpak/remotes.d/flathub.flatpakrepo ]
 # Atlas Monitor takes Plasma System Monitor's shortcuts (Ctrl+Shift+Esc,
 # Ctrl+Esc); packages.sh removes that app.
 [ -f /usr/share/kglobalaccel/net.eterneon.atlas.monitor.desktop ]

@@ -1,12 +1,9 @@
-# Brave Origin opens web pages, Atlas Notepad opens text and source files,
+# No browser is set here (the installer's app step offers one). Atlas Notepad
+# opens text and source files,
 # Gwenview opens images, Okular opens PDFs, and Haruna opens video and audio.
-# Ahead of Fedora's lists, which name Firefox and KWrite, and of Brave's own
-# claim on PDFs and images.
+# Ahead of Fedora's lists, which name Firefox and KWrite, and of a browser's
+# own claim on PDFs and images.
 [Default Applications]
-text/html=brave-origin.desktop
-application/xhtml+xml=brave-origin.desktop
-x-scheme-handler/http=brave-origin.desktop
-x-scheme-handler/https=brave-origin.desktop
 text/plain=net.eterneon.atlas.notepad.desktop
 text/markdown=net.eterneon.atlas.notepad.desktop
 text/x-readme=net.eterneon.atlas.notepad.desktop
