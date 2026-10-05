@@ -1,4 +1,8 @@
-/usr/libexec/atlasos/pin-daemon		--	gen_context(system_u:object_r:atlasos_pin_exec_t,s0)
+# No file under /usr gets a type of its own here: a system running an image
+# from before this module can't write a label its policy doesn't know, so
+# its update to this image would fail (fsetxattr security.selinux: Invalid
+# argument). pin-daemon keeps bin_t, and its unit sets the domain; see
+# atlasos_pin.te. /run and /var are labelled on the running system.
 /run/atlasos				-d	gen_context(system_u:object_r:atlasos_pin_var_run_t,s0)
 /run/atlasos/pin\.sock			-s	gen_context(system_u:object_r:atlasos_pin_var_run_t,s0)
 /var/lib/atlasos/pin			-d	gen_context(system_u:object_r:atlasos_pin_var_lib_t,s0)

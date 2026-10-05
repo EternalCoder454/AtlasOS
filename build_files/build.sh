@@ -436,6 +436,20 @@ python3 -c 'import ctypes; ctypes.CDLL("libcrypt.so.2").crypt_gensalt'
 semodule -i /selinux/atlasos_pin.pp -i /selinux/atlasos_bootc.pp
 semodule -l | grep -qx atlasos_pin
 semodule -l | grep -qx atlasos_bootc
+# No file the image holds may get a type of ours: a system on an older image
+# doesn't know the type yet, and its update to this one would fail writing
+# the label (fsetxattr security.selinux: Invalid argument). Only /run and
+# /var, which the running system labels itself, may (selinux/atlasos_pin.fc).
+# It finds types named atlasos_*; a type of ours must be named so.
+fc=/etc/selinux/targeted/contexts/files/file_contexts
+test -s "$fc"
+if grep -E '_u:object_r:atlasos_' "$fc" | grep -vE '^/(run|var)/'; then
+	echo "build.sh: an image path above is labelled with a new AtlasOS SELinux type" >&2
+	exit 1
+fi
+# pin-daemon is bin_t, so its unit alone puts it in its domain; without the
+# line it would run as init_t
+grep -qx 'SELinuxContext=system_u:system_r:atlasos_pin_t:s0' /usr/lib/systemd/system/atlasos-pin@.service
 
 # Icons and logos rendered from branding/ (see branding/render.sh)
 cp -a /branding/icons/. /usr/share/icons/

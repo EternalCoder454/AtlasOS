@@ -8,6 +8,10 @@ RefuseManualStart=yes
 
 [Service]
 ExecStart=/usr/libexec/atlasos/pin-daemon
+# Its own SELinux domain (selinux/atlasos_pin.te), set here rather than by
+# the file's label: an image's files carry only types every older AtlasOS
+# already knows, or updating to it fails.
+SELinuxContext=system_u:system_r:atlasos_pin_t:s0
 StandardInput=socket
 StandardOutput=socket
 StandardError=journal

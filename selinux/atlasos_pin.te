@@ -15,8 +15,18 @@ require {
 }
 
 type atlasos_pin_t;
+# Declared for init_daemon_domain (init_t's transition and the daemon's role),
+# but no file has it: see atlasos_pin.fc. The daemon is bin_t like the rest of
+# /usr/libexec, and atlasos-pin@.service enters atlasos_pin_t with
+# SELinuxContext=. bin_t may be its entrypoint, and only init_t may make that
+# transition (no domain_auto_trans from bin_t), so nothing else can start a
+# process in this domain.
 type atlasos_pin_exec_t;
 init_daemon_domain(atlasos_pin_t, atlasos_pin_exec_t)
+require {
+	type bin_t;
+}
+domain_entry_file(atlasos_pin_t, bin_t)
 # The unit sets NoNewPrivileges=yes, which blocks a domain transition unless
 # the policy allows nnp_transition: without this, pin-daemon ran as init_t.
 init_nnp_daemon_domain(atlasos_pin_t)
@@ -41,8 +51,8 @@ manage_dirs_pattern(atlasos_pin_t, atlasos_pin_var_lib_t, atlasos_pin_var_lib_t)
 files_search_var_lib(atlasos_pin_t)
 list_dirs_pattern(atlasos_pin_t, atlasos_pin_var_run_t, atlasos_pin_var_run_t)
 allow atlasos_pin_t self:unix_stream_socket { accept getopt setopt read write getattr shutdown ioctl append };
-# the script itself (the interpreter opens it)
-allow atlasos_pin_t atlasos_pin_exec_t:file { getattr open read ioctl map lock };
+# the script itself (the interpreter opens it; bin_t, so corecmd_exec_bin
+# below covers it)
 allow atlasos_pin_t self:capability dac_read_search;
 allow atlasos_pin_t self:process { signal_perms getsched };
 allow atlasos_pin_t atlasos_pin_var_run_t:sock_file { getattr read write };
