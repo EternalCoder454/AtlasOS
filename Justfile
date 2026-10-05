@@ -60,6 +60,10 @@ build tag="latest" *args:
         mkdir -p "$2"
         git -C "$1" ls-files -z --cached --others --exclude-standard |
             rsync -a --from0 --files-from=- --ignore-missing-args "$1/" "$2/"
+        # An app's own .containerignore is written for its dev image (the
+        # wizard's keeps only its spec), and podman applies it to a named
+        # build context too, hiding packaging/build-rpm.sh from the stage.
+        rm -f "$2/.containerignore" "$2/.dockerignore"
     }
     copy_source "$framework" build/framework-src
     copy_source "$updater" build/updater-src
