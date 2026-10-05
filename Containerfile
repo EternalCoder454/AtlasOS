@@ -23,6 +23,15 @@ FROM registry.fedoraproject.org/fedora:44 AS framework
 COPY --from=atlas-framework --exclude=.git --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
+# atlas-framework 1.5.0's build-rpm.sh packages git's HEAD, and the context
+# is the pinned tree without .git: commit that tree into a throwaway
+# repository (fixed author and date, so this layer stays cacheable) whose HEAD
+# is exactly the pin. The image's label names the real commit.
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    dnf -y install git-core && \
+    git -C /src init -q && git -C /src add -A -f && \
+    GIT_AUTHOR_DATE=@0 GIT_COMMITTER_DATE=@0 git -C /src \
+        -c user.name=AtlasOS -c user.email=build@atlasos.invalid commit -qm pin
 RUN --mount=type=cache,target=/var/cache/atlas-framework-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     ATLAS_BUILD_CACHE=/var/cache/atlas-framework-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
