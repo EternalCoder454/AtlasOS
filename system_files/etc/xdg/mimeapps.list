@@ -5,6 +5,19 @@
 # own claim on PDFs and images.
 [Default Applications]
 inode/directory=net.eterneon.atlas.explorer.desktop
+application/zip=net.eterneon.atlas.archive.desktop
+application/x-7z-compressed=net.eterneon.atlas.archive.desktop
+application/x-tar=net.eterneon.atlas.archive.desktop
+application/x-compressed-tar=net.eterneon.atlas.archive.desktop
+application/x-bzip2-compressed-tar=net.eterneon.atlas.archive.desktop
+application/x-xz-compressed-tar=net.eterneon.atlas.archive.desktop
+application/x-zstd-compressed-tar=net.eterneon.atlas.archive.desktop
+application/gzip=net.eterneon.atlas.archive.desktop
+application/x-xz=net.eterneon.atlas.archive.desktop
+application/zstd=net.eterneon.atlas.archive.desktop
+application/x-bzip2=net.eterneon.atlas.archive.desktop
+application/vnd.rar=net.eterneon.atlas.archive.desktop
+application/x-rar=net.eterneon.atlas.archive.desktop
 text/plain=net.eterneon.atlas.notepad.desktop
 text/markdown=net.eterneon.atlas.notepad.desktop
 text/x-readme=net.eterneon.atlas.notepad.desktop

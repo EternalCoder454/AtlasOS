@@ -119,6 +119,20 @@ RUN --mount=type=cache,target=/var/cache/atlas-store-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-store-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Archive, the archive manager (replaces Ark), built the same way from the
+# build context named "atlas-archive". Its build-rpm.sh tars the tree it is
+# given (no git needed), so no ATLAS_RPM_WORKTREE; the pinned commit is labelled
+# in net.eterneon.atlas.archive.revision.
+FROM registry.fedoraproject.org/fedora:44 AS archive-app
+COPY --from=atlas-archive --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-archive-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    CARGO_HOME=/var/cache/atlas-archive-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # Atlas Explorer (Files), the file manager and its index service, built the same
 # way from the build context named "atlas-explorer"; the pinned commit is
 # labelled in net.eterneon.atlas.explorer.revision.
@@ -211,6 +225,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
     --mount=type=bind,from=store-app,source=/out,target=/atlas-store-rpms \
     --mount=type=bind,from=explorer-app,source=/out,target=/atlas-explorer-rpms \
+    --mount=type=bind,from=archive-app,source=/out,target=/atlas-archive-rpms \
     --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh

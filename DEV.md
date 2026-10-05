@@ -738,7 +738,7 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
 Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad, Atlas Settings, Atlas Wizard, Atlas Explorer (Files, the default file manager), Atlas Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
+Notepad, Atlas Settings, Atlas Wizard, Atlas Explorer (Files, the default file manager), Atlas Archive (replaces Ark), Atlas Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
 named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad`,
 `atlas-settings`, `atlas-wizard`, `atlas-store`, `atlas-explorer` and `atlas-installer` (no RPM: its `firstboot/` is bound into the
 `apps.sh` step, which runs `install.sh`). atlas-framework's `framework` stage makes the RPMs; the app
@@ -757,7 +757,7 @@ exactly what it holds.
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
   instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC`, `ATLAS_STORE_SRC`, `ATLAS_EXPLORER_SRC` or `ATLAS_INSTALLER_SRC` at it.
+  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC`, `ATLAS_STORE_SRC`, `ATLAS_EXPLORER_SRC`, `ATLAS_ARCHIVE_SRC` or `ATLAS_INSTALLER_SRC` at it.
 - Each build records the commits in the `net.eterneon.atlas.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
@@ -843,7 +843,8 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 `EternalCoder454/atlasos-settings` as `atlas-settings`, and
 `EternalCoder454/atlasos-wizard` as `atlas-wizard`,
 `EternalCoder454/atlasos-store` as `atlas-store`,
-`EternalCoder454/atlasos-explorer` as `atlas-explorer`, and
+`EternalCoder454/atlasos-explorer` as `atlas-explorer`,
+`EternalCoder454/atlasos-archive` as `atlas-archive`, and
 `EternalCoder454/atlasos-installer` as `atlas-installer`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.

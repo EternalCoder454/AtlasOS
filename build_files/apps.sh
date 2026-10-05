@@ -30,8 +30,8 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm /atlas-archive-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer atlas-archive
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -67,6 +67,15 @@ fi
 rm -f /usr/share/dbus-1/services/org.kde.dolphin.FileManager1.service
 [ "$(grep -l '^Name=org.freedesktop.FileManager1$' /usr/share/dbus-1/services/*.service)" = /usr/share/dbus-1/services/org.freedesktop.FileManager1.service ]
 grep -q atlas-explorer /usr/share/dbus-1/services/org.freedesktop.FileManager1.service
+# Atlas Archive replaces Ark (removed in packages.sh, with ark-libs); both ship
+# KIO service menus, so Ark must be gone and Archive's menu present.
+[ -f /usr/share/applications/net.eterneon.atlas.archive.desktop ]
+[ -x /usr/bin/atlas-archive ]
+[ -f /usr/share/kio/servicemenus/net.eterneon.atlas.archive.desktop ]
+if rpm -q --quiet ark ark-libs; then
+	echo "apps.sh: ark is still installed beside atlas-archive" >&2
+	exit 1
+fi
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,

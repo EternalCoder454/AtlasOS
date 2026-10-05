@@ -54,6 +54,9 @@ vendor_repo_remove() {
 # user can see on a stock desktop is in "keep" below and checked afterwards.
 # Not here because Kinoite never had them: LibreOffice, ABRT and KDE games.
 remove=(
+	# Ark: Atlas Archive replaces it (both ship KIO service menus)
+	ark
+	ark-libs
 	# KDE PIM: the Akonadi server and the MariaDB it runs on
 	akonadi-server
 	akonadi-server-mysql
