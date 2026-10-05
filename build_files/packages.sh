@@ -217,14 +217,15 @@ sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
 
 # Developer tools: AtlasOS is for developers. Containers (Podman with a
 # `docker` command and compose; toolbox and distrobox for mutable dev
-# environments) and everyday command-line tools. gh, just, mise, gdb, strace
-# and perf are not preinstalled: the installer's "Choose your apps" step
+# environments) and everyday command-line tools; just runs `atlas`, the
+# command menu (/usr/share/atlasos/atlas.just). gh, mise, gdb, strace and perf
+# are not preinstalled: the installer's "Choose your apps" step
 # offers them. (The text editor is Atlas Notepad, from apps.sh.) Docker CE stays out:
 # podman-docker answers to `docker`, and Docker's daemon would run as root at
 # all times.
 "${dnf[@]}" install \
 	podman-compose podman-docker toolbox distrobox \
-	git jq ripgrep fd-find curl wget2-wget
+	git jq ripgrep fd-find curl wget2-wget just
 # Kvantum is the application style (AtlasOS themes in usr/share/Kvantum): the
 # Qt6 style plugin and its themes, 8 MiB installed, no Qt5.
 "${dnf[@]}" install kvantum
@@ -369,7 +370,7 @@ keep=(
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
 	plymouth zram-generator power-profiles-daemon xorg-x11-server-Xwayland
-	podman podman-compose podman-docker toolbox distrobox git
+	podman podman-compose podman-docker toolbox distrobox git just
 	gwenview okular qalculate-qt haruna plasma-camera ffmpeg openh264 steam-devices plasma-print-manager
 	firewalld plasma-firewall-firewalld
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
@@ -377,7 +378,7 @@ keep=(
 rpm -q "${keep[@]}"
 # What the installer's "Choose your apps" step offers is not preinstalled:
 # none of these may be in the image (or pulled back as a dependency).
-for pkg in brave-origin brave-browser firefox gh just mise gdb strace perf; do
+for pkg in brave-origin brave-browser firefox gh mise gdb strace perf; do
 	if rpm -q --quiet "$pkg"; then
 		echo "packages.sh: $pkg is installed; it is offered at first boot instead" >&2
 		exit 1

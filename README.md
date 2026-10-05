@@ -66,8 +66,8 @@ rolls itself back.
   "Open Terminal Here" in Dolphin.
 - Podman with a `docker` command and compose, Toolbox and Distrobox for
   mutable dev environments.
-- git, jq, ripgrep and fd, already there (Atlas Monitor in place of btop).
-  gh, [mise](https://mise.jdx.dev), just, a debug toolbox and VS Code are
+- git, jq, ripgrep, fd and just, already there (Atlas Monitor in place of btop).
+  gh, [mise](https://mise.jdx.dev), a debug toolbox and VS Code are
   offered in the installer's "Choose your apps" step, as are Brave and Firefox.
 - Atlas Notepad as the text editor, and file watch limits raised for big projects.
 - `atlas`, a command menu for the rest: Homebrew, Docker tools on Podman,
