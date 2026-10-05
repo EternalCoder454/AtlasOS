@@ -69,6 +69,15 @@ audio/webm=org.kde.haruna.desktop
 audio/x-matroska=org.kde.haruna.desktop
 audio/x-mpegurl=org.kde.haruna.desktop
 
+# Discover stays the default for Flatpak links and files, RPM files and AppStream
+# links; Atlas Store lists them but 0.1.0 doesn't handle them yet.
+application/vnd.flatpak.ref=org.kde.discover.desktop
+application/vnd.flatpak.repo=org.kde.discover.desktop
+application/vnd.flatpak=org.kde.discover.desktop
+application/x-rpm=org.kde.discover.desktop
+x-scheme-handler/appstream=org.kde.discover.desktop
+x-scheme-handler/flatpak+https=org.kde.discover.desktop
+
 # Notepad itself only claims plain text and Markdown. These put it in Open
 # With for the source and data types above too.
 [Added Associations]

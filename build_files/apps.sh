@@ -24,14 +24,14 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 # image. They are required parts of the system: the build fails without them,
 # and their protected.d files (atlas-framework.conf from atlas-ui, atlas.conf
 # from atlas-system-helper, atlas-monitor.conf, atlas-notepad.conf,
-# atlas-settings.conf, atlas-wizard.conf) stop dnf
+# atlas-settings.conf, atlas-wizard.conf, atlas-store.conf) stop dnf
 # removing them.
 "${dnf[@]}" install /atlas-framework-rpms/*.rpm
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -42,12 +42,16 @@ fi
 [ -f /etc/dnf/protected.d/atlas-notepad.conf ]
 [ -f /etc/dnf/protected.d/atlas-settings.conf ]
 [ -f /etc/dnf/protected.d/atlas-wizard.conf ]
+[ -f /etc/dnf/protected.d/atlas-store.conf ]
 # The default apps (mimeapps.list), launcher favourites and the menu name
 # these.
 [ -f /usr/share/applications/net.eterneon.atlas.notepad.desktop ]
 [ -f /usr/share/applications/net.eterneon.atlas.monitor.desktop ]
 [ -f /usr/share/applications/net.eterneon.atlas.settings.desktop ]
 [ -x /usr/bin/atlas-settings ]
+# Atlas Store sits beside Discover (the default for Flatpak links and RPM files).
+[ -f /usr/share/applications/net.eterneon.atlas.store.desktop ]
+[ -x /usr/bin/atlas-store ]
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,

@@ -48,6 +48,7 @@ tasks.writeConfig("launchers", [
     "preferred://filemanager",
     "preferred://browser",
     "applications:com.mitchellh.ghostty.desktop",
+    "applications:net.eterneon.atlas.store.desktop",
     "applications:org.kde.discover.desktop",
     "applications:systemsettings.desktop",
 ]);

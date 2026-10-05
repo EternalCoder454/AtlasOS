@@ -378,7 +378,7 @@ for pkg in brave-origin brave-browser firefox gh just mise gdb strace perf; do
 done
 
 # Everyday names for the everyday apps, in every language (as macOS calls
-# its file manager Finder everywhere): Terminal, Files and Store. (Atlas
+# its file manager Finder everywhere): Terminal, Files and Discover. (Atlas
 # Notepad is called Notepad already.)
 # Only the app's own entry is renamed, not its actions; searching the old
 # name still finds it. Ghostty's shortcut copy above is renamed with it.
@@ -404,7 +404,7 @@ rename_app() { # desktop file, new name
 rename_app /usr/share/applications/com.mitchellh.ghostty.desktop Terminal
 rename_app /usr/share/kglobalaccel/com.mitchellh.ghostty.desktop Terminal
 rename_app /usr/share/applications/org.kde.dolphin.desktop Files
-rename_app /usr/share/applications/org.kde.discover.desktop Store
+rename_app /usr/share/applications/org.kde.discover.desktop Discover
 
 # Tools kept but left out of the app menu. Kvantum Manager would fight
 # kvantum-sync, which sets the theme from AtlasOS Light/Dark. Menu Editor

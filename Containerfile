@@ -105,6 +105,20 @@ RUN --mount=type=cache,target=/var/cache/atlas-wizard-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms ATLAS_RPM_WORKTREE=1 \
     CARGO_HOME=/var/cache/atlas-wizard-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# Atlas Store, the app store added beside Discover, built the same way from the
+# build context named "atlas-store". Its build-rpm.sh tars the tree it is
+# given (no git needed), so no ATLAS_RPM_WORKTREE; the pinned commit is labelled
+# in the image's net.eterneon.atlas.store.revision.
+FROM registry.fedoraproject.org/fedora:44 AS store-app
+COPY --from=atlas-store --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-store-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
+    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
+    CARGO_HOME=/var/cache/atlas-store-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
@@ -182,6 +196,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
     --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
     --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
+    --mount=type=bind,from=store-app,source=/out,target=/atlas-store-rpms \
     --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
