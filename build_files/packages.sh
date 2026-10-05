@@ -255,13 +255,16 @@ leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*mise*' -o -in
 
 # Everyday apps, native RPMs so they take the AtlasOS Kvantum style and the
 # Papirus icons: Gwenview (images), Okular (PDFs and documents), Qalculate!
-# (the Qt calculator) and Haruna (video and audio). The image formats beyond
+# (the Qt calculator), Haruna (video and audio) and Camera (Plasma Camera:
+# photos and videos from the webcam, for a profile picture and the like; its
+# libcamera backend also drives the MIPI cameras of newer laptops, which
+# plain V4L2 apps like Kamoso can't open). The image formats beyond
 # JPEG and PNG (HEIC, AVIF, WebP, JXL) come from kimageformats and
 # qt6-qtimageformats, and Dolphin's PDF and image previews from
 # kdegraphics-thumbnailers; named here because install_weak_deps=False would
 # leave out a weak dependency on them. Okular's PDF reader is its Poppler
 # generator, in okular-part. No office suite.
-"${dnf[@]}" install gwenview okular okular-part qalculate-qt haruna \
+"${dnf[@]}" install gwenview okular okular-part qalculate-qt haruna plasma-camera \
 	kf6-kimageformats qt6-qtimageformats kdegraphics-thumbnailers
 [ -f /usr/lib64/qt6/plugins/okular_generators/okularGenerator_poppler.so ]
 
@@ -381,7 +384,7 @@ keep=(
 	flatpak plasma-discover plasma-discover-flatpak
 	plymouth zram-generator power-profiles-daemon xorg-x11-server-Xwayland
 	podman podman-compose podman-docker toolbox distrobox git gh just mise
-	gwenview okular qalculate-qt haruna ffmpeg openh264 steam-devices plasma-print-manager
+	gwenview okular qalculate-qt haruna plasma-camera ffmpeg openh264 steam-devices plasma-print-manager
 	firewalld plasma-firewall-firewalld
 	kde-settings-plasma plasma-lookandfeel-fedora fedora-release-kinoite
 )

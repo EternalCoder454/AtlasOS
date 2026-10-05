@@ -5,7 +5,7 @@
   editing this file.
   SPDX-License-Identifier: Apache-2.0
 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" version="1.1">
+<svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" version="1.1">
  <defs>
   <style id="current-color-scheme" type="text/css">
    .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
@@ -15,49 +15,49 @@
   </style>
  </defs>
  <g id="topleft">
-  <rect x="0" y="0" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z M1 13 V12 A11 11 0 0 1 12 1 H13 V13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M1 9 V8 A7 7 0 0 1 8 1 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="top">
-  <rect x="13" y="0" width="8" height="13" fill="#000" opacity="0.004"/>
-  <path d="M13 0 H21 V13 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 0 H21 V13 H13 Z M13 1 H21 V13 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 0 H17 V9 H9 Z M9 1 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="topright">
-  <rect x="21" y="0" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z M21 1 H22 A11 11 0 0 1 33 12 V13 H21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 1 H18 A7 7 0 0 1 25 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="left">
-  <rect x="0" y="13" width="13" height="8" fill="#000" opacity="0.004"/>
-  <path d="M0 13 H13 V21 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 13 H13 V21 H0 Z M1 13 H13 V21 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 9 H9 V17 H0 Z M1 9 H9 V17 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="center">
-  <rect x="13" y="13" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M13 13 H21 V21 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 13 H21 V21 H13 Z M13 13 H21 V21 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="right">
-  <rect x="21" y="13" width="13" height="8" fill="#000" opacity="0.004"/>
-  <path d="M21 13 H34 V21 H21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 13 H34 V21 H21 Z M21 13 H33 V21 H21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H25 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="bottomleft">
-  <rect x="0" y="21" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z M1 21 V22 A11 11 0 0 0 12 33 H13 V21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M1 17 V18 A7 7 0 0 0 8 25 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="bottom">
-  <rect x="13" y="21" width="8" height="13" fill="#000" opacity="0.004"/>
-  <path d="M13 21 H21 V34 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 21 H21 V34 H13 Z M13 21 H21 V33 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V25 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="bottomright">
-  <rect x="21" y="21" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z M21 21 V33 H22 A11 11 0 0 0 33 22 V21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V25 H18 A7 7 0 0 0 25 18 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <rect id="hint-top-margin" x="0" y="0" width="1" height="8" fill="#000" opacity="0.004"/>
  <rect id="hint-bottom-margin" x="0" y="0" width="1" height="8" fill="#000" opacity="0.004"/>
@@ -68,76 +68,76 @@
  <rect id="hint-left-inset" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
  <rect id="hint-right-inset" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
  <g id="mask-topleft">
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-top">
-  <path d="M13 0 H21 V13 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 0 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-topright">
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-left">
-  <path d="M0 13 H13 V21 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 9 H9 V17 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-center">
-  <path d="M13 13 H21 V21 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-right">
-  <path d="M21 13 H34 V21 H21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 9 H26 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-bottomleft">
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-bottom">
-  <path d="M13 21 H21 V34 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 17 H17 V26 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="mask-bottomright">
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-topleft">
-  <rect x="0" y="0" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z M1 13 V12 A11 11 0 0 1 12 1 H13 V13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z M1 9 V8 A7 7 0 0 1 8 1 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-top">
-  <rect x="13" y="0" width="8" height="13" fill="#000" opacity="0.004"/>
-  <path d="M13 0 H21 V13 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 0 H21 V13 H13 Z M13 1 H21 V13 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="0" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 0 H17 V9 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 0 H17 V9 H9 Z M9 1 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-topright">
-  <rect x="21" y="0" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z M21 1 H22 A11 11 0 0 1 33 12 V13 H21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="0" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z M17 1 H18 A7 7 0 0 1 25 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-left">
-  <rect x="0" y="13" width="13" height="8" fill="#000" opacity="0.004"/>
-  <path d="M0 13 H13 V21 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 13 H13 V21 H0 Z M1 13 H13 V21 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 9 H9 V17 H0 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 9 H9 V17 H0 Z M1 9 H9 V17 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-center">
-  <rect x="13" y="13" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M13 13 H21 V21 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 13 H21 V21 H13 Z M13 13 H21 V21 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="9" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 9 H17 V17 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 9 H17 V17 H9 Z M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-right">
-  <rect x="21" y="13" width="13" height="8" fill="#000" opacity="0.004"/>
-  <path d="M21 13 H34 V21 H21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 13 H34 V21 H21 Z M21 13 H33 V21 H21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="9" width="9" height="8" fill="#000" opacity="0.004"/>
+  <path d="M17 9 H26 V17 H17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 9 H26 V17 H17 Z M17 9 H25 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-bottomleft">
-  <rect x="0" y="21" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z M1 21 V22 A11 11 0 0 0 12 33 H13 V21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="0" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z M1 17 V18 A7 7 0 0 0 8 25 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-bottom">
-  <rect x="13" y="21" width="8" height="13" fill="#000" opacity="0.004"/>
-  <path d="M13 21 H21 V34 H13 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M13 21 H21 V34 H13 Z M13 21 H21 V33 H13 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="9" y="17" width="8" height="9" fill="#000" opacity="0.004"/>
+  <path d="M9 17 H17 V26 H9 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M9 17 H17 V26 H9 Z M9 17 H17 V25 H9 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <g id="blurred-bottomright">
-  <rect x="21" y="21" width="13" height="13" fill="#000" opacity="0.004"/>
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z M21 21 V33 H22 A11 11 0 0 0 33 22 V21 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
+  <rect x="17" y="17" width="9" height="9" fill="#000" opacity="0.004"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z" class="ColorScheme-Background" fill="currentColor" opacity="1"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z M17 17 V25 H18 A7 7 0 0 0 25 18 V17 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.12"/>
  </g>
  <rect id="blurred-hint-top-margin" x="0" y="0" width="1" height="8" fill="#000" opacity="0.004"/>
  <rect id="blurred-hint-bottom-margin" x="0" y="0" width="1" height="8" fill="#000" opacity="0.004"/>
@@ -148,148 +148,148 @@
  <rect id="blurred-hint-left-inset" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
  <rect id="blurred-hint-right-inset" x="0" y="0" width="1e-08" height="1" fill="#000" opacity="0.004"/>
  <g id="blurred-mask-topleft">
-  <path d="M0 13 V12 A12 12 0 0 1 12 0 H13 V13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 9 V8 A8 8 0 0 1 8 0 H9 V9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-top">
-  <path d="M13 0 H21 V13 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 0 H17 V9 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-topright">
-  <path d="M21 0 H22 A12 12 0 0 1 34 12 V13 H21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 0 H18 A8 8 0 0 1 26 8 V9 H17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-left">
-  <path d="M0 13 H13 V21 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 9 H9 V17 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-center">
-  <path d="M13 13 H21 V21 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 9 H17 V17 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-right">
-  <path d="M21 13 H34 V21 H21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 9 H26 V17 H17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-bottomleft">
-  <path d="M0 21 V22 A12 12 0 0 0 12 34 H13 V21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M0 17 V18 A8 8 0 0 0 8 26 H9 V17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-bottom">
-  <path d="M13 21 H21 V34 H13 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M9 17 H17 V26 H9 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="blurred-mask-bottomright">
-  <path d="M21 21 V34 H22 A12 12 0 0 0 34 22 V21 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
+  <path d="M17 17 V26 H18 A8 8 0 0 0 26 18 V17 Z" class="ColorScheme-Text" fill="currentColor" opacity="1"/>
  </g>
  <g id="shadow-topleft">
-  <rect x="0" y="0" width="23" height="23" fill="#000" opacity="0.004"/>
-  <path d="M9 23 V22 A13 13 0 0 1 22 9 H23 V23 Z M10 23 V22 A12 12 0 0 1 22 10 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M8 23 V22 A14 14 0 0 1 22 8 H23 V23 Z M9 23 V22 A13 13 0 0 1 22 9 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M7 23 V22 A15 15 0 0 1 22 7 H23 V23 Z M8 23 V22 A14 14 0 0 1 22 8 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M6 23 V22 A16 16 0 0 1 22 6 H23 V23 Z M7 23 V22 A15 15 0 0 1 22 7 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M5 23 V22 A17 17 0 0 1 22 5 H23 V23 Z M6 23 V22 A16 16 0 0 1 22 6 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M4 23 V22 A18 18 0 0 1 22 4 H23 V23 Z M5 23 V22 A17 17 0 0 1 22 5 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M3 23 V22 A19 19 0 0 1 22 3 H23 V23 Z M4 23 V22 A18 18 0 0 1 22 4 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M2 23 V22 A20 20 0 0 1 22 2 H23 V23 Z M3 23 V22 A19 19 0 0 1 22 3 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M1 23 V22 A21 21 0 0 1 22 1 H23 V23 Z M2 23 V22 A20 20 0 0 1 22 2 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M0 23 V22 A22 22 0 0 1 22 0 H23 V23 Z M1 23 V22 A21 21 0 0 1 22 1 H23 V23 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="0" y="0" width="19" height="19" fill="#000" opacity="0.004"/>
+  <path d="M9 19 V18 A9 9 0 0 1 18 9 H19 V19 Z M10 19 V18 A8 8 0 0 1 18 10 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M8 19 V18 A10 10 0 0 1 18 8 H19 V19 Z M9 19 V18 A9 9 0 0 1 18 9 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M7 19 V18 A11 11 0 0 1 18 7 H19 V19 Z M8 19 V18 A10 10 0 0 1 18 8 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M6 19 V18 A12 12 0 0 1 18 6 H19 V19 Z M7 19 V18 A11 11 0 0 1 18 7 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M5 19 V18 A13 13 0 0 1 18 5 H19 V19 Z M6 19 V18 A12 12 0 0 1 18 6 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M4 19 V18 A14 14 0 0 1 18 4 H19 V19 Z M5 19 V18 A13 13 0 0 1 18 5 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M3 19 V18 A15 15 0 0 1 18 3 H19 V19 Z M4 19 V18 A14 14 0 0 1 18 4 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M2 19 V18 A16 16 0 0 1 18 2 H19 V19 Z M3 19 V18 A15 15 0 0 1 18 3 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M1 19 V18 A17 17 0 0 1 18 1 H19 V19 Z M2 19 V18 A16 16 0 0 1 18 2 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M0 19 V18 A18 18 0 0 1 18 0 H19 V19 Z M1 19 V18 A17 17 0 0 1 18 1 H19 V19 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-top">
-  <rect x="23" y="0" width="8" height="23" fill="#000" opacity="0.004"/>
-  <path d="M23 9 H31 V23 H23 Z M23 10 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M23 8 H31 V23 H23 Z M23 9 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M23 7 H31 V23 H23 Z M23 8 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M23 6 H31 V23 H23 Z M23 7 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M23 5 H31 V23 H23 Z M23 6 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M23 4 H31 V23 H23 Z M23 5 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M23 3 H31 V23 H23 Z M23 4 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M23 2 H31 V23 H23 Z M23 3 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M23 1 H31 V23 H23 Z M23 2 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M23 0 H31 V23 H23 Z M23 1 H31 V23 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="19" y="0" width="8" height="19" fill="#000" opacity="0.004"/>
+  <path d="M19 9 H27 V19 H19 Z M19 10 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M19 8 H27 V19 H19 Z M19 9 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M19 7 H27 V19 H19 Z M19 8 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M19 6 H27 V19 H19 Z M19 7 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M19 5 H27 V19 H19 Z M19 6 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M19 4 H27 V19 H19 Z M19 5 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M19 3 H27 V19 H19 Z M19 4 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M19 2 H27 V19 H19 Z M19 3 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M19 1 H27 V19 H19 Z M19 2 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M19 0 H27 V19 H19 Z M19 1 H27 V19 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-topright">
-  <rect x="31" y="0" width="23" height="23" fill="#000" opacity="0.004"/>
-  <path d="M31 9 H32 A13 13 0 0 1 45 22 V23 H31 Z M31 10 H32 A12 12 0 0 1 44 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M31 8 H32 A14 14 0 0 1 46 22 V23 H31 Z M31 9 H32 A13 13 0 0 1 45 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M31 7 H32 A15 15 0 0 1 47 22 V23 H31 Z M31 8 H32 A14 14 0 0 1 46 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M31 6 H32 A16 16 0 0 1 48 22 V23 H31 Z M31 7 H32 A15 15 0 0 1 47 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M31 5 H32 A17 17 0 0 1 49 22 V23 H31 Z M31 6 H32 A16 16 0 0 1 48 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M31 4 H32 A18 18 0 0 1 50 22 V23 H31 Z M31 5 H32 A17 17 0 0 1 49 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M31 3 H32 A19 19 0 0 1 51 22 V23 H31 Z M31 4 H32 A18 18 0 0 1 50 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M31 2 H32 A20 20 0 0 1 52 22 V23 H31 Z M31 3 H32 A19 19 0 0 1 51 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M31 1 H32 A21 21 0 0 1 53 22 V23 H31 Z M31 2 H32 A20 20 0 0 1 52 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M31 0 H32 A22 22 0 0 1 54 22 V23 H31 Z M31 1 H32 A21 21 0 0 1 53 22 V23 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="27" y="0" width="19" height="19" fill="#000" opacity="0.004"/>
+  <path d="M27 9 H28 A9 9 0 0 1 37 18 V19 H27 Z M27 10 H28 A8 8 0 0 1 36 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M27 8 H28 A10 10 0 0 1 38 18 V19 H27 Z M27 9 H28 A9 9 0 0 1 37 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M27 7 H28 A11 11 0 0 1 39 18 V19 H27 Z M27 8 H28 A10 10 0 0 1 38 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M27 6 H28 A12 12 0 0 1 40 18 V19 H27 Z M27 7 H28 A11 11 0 0 1 39 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M27 5 H28 A13 13 0 0 1 41 18 V19 H27 Z M27 6 H28 A12 12 0 0 1 40 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M27 4 H28 A14 14 0 0 1 42 18 V19 H27 Z M27 5 H28 A13 13 0 0 1 41 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M27 3 H28 A15 15 0 0 1 43 18 V19 H27 Z M27 4 H28 A14 14 0 0 1 42 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M27 2 H28 A16 16 0 0 1 44 18 V19 H27 Z M27 3 H28 A15 15 0 0 1 43 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M27 1 H28 A17 17 0 0 1 45 18 V19 H27 Z M27 2 H28 A16 16 0 0 1 44 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M27 0 H28 A18 18 0 0 1 46 18 V19 H27 Z M27 1 H28 A17 17 0 0 1 45 18 V19 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-left">
-  <rect x="0" y="23" width="23" height="8" fill="#000" opacity="0.004"/>
-  <path d="M9 23 H23 V31 H9 Z M10 23 H23 V31 H10 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M8 23 H23 V31 H8 Z M9 23 H23 V31 H9 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M7 23 H23 V31 H7 Z M8 23 H23 V31 H8 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M6 23 H23 V31 H6 Z M7 23 H23 V31 H7 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M5 23 H23 V31 H5 Z M6 23 H23 V31 H6 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M4 23 H23 V31 H4 Z M5 23 H23 V31 H5 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M3 23 H23 V31 H3 Z M4 23 H23 V31 H4 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M2 23 H23 V31 H2 Z M3 23 H23 V31 H3 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M1 23 H23 V31 H1 Z M2 23 H23 V31 H2 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M0 23 H23 V31 H0 Z M1 23 H23 V31 H1 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="0" y="19" width="19" height="8" fill="#000" opacity="0.004"/>
+  <path d="M9 19 H19 V27 H9 Z M10 19 H19 V27 H10 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M8 19 H19 V27 H8 Z M9 19 H19 V27 H9 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M7 19 H19 V27 H7 Z M8 19 H19 V27 H8 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M6 19 H19 V27 H6 Z M7 19 H19 V27 H7 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M5 19 H19 V27 H5 Z M6 19 H19 V27 H6 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M4 19 H19 V27 H4 Z M5 19 H19 V27 H5 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M3 19 H19 V27 H3 Z M4 19 H19 V27 H4 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M2 19 H19 V27 H2 Z M3 19 H19 V27 H3 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M1 19 H19 V27 H1 Z M2 19 H19 V27 H2 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M0 19 H19 V27 H0 Z M1 19 H19 V27 H1 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-center">
-  <rect x="23" y="23" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M23 23 H31 V31 H23 Z M23 23 H31 V31 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="19" y="19" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M19 19 H27 V27 H19 Z M19 19 H27 V27 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-right">
-  <rect x="31" y="23" width="23" height="8" fill="#000" opacity="0.004"/>
-  <path d="M31 23 H45 V31 H31 Z M31 23 H44 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M31 23 H46 V31 H31 Z M31 23 H45 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M31 23 H47 V31 H31 Z M31 23 H46 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M31 23 H48 V31 H31 Z M31 23 H47 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M31 23 H49 V31 H31 Z M31 23 H48 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M31 23 H50 V31 H31 Z M31 23 H49 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M31 23 H51 V31 H31 Z M31 23 H50 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M31 23 H52 V31 H31 Z M31 23 H51 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M31 23 H53 V31 H31 Z M31 23 H52 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M31 23 H54 V31 H31 Z M31 23 H53 V31 H31 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="27" y="19" width="19" height="8" fill="#000" opacity="0.004"/>
+  <path d="M27 19 H37 V27 H27 Z M27 19 H36 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M27 19 H38 V27 H27 Z M27 19 H37 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M27 19 H39 V27 H27 Z M27 19 H38 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M27 19 H40 V27 H27 Z M27 19 H39 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M27 19 H41 V27 H27 Z M27 19 H40 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M27 19 H42 V27 H27 Z M27 19 H41 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M27 19 H43 V27 H27 Z M27 19 H42 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M27 19 H44 V27 H27 Z M27 19 H43 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M27 19 H45 V27 H27 Z M27 19 H44 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M27 19 H46 V27 H27 Z M27 19 H45 V27 H27 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-bottomleft">
-  <rect x="0" y="31" width="23" height="23" fill="#000" opacity="0.004"/>
-  <path d="M9 31 V32 A13 13 0 0 0 22 45 H23 V31 Z M10 31 V32 A12 12 0 0 0 22 44 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M8 31 V32 A14 14 0 0 0 22 46 H23 V31 Z M9 31 V32 A13 13 0 0 0 22 45 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M7 31 V32 A15 15 0 0 0 22 47 H23 V31 Z M8 31 V32 A14 14 0 0 0 22 46 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M6 31 V32 A16 16 0 0 0 22 48 H23 V31 Z M7 31 V32 A15 15 0 0 0 22 47 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M5 31 V32 A17 17 0 0 0 22 49 H23 V31 Z M6 31 V32 A16 16 0 0 0 22 48 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M4 31 V32 A18 18 0 0 0 22 50 H23 V31 Z M5 31 V32 A17 17 0 0 0 22 49 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M3 31 V32 A19 19 0 0 0 22 51 H23 V31 Z M4 31 V32 A18 18 0 0 0 22 50 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M2 31 V32 A20 20 0 0 0 22 52 H23 V31 Z M3 31 V32 A19 19 0 0 0 22 51 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M1 31 V32 A21 21 0 0 0 22 53 H23 V31 Z M2 31 V32 A20 20 0 0 0 22 52 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M0 31 V32 A22 22 0 0 0 22 54 H23 V31 Z M1 31 V32 A21 21 0 0 0 22 53 H23 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="0" y="27" width="19" height="19" fill="#000" opacity="0.004"/>
+  <path d="M9 27 V28 A9 9 0 0 0 18 37 H19 V27 Z M10 27 V28 A8 8 0 0 0 18 36 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M8 27 V28 A10 10 0 0 0 18 38 H19 V27 Z M9 27 V28 A9 9 0 0 0 18 37 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M7 27 V28 A11 11 0 0 0 18 39 H19 V27 Z M8 27 V28 A10 10 0 0 0 18 38 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M6 27 V28 A12 12 0 0 0 18 40 H19 V27 Z M7 27 V28 A11 11 0 0 0 18 39 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M5 27 V28 A13 13 0 0 0 18 41 H19 V27 Z M6 27 V28 A12 12 0 0 0 18 40 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M4 27 V28 A14 14 0 0 0 18 42 H19 V27 Z M5 27 V28 A13 13 0 0 0 18 41 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M3 27 V28 A15 15 0 0 0 18 43 H19 V27 Z M4 27 V28 A14 14 0 0 0 18 42 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M2 27 V28 A16 16 0 0 0 18 44 H19 V27 Z M3 27 V28 A15 15 0 0 0 18 43 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M1 27 V28 A17 17 0 0 0 18 45 H19 V27 Z M2 27 V28 A16 16 0 0 0 18 44 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M0 27 V28 A18 18 0 0 0 18 46 H19 V27 Z M1 27 V28 A17 17 0 0 0 18 45 H19 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-bottom">
-  <rect x="23" y="31" width="8" height="23" fill="#000" opacity="0.004"/>
-  <path d="M23 31 H31 V45 H23 Z M23 31 H31 V44 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M23 31 H31 V46 H23 Z M23 31 H31 V45 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M23 31 H31 V47 H23 Z M23 31 H31 V46 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M23 31 H31 V48 H23 Z M23 31 H31 V47 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M23 31 H31 V49 H23 Z M23 31 H31 V48 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M23 31 H31 V50 H23 Z M23 31 H31 V49 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M23 31 H31 V51 H23 Z M23 31 H31 V50 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M23 31 H31 V52 H23 Z M23 31 H31 V51 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M23 31 H31 V53 H23 Z M23 31 H31 V52 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M23 31 H31 V54 H23 Z M23 31 H31 V53 H23 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="19" y="27" width="8" height="19" fill="#000" opacity="0.004"/>
+  <path d="M19 27 H27 V37 H19 Z M19 27 H27 V36 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M19 27 H27 V38 H19 Z M19 27 H27 V37 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M19 27 H27 V39 H19 Z M19 27 H27 V38 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M19 27 H27 V40 H19 Z M19 27 H27 V39 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M19 27 H27 V41 H19 Z M19 27 H27 V40 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M19 27 H27 V42 H19 Z M19 27 H27 V41 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M19 27 H27 V43 H19 Z M19 27 H27 V42 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M19 27 H27 V44 H19 Z M19 27 H27 V43 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M19 27 H27 V45 H19 Z M19 27 H27 V44 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M19 27 H27 V46 H19 Z M19 27 H27 V45 H19 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <g id="shadow-bottomright">
-  <rect x="31" y="31" width="23" height="23" fill="#000" opacity="0.004"/>
-  <path d="M31 31 V45 H32 A13 13 0 0 0 45 32 V31 Z M31 31 V44 H32 A12 12 0 0 0 44 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
-  <path d="M31 31 V46 H32 A14 14 0 0 0 46 32 V31 Z M31 31 V45 H32 A13 13 0 0 0 45 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
-  <path d="M31 31 V47 H32 A15 15 0 0 0 47 32 V31 Z M31 31 V46 H32 A14 14 0 0 0 46 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
-  <path d="M31 31 V48 H32 A16 16 0 0 0 48 32 V31 Z M31 31 V47 H32 A15 15 0 0 0 47 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
-  <path d="M31 31 V49 H32 A17 17 0 0 0 49 32 V31 Z M31 31 V48 H32 A16 16 0 0 0 48 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
-  <path d="M31 31 V50 H32 A18 18 0 0 0 50 32 V31 Z M31 31 V49 H32 A17 17 0 0 0 49 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
-  <path d="M31 31 V51 H32 A19 19 0 0 0 51 32 V31 Z M31 31 V50 H32 A18 18 0 0 0 50 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
-  <path d="M31 31 V52 H32 A20 20 0 0 0 52 32 V31 Z M31 31 V51 H32 A19 19 0 0 0 51 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
-  <path d="M31 31 V53 H32 A21 21 0 0 0 53 32 V31 Z M31 31 V52 H32 A20 20 0 0 0 52 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
-  <path d="M31 31 V54 H32 A22 22 0 0 0 54 32 V31 Z M31 31 V53 H32 A21 21 0 0 0 53 32 V31 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
+  <rect x="27" y="27" width="19" height="19" fill="#000" opacity="0.004"/>
+  <path d="M27 27 V37 H28 A9 9 0 0 0 37 28 V27 Z M27 27 V36 H28 A8 8 0 0 0 36 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.1444"/>
+  <path d="M27 27 V38 H28 A10 10 0 0 0 38 28 V27 Z M27 27 V37 H28 A9 9 0 0 0 37 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.1156"/>
+  <path d="M27 27 V39 H28 A11 11 0 0 0 39 28 V27 Z M27 27 V38 H28 A10 10 0 0 0 38 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.09"/>
+  <path d="M27 27 V40 H28 A12 12 0 0 0 40 28 V27 Z M27 27 V39 H28 A11 11 0 0 0 39 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0676"/>
+  <path d="M27 27 V41 H28 A13 13 0 0 0 41 28 V27 Z M27 27 V40 H28 A12 12 0 0 0 40 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0484"/>
+  <path d="M27 27 V42 H28 A14 14 0 0 0 42 28 V27 Z M27 27 V41 H28 A13 13 0 0 0 41 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0324"/>
+  <path d="M27 27 V43 H28 A15 15 0 0 0 43 28 V27 Z M27 27 V42 H28 A14 14 0 0 0 42 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0196"/>
+  <path d="M27 27 V44 H28 A16 16 0 0 0 44 28 V27 Z M27 27 V43 H28 A15 15 0 0 0 43 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.01"/>
+  <path d="M27 27 V45 H28 A17 17 0 0 0 45 28 V27 Z M27 27 V44 H28 A16 16 0 0 0 44 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0036"/>
+  <path d="M27 27 V46 H28 A18 18 0 0 0 46 28 V27 Z M27 27 V45 H28 A17 17 0 0 0 45 28 V27 Z" fill="#000" fill-rule="evenodd" opacity="0.0004"/>
  </g>
  <rect id="shadow-hint-top-margin" x="0" y="0" width="1" height="10" fill="#000" opacity="0.004"/>
  <rect id="shadow-hint-top-inset" x="0" y="0" width="1" height="10" fill="#000" opacity="0.004"/>

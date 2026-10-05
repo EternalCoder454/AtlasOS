@@ -8,8 +8,8 @@ builds them on GitHub's runners after each weekly stable release
 | File in `/srv/downloads/atlasos`, served under `/dl/` | What |
 |---|---|
 | `<image>.json` | The current version: `version`, `file`, `size`, `sha256`, `date` |
-| `<image>-44.YYYYMMDD.iso` | The ISO of that stable version |
-| `<image>-44.YYYYMMDD.iso.sha256` | Its checksum, in `sha256sum -c` format |
+| `<image>-44.YYYYMMDD-N.iso` | The ISO of that stable version (`-N` is the build number; versions before 2026-10-03 have none) |
+| `<image>-44.YYYYMMDD-N.iso.sha256` | Its checksum, in `sha256sum -c` format |
 
 `<image>` is `atlasos` or `atlasos-nvidia`. Each image keeps one version. An
 upload puts the new ISO and its checksum in place together once both are up,

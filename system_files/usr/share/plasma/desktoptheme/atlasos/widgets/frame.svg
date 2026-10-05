@@ -5,7 +5,7 @@
   editing this file.
   SPDX-License-Identifier: Apache-2.0
 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" version="1.1">
+<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" version="1.1">
  <defs>
   <style id="current-color-scheme" type="text/css">
    .ColorScheme-Text { color:#1b1748; } .ColorScheme-Background { color:#f3f2fa; }
@@ -15,129 +15,129 @@
   </style>
  </defs>
  <g id="plain-topleft">
-  <rect x="0" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 11 V10 A10 10 0 0 1 10 0 H11 V11 Z M1 11 V10 A9 9 0 0 1 10 1 H11 V11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z M1 7 V6 A5 5 0 0 1 6 1 H7 V7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-top">
-  <rect x="11" y="0" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 0 H19 V11 H11 Z M11 1 H19 V11 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z M7 1 H15 V7 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-topright">
-  <rect x="19" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 0 H20 A10 10 0 0 1 30 10 V11 H19 Z M19 1 H20 A9 9 0 0 1 29 10 V11 H19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z M15 1 H16 A5 5 0 0 1 21 6 V7 H15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-left">
-  <rect x="0" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M0 11 H11 V19 H0 Z M1 11 H11 V19 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z M1 7 H7 V15 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-center">
-  <rect x="11" y="11" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M11 11 H19 V19 H11 Z M11 11 H19 V19 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z M7 7 H15 V15 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-right">
-  <rect x="19" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M19 11 H30 V19 H19 Z M19 11 H29 V19 H19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z M15 7 H21 V15 H15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-bottomleft">
-  <rect x="0" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 19 V20 A10 10 0 0 0 10 30 H11 V19 Z M1 19 V20 A9 9 0 0 0 10 29 H11 V19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z M1 15 V16 A5 5 0 0 0 6 21 H7 V15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-bottom">
-  <rect x="11" y="19" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 19 H19 V30 H11 Z M11 19 H19 V29 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z M7 15 H15 V21 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <g id="plain-bottomright">
-  <rect x="19" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 19 V30 H20 A10 10 0 0 0 30 20 V19 Z M19 19 V29 H20 A9 9 0 0 0 29 20 V19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z M15 15 V21 H16 A5 5 0 0 0 21 16 V15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.14"/>
  </g>
  <rect id="plain-hint-top-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
  <rect id="plain-hint-bottom-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
  <rect id="plain-hint-left-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
  <rect id="plain-hint-right-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
  <g id="raised-topleft">
-  <rect x="0" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 11 V10 A10 10 0 0 1 10 0 H11 V11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M0 11 V10 A10 10 0 0 1 10 0 H11 V11 Z M1 11 V10 A9 9 0 0 1 10 1 H11 V11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z M1 7 V6 A5 5 0 0 1 6 1 H7 V7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-top">
-  <rect x="11" y="0" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 0 H19 V11 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M11 0 H19 V11 H11 Z M11 1 H19 V11 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M7 0 H15 V7 H7 Z M7 1 H15 V7 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-topright">
-  <rect x="19" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 0 H20 A10 10 0 0 1 30 10 V11 H19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M19 0 H20 A10 10 0 0 1 30 10 V11 H19 Z M19 1 H20 A9 9 0 0 1 29 10 V11 H19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z M15 1 H16 A5 5 0 0 1 21 6 V7 H15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-left">
-  <rect x="0" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M0 11 H11 V19 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M0 11 H11 V19 H0 Z M1 11 H11 V19 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M0 7 H7 V15 H0 Z M1 7 H7 V15 H1 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-center">
-  <rect x="11" y="11" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M11 11 H19 V19 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M11 11 H19 V19 H11 Z M11 11 H19 V19 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M7 7 H15 V15 H7 Z M7 7 H15 V15 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-right">
-  <rect x="19" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M19 11 H30 V19 H19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M19 11 H30 V19 H19 Z M19 11 H29 V19 H19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M15 7 H22 V15 H15 Z M15 7 H21 V15 H15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-bottomleft">
-  <rect x="0" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 19 V20 A10 10 0 0 0 10 30 H11 V19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M0 19 V20 A10 10 0 0 0 10 30 H11 V19 Z M1 19 V20 A9 9 0 0 0 10 29 H11 V19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z M1 15 V16 A5 5 0 0 0 6 21 H7 V15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-bottom">
-  <rect x="11" y="19" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 19 H19 V30 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M11 19 H19 V30 H11 Z M11 19 H19 V29 H11 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M7 15 H15 V22 H7 Z M7 15 H15 V21 H7 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <g id="raised-bottomright">
-  <rect x="19" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 19 V30 H20 A10 10 0 0 0 30 20 V19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
-  <path d="M19 19 V30 H20 A10 10 0 0 0 30 20 V19 Z M19 19 V29 H20 A9 9 0 0 0 29 20 V19 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.05"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z M15 15 V21 H16 A5 5 0 0 0 21 16 V15 Z" class="ColorScheme-Text" fill="currentColor" fill-rule="evenodd" opacity="0.1"/>
  </g>
  <rect id="raised-hint-top-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
  <rect id="raised-hint-bottom-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
  <rect id="raised-hint-left-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
  <rect id="raised-hint-right-margin" x="0" y="0" width="6" height="1" fill="#000" opacity="0.004"/>
  <g id="sunken-topleft">
-  <rect x="0" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 11 V10 A10 10 0 0 1 10 0 H11 V11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="0" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 7 V6 A6 6 0 0 1 6 0 H7 V7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-top">
-  <rect x="11" y="0" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 0 H19 V11 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="7" y="0" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 0 H15 V7 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-topright">
-  <rect x="19" y="0" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 0 H20 A10 10 0 0 1 30 10 V11 H19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="15" y="0" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 0 H16 A6 6 0 0 1 22 6 V7 H15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-left">
-  <rect x="0" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M0 11 H11 V19 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="0" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M0 7 H7 V15 H0 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-center">
-  <rect x="11" y="11" width="8" height="8" fill="#000" opacity="0.004"/>
-  <path d="M11 11 H19 V19 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="7" y="7" width="8" height="8" fill="#000" opacity="0.004"/>
+  <path d="M7 7 H15 V15 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-right">
-  <rect x="19" y="11" width="11" height="8" fill="#000" opacity="0.004"/>
-  <path d="M19 11 H30 V19 H19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="15" y="7" width="7" height="8" fill="#000" opacity="0.004"/>
+  <path d="M15 7 H22 V15 H15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-bottomleft">
-  <rect x="0" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M0 19 V20 A10 10 0 0 0 10 30 H11 V19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="0" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M0 15 V16 A6 6 0 0 0 6 22 H7 V15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-bottom">
-  <rect x="11" y="19" width="8" height="11" fill="#000" opacity="0.004"/>
-  <path d="M11 19 H19 V30 H11 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="7" y="15" width="8" height="7" fill="#000" opacity="0.004"/>
+  <path d="M7 15 H15 V22 H7 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <g id="sunken-bottomright">
-  <rect x="19" y="19" width="11" height="11" fill="#000" opacity="0.004"/>
-  <path d="M19 19 V30 H20 A10 10 0 0 0 30 20 V19 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
+  <rect x="15" y="15" width="7" height="7" fill="#000" opacity="0.004"/>
+  <path d="M15 15 V22 H16 A6 6 0 0 0 22 16 V15 Z" class="ColorScheme-Text" fill="currentColor" opacity="0.07"/>
  </g>
  <rect id="sunken-hint-top-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>
  <rect id="sunken-hint-bottom-margin" x="0" y="0" width="1" height="6" fill="#000" opacity="0.004"/>

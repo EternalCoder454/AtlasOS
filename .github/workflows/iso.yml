@@ -5,7 +5,7 @@ name: Live ISO
 # (the VPS, ci/iso-hosting). promote-stable.yml calls it for each image whose
 # stable tags it moved; run it by hand to rebuild one.
 #
-# On the VPS each image keeps one version: <image>-44.YYYYMMDD.iso, its
+# On the VPS each image keeps one version: <image>-44.YYYYMMDD-N.iso, its
 # .sha256, and <image>.json, which names the current version for the site's
 # download buttons. The new ISO and checksum take their place together once
 # both are up, then <image>.json moves to them, then the old version goes

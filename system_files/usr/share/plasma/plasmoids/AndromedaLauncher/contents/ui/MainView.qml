@@ -51,7 +51,7 @@ Item {
   property bool showAllApps: false
 
   property bool isDarkTheme: ColorType.isDark(bgColor)
-  // AtlasOS: the neutral tint Atlas.Ui puts on its pill controls.
+  // AtlasOS: the neutral tint Atlas.Ui puts on its controls.
   property color contrastBgColor: Qt.alpha(Kirigami.Theme.textColor, 0.08)
 
   property int pinnedModel: plasmoid.configuration.pinnedModel
@@ -125,7 +125,7 @@ Item {
 
     spacing: itemSpacing
 
-    // Search Bar (AtlasOS: on top, a pill like Atlas.Ui's SearchField)
+    // Search Bar (AtlasOS: on top, like Atlas.Ui's SearchField)
 
     SearchBar {
       id: searchBar
@@ -217,13 +217,13 @@ Item {
         background: Rectangle {
           id: btnBg
           color: Qt.alpha(Kirigami.Theme.highlightColor, allAppsButton.down ? 0.3 : allAppsButton.hovered ? 0.22 : 0.14)
-          radius: height / 2
+          radius: 4 // AtlasOS: radiusSmall, not a pill
 
           Rectangle {
             id: bgMask
             width: parent.width
             height: parent.height
-            radius: height / 2
+            radius: 4 // AtlasOS: radiusSmall, not a pill
             border.width: 1
             visible: plasmoid.configuration.enableGlow && !searching
           }

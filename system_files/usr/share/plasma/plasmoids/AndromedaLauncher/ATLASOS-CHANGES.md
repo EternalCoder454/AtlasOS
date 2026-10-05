@@ -24,7 +24,7 @@ and units (no hard-coded colours), drawing on the AtlasOS style's dialog frame:
 
 - contents/ui/MainView.qml: a compact user row (small avatar, name, then the
   settings, lock and power buttons) replaces the large floating avatar; the
-  search field moved to the top as a pill; the section title is semibold and
+  search field moved to the top (4 px radius, as Atlas.Ui's SearchField); the section title is semibold and
   subdued, without the star icon; the "All apps" button is accent-tinted;
   the font family fix (a font object was assigned to a string).
 - contents/ui/Header.qml: settings, lock (new; the system model's lock action,
@@ -33,8 +33,8 @@ and units (no hard-coded colours), drawing on the AtlasOS style's dialog frame:
   (atlas-symbols-fonts) drawn as plain text, with a theme icon as fallback
   when the font is missing. Atlas.Ui's Symbol is not used: it needs the Atlas
   apps' startup singletons.
-- contents/ui/SearchBar.qml: SearchField's pill, border and focus ring.
-- contents/ui/Highlight.qml, GenericItem.qml: an 8 px accent-tinted
+- contents/ui/SearchBar.qml: SearchField's 4 px corners, border and focus ring.
+- contents/ui/Highlight.qml, GenericItem.qml: a 4 px accent-tinted
   selection/hover as SidebarItem, instead of the style's viewitem frame.
 - contents/ui/Greeting.qml, UserAvatar.qml: sized by the layout, semibold
   name; no inner avatar margin.

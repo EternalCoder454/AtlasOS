@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generates AtlasOS's Kvantum themes: the application style for Qt/KDE apps
 (Dolphin, System Settings, Discover...), drawn to match the Atlas apps (Atlas
-Updater, Atlas Monitor): pill buttons, 10 px cards with a hairline border, soft
-accent-tinted selection, thin rounded scrollbars.
+Updater, Atlas Monitor) as of Atlas.Ui 1.4.0: small-radius (4 px) buttons,
+fields and selections, 6 px cards, menus and tooltips, a hairline border, grey
+hover and press, accent-filled selected tab, thin rounded scrollbars. No pills.
 
 Four themes come out, into system_files/usr/share/Kvantum/<name>/:
 
@@ -32,14 +33,19 @@ SCHEMES = ROOT / "system_files/usr/share/color-schemes"
 OUT = ROOT / "system_files/usr/share/Kvantum"
 
 # --- Sizes, in logical pixels -------------------------------------------------
-PILL_H = 33  # height a pill is drawn for; the text line plus the frame
-PILL_CAP = 17  # width of a pill's end cap (about half its height)
-FIELD_R = 8  # text fields, spin boxes
-CARD_R = 10  # group boxes and cards (Section.qml)
-MENU_R = 8
-TOOLTIP_R = 6
-ITEM_R = 6  # list rows, menu items, tabs
-TOOL_R = 6  # tool buttons
+# These follow AtlasStyle.qml (Atlas.Ui 1.4.0): radiusSmall 4 for controls,
+# radius 6 for menus, cards and tooltips.
+RADIUS_SMALL = 4
+RADIUS = 6
+BTN_FR = 6  # frame tile of buttons and tabs: holds the 6 px pressed radius
+BTN_PAD = 6  # button frame top and bottom: text line + 2 * 6 is about controlHeight (28)
+FIELD_R = RADIUS_SMALL  # text fields, spin boxes
+CARD_R = RADIUS  # group boxes and cards (Section.qml)
+MENU_R = RADIUS
+TOOLTIP_R = RADIUS
+ITEM_R = RADIUS_SMALL  # list rows, menu items
+TAB_R = RADIUS  # tabs (the selected one is the segmented control's accent cell)
+TOOL_R = RADIUS_SMALL  # tool buttons
 SCROLL_W = 10  # scrollbar track; the visible thumb is SCROLL_W - 2 * SCROLL_PAD
 SCROLL_PAD = 2
 CHECK = 18
@@ -122,6 +128,7 @@ class Theme:
         self.text = p["text"]
         self.accent = p["accent"]
         self.white = (255, 255, 255)
+        self.accent_text = (0x14, 0x12, 0x1F) if dark else self.white  # AtlasStyle.accentText
         # Card colour: Section.qml (lighter in light mode, a 6% white tint in dark).
         if dark:
             self.card = mix(self.white, p["window"], 0.06)
@@ -303,23 +310,25 @@ def draw_theme(t):
     def neutral(a):
         return (txt, a)
 
-    # Pills. Normal/hover/pressed follow AtlasButton.qml: text colour at 7/12/20%
-    # with a 14% hairline; the default and toggled button is the accent.
-    cap, ph = PILL_CAP, PILL_H
-    cap_v = 8  # a pill's cap tiles are cap wide and 8 tall; the middle row stretches
-
-    hair = neutral(0.14)
+    # Buttons follow AtlasButton.qml: the control fill with a controlBorder
+    # hairline, a grey hover and press overlay (hover 5.5/7%, press 10/12% of
+    # the text colour in light/dark, over the 5.5/6.5% fill), radiusSmall
+    # corners that grow to radius while pressed; checked is the selection fill
+    # with an accent border; the default button is the prominent one.
+    fr = BTN_FR
+    ctl, hov, prs = (0.065, 0.07, 0.12) if t.dark else (0.055, 0.055, 0.10)
+    border = neutral(0.22)
     button_states = {
-        "normal": (neutral(0.07), hair),
-        "focused": (neutral(0.12), hair),
-        "pressed": (neutral(0.20), hair),
-        "toggled": ((acc, 1.0), None),
-        "toggled-focused": ((lighten(acc, 1.12), 1.0), None),
-        "toggled-pressed": ((darken(acc, 1.2), 1.0), None),
-        "disabled": (neutral(0.04), neutral(0.08)),
+        "normal": (neutral(ctl), border, RADIUS_SMALL),
+        "focused": (neutral(ctl + hov), border, RADIUS_SMALL),
+        "pressed": (neutral(ctl + prs), border, RADIUS),
+        "toggled": ((acc, 0.24 if t.dark else 0.16), (acc, 1.0), RADIUS_SMALL),
+        "toggled-focused": ((acc, 0.32 if t.dark else 0.24), (acc, 1.0), RADIUS_SMALL),
+        "toggled-pressed": ((acc, 0.40 if t.dark else 0.32), (acc, 1.0), RADIUS),
+        "disabled": (neutral(0.04), neutral(0.10), RADIUS_SMALL),
     }
-    for st, (fill, stroke) in button_states.items():
-        s.frame9("button", st, cap, cap_v, cap, cap_v, ph, box(fill, stroke, r=ph / 2))
+    for st, (fill, stroke, r) in button_states.items():
+        s.frame9("button", st, fr, BTN_PAD, fr, BTN_PAD, 0, box(fill, stroke, r=r))
 
     # The default button (Enter activates it): Kvantum draws the unstated
     # `button-default` frame over it. Make that the accent fill.
@@ -327,27 +336,27 @@ def draw_theme(t):
     # text colour. So on the light theme the fill is a lighter accent (dark text
     # stays readable); on the dark theme it is the accent itself.
     dfill = acc if t.dark else mix(acc, white, 0.55)
-    s.frame9("button", "default", cap, cap_v, cap, cap_v, ph, box((dfill, 1.0), None, r=ph / 2))
-    s.frame9("button-default", None, cap, cap_v, cap, cap_v, ph, box((dfill, 1.0), None, r=ph / 2))
+    s.frame9("button", "default", fr, BTN_PAD, fr, BTN_PAD, 0, box((dfill, 1.0), None, r=RADIUS_SMALL))
+    s.frame9("button-default", None, fr, BTN_PAD, fr, BTN_PAD, 0, box((dfill, 1.0), None, r=RADIUS_SMALL))
     s.tile("button-default-indicator", 4, 4, lambda ox, oy: "")
 
     # Tool buttons: flat until hovered.
     tb = TOOL_R
     for st, fill, stroke in [
         ("normal", None, None),
-        ("focused", neutral(0.08), None),
-        ("pressed", neutral(0.16), None),
-        ("toggled", (acc, 0.18), None),
-        ("toggled-focused", (acc, 0.26), None),
+        ("focused", neutral(hov), None),
+        ("pressed", neutral(prs), None),
+        ("toggled", (acc, 0.24 if t.dark else 0.16), None),
+        ("toggled-focused", (acc, 0.32 if t.dark else 0.24), None),
     ]:
         s.frame9("tbutton", st, tb, tb, tb, tb, 0, box(fill, stroke, r=tb))
 
-    # Text fields: soft fill, 1 px border; 2 px accent ring while focused.
+    # Text fields: the control fill, 1 px controlBorder; 2 px accent ring while focused.
     fr_ = FIELD_R
-    field_fill = (txt, 0.06)
+    field_fill = neutral(ctl)
     for st, fill, stroke in [
-        ("normal", field_fill, neutral(0.12)),
-        ("focused", (txt, 0.09), (acc, 0.8)),
+        ("normal", field_fill, border),
+        ("focused", neutral(ctl + hov), (acc, 0.8)),
         ("disabled", (txt, 0.03), neutral(0.07)),
     ]:
         w = 2 if st == "focused" else 1
@@ -358,14 +367,15 @@ def draw_theme(t):
     card = (t.card, t.card_alpha)
     s.frame9("group", "normal", cd, cd, cd, cd, 0, box(card, neutral(0.12), r=cd), interior=False)
     s.frame9("tabframe", "normal", cd, cd, cd, cd, 0, box(card, neutral(0.12), r=cd), interior=False)
-    s.frame9("common", "normal", 6, 6, 6, 6, 0, box(None, neutral(0.12), r=6), interior=False)
-    s.frame9("common", "focused", 6, 6, 6, 6, 0, box(None, (acc, 0.8), r=6, sw=2), interior=False)
+    s.frame9("common", "normal", RADIUS, RADIUS, RADIUS, RADIUS, 0, box(None, neutral(0.12), r=RADIUS), interior=False)
+    s.frame9("common", "focused", RADIUS, RADIUS, RADIUS, RADIUS, 0, box(None, (acc, 0.8), r=RADIUS, sw=2), interior=False)
 
-    # Tabs: a soft pill for the selected one.
-    tr = ITEM_R + 2
-    for st, fill in [("normal", None), ("focused", neutral(0.06)), ("toggled", (acc, 0.18))]:
-        s.frame9("tab", st, tr, tr, tr, tr, 0, box(fill, None, r=tr))
-        s.frame9("floating-tab", st, tr, tr, tr, tr, 0, box(fill, None, r=tr))
+    # Tabs follow the segmented control: the selected one is an accent cell
+    # (radius), hover is the grey hover overlay (radiusSmall).
+    tr = TAB_R
+    for st, fill, r in [("normal", None, RADIUS_SMALL), ("focused", neutral(hov), RADIUS_SMALL), ("toggled", (acc, 1.0), RADIUS)]:
+        s.frame9("tab", st, tr, tr, tr, tr, 0, box(fill, None, r=r))
+        s.frame9("floating-tab", st, tr, tr, tr, tr, 0, box(fill, None, r=r))
 
     # Lists: a rounded accent selection. QML apps (System Settings, Discover) draw
 # the selected row's text in the colour scheme's white, so a pale tint would
@@ -386,10 +396,10 @@ def draw_theme(t):
     s.frame9("menu", "normal", mr, mr, mr, mr, 0, box(menu, neutral(0.16), r=mr))
     tr = TOOLTIP_R
     s.frame9("tooltip", "normal", tr, tr, tr, tr, 0, box((t.card, t.menu_alpha), neutral(0.16), r=tr))
-    mi = 5
-    for st, fill in [("pressed", (acc, 0.18)), ("toggled", (acc, 0.18)), ("normal", None)]:
+    mi = RADIUS_SMALL
+    for st, fill in [("pressed", neutral(prs)), ("toggled", neutral(hov)), ("normal", None)]:
         s.frame9("menuitem", st, mi, mi, mi, mi, 0, box(fill, None, r=mi))
-    for st, fill in [("normal", None), ("focused", neutral(0.08)), ("pressed", (acc, 0.2)), ("toggled", (acc, 0.2))]:
+    for st, fill in [("normal", None), ("focused", neutral(hov)), ("pressed", neutral(prs)), ("toggled", neutral(hov))]:
         s.frame9("menubaritem", st, mi, mi, mi, mi, 0, box(fill, None, r=mi))
 
     # Menu and tooltip shadows. With a compositor Kvantum paints a menu's
@@ -655,10 +665,10 @@ centered_forms=false
 [PanelButtonCommand]
 frame=true
 frame.element=button
-frame.top=8
-frame.bottom=8
-frame.left=17
-frame.right=17
+frame.top={BTN_PAD}
+frame.bottom={BTN_PAD}
+frame.left={BTN_FR}
+frame.right={BTN_FR}
 interior=true
 interior.element=button
 indicator.size=12
@@ -666,7 +676,7 @@ indicator.element=arrow
 text.normal.color={txt}
 text.focus.color={txt}
 text.press.color={txt}
-text.toggle.color=#ffffff
+text.toggle.color={acc}
 text.disabled.color={disabled}
 text.shadow=0
 text.margin=0
@@ -680,10 +690,10 @@ text.margin.right=0
 inherits=PanelButtonCommand
 interior.element=tbutton
 frame.element=tbutton
-frame.top=6
-frame.bottom=6
-frame.left=6
-frame.right=6
+frame.top={TOOL_R}
+frame.bottom={TOOL_R}
+frame.left={TOOL_R}
+frame.right={TOOL_R}
 text.toggle.color={txt}
 text.margin.left=0
 text.margin.right=0
@@ -724,10 +734,10 @@ inherits=PanelButtonCommand
 frame=true
 interior=false
 frame.element=common
-frame.top=6
-frame.bottom=6
-frame.left=6
-frame.right=6
+frame.top={RADIUS}
+frame.bottom={RADIUS}
+frame.left={RADIUS}
+frame.right={RADIUS}
 text.margin=0
 
 [LineEdit]
@@ -740,8 +750,8 @@ frame.top={FIELD_R}
 frame.bottom={FIELD_R}
 frame.left={FIELD_R}
 frame.right={FIELD_R}
-text.margin.top=0
-text.margin.bottom=0
+text.margin.top=2
+text.margin.bottom=2
 text.margin.left=1
 text.margin.right=1
 
@@ -755,19 +765,19 @@ indicator.size=12
 
 [ToolboxTab]
 inherits=PanelButtonCommand
-frame.left=8
-frame.right=8
+frame.left={BTN_FR}
+frame.right={BTN_FR}
 
 [Tab]
 inherits=PanelButtonCommand
 interior.element=tab
 frame.element=tab
-frame.top={ITEM_R + 2}
-frame.bottom={ITEM_R + 2}
-frame.left={ITEM_R + 2}
-frame.right={ITEM_R + 2}
+frame.top={TAB_R}
+frame.bottom={TAB_R}
+frame.left={TAB_R}
+frame.right={TAB_R}
 text.margin=0
-text.toggle.color={txt}
+text.toggle.color={hx(t.accent_text)}
 text.press.color={txt}
 indicator.element=tab
 min_width=+0
@@ -945,8 +955,8 @@ text.bold=true
 
 [ComboBox]
 inherits=PanelButtonCommand
-frame.left=17
-frame.right=17
+frame.left={BTN_FR}
+frame.right={BTN_FR}
 
 [Menu]
 inherits=PanelButtonCommand

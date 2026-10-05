@@ -129,7 +129,7 @@ Item {
   Rectangle {
     id: rectFill
     color: Kirigami.Theme.highlightColor
-    radius: 8 // AtlasOS: Atlas.Ui SidebarItem's pill
+    radius: 4 // AtlasOS: Atlas.Ui's list selection (radiusSmall)
     z: -20
     anchors.fill: rect
   }

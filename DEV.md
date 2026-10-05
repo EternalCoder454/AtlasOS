@@ -405,9 +405,9 @@ sudo bootc status                       # booted / staged / rollback
   one) and a rounded tile covering the whole item on hover. All of that is
   the AtlasOS Plasma style (`system_files/usr/share/plasma/desktoptheme/atlasos/`:
   the task frames, the dock's and menu bar's background, and every surface
-  Plasma draws from its theme: popups (`dialogs/background`, 12 px card,
+  Plasma draws from its theme: popups (`dialogs/background`, 8 px card,
   hairline, soft shadow, see-through so KWin's blur shows), tooltips, desktop
-  widget backgrounds, pill buttons and flat tool buttons, text fields,
+  widget backgrounds, 4 px-radius buttons and flat tool buttons, text fields,
   sliders, switches, check and radio marks, scrollbars, tabs, list and view
   items, frames and progress bars, all sized like the Kvantum themes and
   coloured from the colour scheme so light, dark and the accent follow; with
@@ -479,14 +479,19 @@ KIO (the `plasma-setup` stage, `build_files/plasma-setup/`, release
 patches. Its frame is compiled into the program, which is why it is a rebuild
 and not a theme. The patch:
 
-- gives it the Atlas apps' look: pill buttons with the step forward in the
-  accent colour, step dots, big bold titles, a rounder card with a shadow,
+- gives it the Atlas apps' look: buttons with Atlas.Ui's 4 px corners and
+  the step forward in the accent colour, step dots, big bold titles, a
+  rounder card with a shadow,
   rounded sections behind the lists, and a welcome screen with the AtlasOS
   logo and one accent button;
 - turns "Dark Theme" into an **Appearance** page with AtlasOS Light and Dark
   as pictures of the desktop, applying AtlasOS's Global Themes. Fedora's patch
   applies Fedora's themes, which AtlasOS removes, so choosing Dark used to do
-  nothing;
+  nothing. The wizard cross-fades to the new look (not under reduced
+  motion): it pictures the window with `grabToImage` (taken of the page's
+  highest ancestor that QML made, since the window's root items refuse it),
+  lays the picture over the wizard and fades it out once the theme has
+  applied. Without a picture it simply switches;
 - falls back to the light wallpaper picture when a wallpaper has no dark one;
 - adds the components AtlasOS's own pages use (`AtlasButton`, `ChoiceCard`,
   `DesktopPreview`, `SectionBackground` in `org.kde.plasmasetup.components`);
@@ -936,7 +941,11 @@ style (`widgetStyle=kvantum`: `/etc/xdg/kdeglobals`, the look-and-feel
 `defaults`, and `atlasos-20261003-kvantum.sh` for users still on Breeze) with
 the AtlasOS themes in `system_files/usr/share/Kvantum/`: `AtlasOS`,
 `AtlasOSDark`, and `AtlasOSSolid` / `AtlasOSDarkSolid` (no translucency or
-blur). The `opaque=` list in each `.kvconfig` keeps browsers, video players,
+blur). The look is Atlas.Ui 1.4.0's: 4 px corners on buttons, fields,
+tool buttons and selections (6 px while a button is pressed), 6 px cards, menus
+and tooltips, grey hover and press, an accent cell for the selected tab; no
+pills. The themes live in `/usr`, so an image update changes them for every
+user and apps pick them up when restarted: no kconf_update is needed. The `opaque=` list in each `.kvconfig` keeps browsers, video players,
 editors, games, terminals and the Atlas apps opaque.
 
 The themes are generated: edit colours and sizes in

@@ -68,7 +68,8 @@ build tag="latest" *args:
         --build-context atlas-updater=build/updater-src \
         --build-context atlas-monitor=build/monitor-src \
         --build-context atlas-notepad=build/notepad-src \
-        --volume "$dnf_cache:/var/cache/libdnf5:Z" \
+        --security-opt label=disable \
+        --volume "$dnf_cache:/var/cache/libdnf5" \
         --build-arg IMAGE_VERSION="$version" \
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
         --label org.opencontainers.image.version="$version" \
@@ -127,7 +128,8 @@ build-nvidia tag="latest" *args:
     dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
     mkdir -p "$dnf_cache"
     podman build \
-        --volume "$dnf_cache:/var/cache/libdnf5:Z" \
+        --security-opt label=disable \
+        --volume "$dnf_cache:/var/cache/libdnf5" \
         --secret id=nvidia-signing-key,src="$key" \
         --build-arg BASE_IMAGE="{{ image }}:{{ tag }}" \
         --label org.opencontainers.image.title="AtlasOS (NVIDIA)" \

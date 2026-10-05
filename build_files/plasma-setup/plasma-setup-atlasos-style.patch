@@ -1,9 +1,10 @@
-From ae54887cb37294ad2f93e857b48f91995595baff Mon Sep 17 00:00:00 2001
+From 57b63dde7d1e0aa1585bf25252b3d007938e0c2f Mon Sep 17 00:00:00 2001
 From: AtlasOS <atlasos@users.noreply.github.com>
-Date: Fri, 2 Oct 2026 13:46:10 -0700
+Date: Sun, 4 Oct 2026 23:37:23 -0700
 Subject: [PATCH] AtlasOS look for the first-run wizard
 
-- Pill buttons (the step forward in the accent colour), step dots, a big
+- Buttons as in Atlas.Ui 1.4 (4 px corners, 6 px pressed; the step forward
+  in the accent colour), step dots, a big
   bold title and a rounder card with a shadow, as in the Atlas apps
 - Welcome screen: the AtlasOS logo, "Welcome to AtlasOS" and one accent
   button; credit Fedora and KDE Plasma underneath
@@ -18,24 +19,28 @@ Subject: [PATCH] AtlasOS look for the first-run wizard
 - Language, keyboard and Wi-Fi pages skip themselves when Atlas Installer
   already asked: /etc/atlasos/installer.ini has the language or keyboard
   layout, or a network that came along and is fully online now
+- Choosing a theme no longer freezes the wizard: the theme applies in the
+  background and the old look fades into the new one (about 400 ms; none
+  under reduced motion); the choice card's ring animates too
 ---
  modules/finished/contents/ui/main.qml    |  20 +-
  modules/keyboard/contents/ui/main.qml    |  32 ++-
  modules/language/contents/ui/main.qml    |  23 +-
- modules/prepare/contents/ui/main.qml     | 113 +++++-----
- modules/prepare/metadata.json            |  72 +------
- modules/prepareutil/prepareutil.cpp      |   7 +-
+ modules/prepare/contents/ui/main.qml     | 326 ++++++++++++++++++-----
+ modules/prepare/metadata.json            |  72 +----
+ modules/prepareutil/prepareutil.cpp      | 149 ++++++++++-
+ modules/prepareutil/prepareutil.h        |  29 +-
  modules/time/contents/ui/main.qml        |   3 +-
- modules/wifi/contents/ui/main.qml        |  38 +++-
+ modules/wifi/contents/ui/main.qml        |  38 ++-
  src/components/CMakeLists.txt            |   4 +
- src/components/qml/AtlasButton.qml       | 107 ++++++++++
- src/components/qml/ChoiceCard.qml        | 117 +++++++++++
- src/components/qml/DesktopPreview.qml    | 286 +++++++++++++++++++++++
+ src/components/qml/AtlasButton.qml       | 127 +++++++++
+ src/components/qml/ChoiceCard.qml        | 128 +++++++++
+ src/components/qml/DesktopPreview.qml    | 286 ++++++++++++++++++++
  src/components/qml/SectionBackground.qml |  19 ++
- src/qml/LandingComponent.qml             |  47 ++++-
+ src/qml/LandingComponent.qml             |  47 +++-
  src/qml/SessionMenu.qml                  |  17 +-
- src/qml/Wizard.qml                       |  72 +++++--
- 16 files changed, 773 insertions(+), 204 deletions(-)
+ src/qml/Wizard.qml                       |  72 +++--
+ 17 files changed, 1180 insertions(+), 212 deletions(-)
  create mode 100644 src/components/qml/AtlasButton.qml
  create mode 100644 src/components/qml/ChoiceCard.qml
  create mode 100644 src/components/qml/DesktopPreview.qml
@@ -194,10 +199,10 @@ index ea4bc36..a6441e3 100644
                  ListView {
                      id: languageListView
 diff --git a/modules/prepare/contents/ui/main.qml b/modules/prepare/contents/ui/main.qml
-index 422088a..0eae95d 100644
+index 422088a..0a6d90e 100644
 --- a/modules/prepare/contents/ui/main.qml
 +++ b/modules/prepare/contents/ui/main.qml
-@@ -1,87 +1,80 @@
+@@ -1,87 +1,307 @@
  // SPDX-FileCopyrightText: 2023 Devin Lin <devin@kde.org>
  // SPDX-FileCopyrightText: 2025 Kristen McWilliam <kristen@kde.org>
 +// SPDX-FileCopyrightText: 2026 AtlasOS
@@ -219,13 +224,254 @@ index 422088a..0eae95d 100644
      id: root
  
 -    cardWidth: Math.min(Kirigami.Units.gridUnit * 30, root.contentItem.width - Kirigami.Units.gridUnit * 2)
--
-     nextEnabled: true
++    // Not while a theme is still being applied.
++    nextEnabled: !Prepare.PrepareUtil.busy
  
--    contentItem: ColumnLayout {
--
+-    nextEnabled: true
++    // The theme the person last clicked. usingDarkTheme itself is written a
++    // moment later while a fade starts, so clicks compare against this.
++    property bool wanted: Prepare.PrepareUtil.usingDarkTheme
++
++    function choose(dark: bool): void {
++        // Applying a Global Theme takes a moment; skip it when nothing changes.
++        if (dark === root.wanted) {
++            return;
++        }
++        root.wanted = dark;
++        fade.start(dark);
++    }
++
++    // The old look stays on top as a picture of the window and fades into the
++    // new one once the theme is applied (the way macOS and Windows 11 do).
++    // The picture never takes mouse input, so the page works throughout.
++    Item {
++        id: fade
++
++        // Kirigami.Units.longDuration is 0 under reduced motion: no fade.
++        readonly property bool enabledFade: Kirigami.Units.longDuration > 0
++        // The window's content item, looked up when a fade starts.
++        property Item target: null
++        property bool grabbing: false
++        // Counts grabs, so a callback from an abandoned one is ignored.
++        property int grabId: 0
++        // When the overlay went up, for the safety timer's absolute cap.
++        property double shownAt: 0
++        property var grabResult: null
++        // The newest wanted theme; every apply from here uses it.
++        property bool pendingDark: false
++
++        parent: target
++        anchors.fill: parent
++        z: 100000
++        visible: opacity > 0
++        opacity: 0
++        enabled: false
++
++        function apply(): void {
++            Prepare.PrepareUtil.usingDarkTheme = fade.pendingDark;
++        }
++
++        function start(dark: bool): void {
++            pendingDark = dark;
++            const win = page.Window.window;
++            if (!enabledFade || !win) {
++                console.info("AtlasOS wizard: no fade (enabledFade=" + enabledFade + ", window=" + (win ? "yes" : "none") + ")");
++                apply();
++                return;
++            }
++            if (grabbing) {
++                // The grab's callback applies the newest value.
++                console.info("AtlasOS wizard: fade already starting, newest choice kept");
++                return;
++            }
++            if (visible) {
++                // Still showing the old look: hold it until the newest theme is in.
++                console.info("AtlasOS wizard: fade held for a newer choice");
++                applyDelay.stop();
++                fadeOut.stop();
++                fadeDelay.stop();
++                safety.restart();
++                apply();
++                return;
++            }
++            console.info("AtlasOS wizard: fade starts");
++            const dpr = Math.max(1, win.devicePixelRatio);
++            // The window's own colour goes behind the picture, since the
++            // grab holds only the items.
++            backdrop.color = win.color;
++            grabbing = true;
++            const id = ++grabId;
++            grabGuard.restart();
++            const done = result => {
++                if (id !== fade.grabId) {
++                    // The guard already gave up on this grab.
++                    return;
++                }
++                grabGuard.stop();
++                fade.grabbing = false;
++                if (!result || result.url.toString() === "") {
++                    console.info("AtlasOS wizard: the window grab was empty, no fade");
++                    fade.apply();
++                    return;
++                }
++                fade.grabResult = result;
++                snapshot.source = result.url;
++                if (snapshot.status === Image.Error) {
++                    // The error handler has already cleared and applied.
++                    return;
++                }
++                fade.shownAt = Date.now();
++                fade.opacity = 1;
++                safety.restart();
++                // Let the picture paint once before the colours change.
++                applyDelay.restart();
++            };
++            const grab = item => item.grabToImage(done, Qt.size(Math.round(item.width * dpr), Math.round(item.height * dpr)));
++            let ok = false;
++            if (target) {
++                ok = grab(target);
++            } else {
++                // The picture covers the whole window, so it is taken of the
++                // page's highest ancestor that grabToImage accepts. The
++                // window's own root items weren't made by QML, and it refuses
++                // those ("item has no QML engine"). Found once, then kept.
++                const chain = [];
++                for (let item = page; item; item = item.parent) {
++                    chain.unshift(item);
++                }
++                for (const item of chain) {
++                    if (grab(item)) {
++                        target = item;
++                        ok = true;
++                        break;
++                    }
++                }
++            }
++            if (!ok) {
++                console.info("AtlasOS wizard: grabToImage refused, no fade");
++                grabbing = false;
++                grabGuard.stop();
++                apply();
++            }
++        }
++
++        function finish(): void {
++            // A frame or so for the new look to paint under the picture.
++            fadeDelay.restart();
++        }
++
++        function clear(): void {
++            safety.stop();
++            snapshot.source = "";
++            grabResult = null;
++            opacity = 0;
++        }
++
++        Timer {
++            id: applyDelay
++            interval: 50
++            onTriggered: fade.apply()
++        }
++        Timer {
++            id: fadeDelay
++            interval: 80
++            onTriggered: {
++                if (fade.visible) {
++                    fadeOut.restart();
++                }
++            }
++        }
++        // A grab whose callback never comes must not stop fades for good.
++        Timer {
++            id: grabGuard
++            interval: 2000
++            onTriggered: {
++                console.info("AtlasOS wizard: the window grab did not finish, no fade");
++                fade.grabId++;
++                fade.grabbing = false;
++                fade.apply();
++            }
++        }
++        // Whatever happens, the picture goes. An apply may take up to 30 s
++        // (PrepareUtil stops it then), so this waits a little longer.
++        Timer {
++            id: safety
++            interval: 32000
++            onTriggered: {
++                // A chain of applies on the C++ side may still be running: wait,
++                // up to 70 s after the picture went up.
++                if (Prepare.PrepareUtil.busy && Date.now() - fade.shownAt < 70000) {
++                    safety.restart();
++                    return;
++                }
++                if (!fade.visible)
++                    return; // No picture up (a grab failed): nothing to undo.
++                fadeOut.restart();
++            }
++        }
++        NumberAnimation {
++            id: fadeOut
++            target: fade
++            property: "opacity"
++            to: 0
++            duration: Kirigami.Units.longDuration + Kirigami.Units.shortDuration
++            easing.type: Easing.OutCubic
++            onFinished: fade.clear()
++        }
++
++        Rectangle {
++            id: backdrop
++            anchors.fill: parent
++        }
++        Image {
++            id: snapshot
++            anchors.fill: parent
++            fillMode: Image.Stretch
++            cache: false
++            smooth: true
++            asynchronous: false
++            onStatusChanged: {
++                if (status === Image.Error) {
++                    console.info("AtlasOS wizard: the snapshot did not load, no fade");
++                    applyDelay.stop();
++                    fade.clear();
++                    fade.apply();
++                }
++            }
++        }
++    }
++
++    Connections {
++        target: Prepare.PrepareUtil
++
++        function onThemeApplied(ok: bool): void {
++            if (applyDelay.running || fade.grabbing) {
++                // A click is still waiting to apply; this was an earlier
++                // apply finishing. Keep the picture until the newest is in.
++                safety.restart();
++                return;
++            }
++            if (!ok) {
++                // Back at what the desktop really has.
++                root.wanted = Prepare.PrepareUtil.usingDarkTheme;
++                fade.pendingDark = root.wanted;
++            }
++            fade.finish();
++        }
++    }
+ 
+     contentItem: ColumnLayout {
++        id: page
++        spacing: Kirigami.Units.gridUnit
+ 
 -        ColumnLayout {
--            Layout.maximumWidth: root.cardWidth
++        Item {
++            Layout.fillHeight: true
++        }
++
++        Text {
++            Layout.fillWidth: true
+             Layout.maximumWidth: root.cardWidth
 -            Layout.alignment: Qt.AlignCenter
 -            spacing: Kirigami.Units.smallSpacing
 -
@@ -257,34 +503,32 @@ index 422088a..0eae95d 100644
 -
 -            // Connections {
 -            // target: Prepare.PrepareUtil
-+    function choose(dark: bool): void {
-+        // Applying a Global Theme takes a moment; skip it when nothing changes.
-+        if (dark !== Prepare.PrepareUtil.usingDarkTheme) {
-+            Prepare.PrepareUtil.usingDarkTheme = dark;
-+        }
-+    }
- 
+-
 -            // function onScalingChanged(): void {
 -            // displayScaling.currentIndex = Prepare.PrepareUtil.scalingOptions.indexOf(Prepare.PrepareUtil.scaling.toString() + "%");
 -            // }
 -            // }
-+    contentItem: ColumnLayout {
-+        spacing: Kirigami.Units.gridUnit
- 
+-
 -            // // remove % suffix
 -            // onCurrentValueChanged: Prepare.PrepareUtil.scaling = parseInt(currentValue.substring(0, currentValue.length - 1))
 -            // }
 -            // }
-+        Item {
-+            Layout.fillHeight: true
-+        }
- 
+-
 -                FormCard.FormCard {
 -                    id: darkThemeCard
 -                    maximumWidth: root.cardWidth
-+        Text {
-+            Layout.fillWidth: true
-+            Layout.maximumWidth: root.cardWidth
+-
+-                    Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
+-
+-                    FormCard.FormSwitchDelegate {
+-                        id: darkThemeSwitch
+-                        text: i18n("Dark Theme")
+-                        checked: Prepare.PrepareUtil.usingDarkTheme
+-                        onCheckedChanged: {
+-                            if (checked !== Prepare.PrepareUtil.usingDarkTheme) {
+-                                Prepare.PrepareUtil.usingDarkTheme = checked;
+-                        }
+-                    }
 +            Layout.alignment: Qt.AlignHCenter
 +            text: i18n("Choose how AtlasOS looks. You can change this later in System Settings.")
 +            horizontalAlignment: Text.AlignHCenter
@@ -292,8 +536,7 @@ index 422088a..0eae95d 100644
 +            font: Kirigami.Theme.defaultFont
 +            color: Kirigami.Theme.disabledTextColor
 +        }
- 
--                    Layout.alignment: Qt.AlignTop | Qt.AlignHCenter
++
 +        RowLayout {
 +            Layout.alignment: Qt.AlignHCenter
 +            Layout.fillWidth: true
@@ -311,16 +554,7 @@ index 422088a..0eae95d 100644
 +                preview: PlasmaSetupComponents.DesktopPreview {}
 +                onClicked: root.choose(false)
 +            }
- 
--                    FormCard.FormSwitchDelegate {
--                        id: darkThemeSwitch
--                        text: i18n("Dark Theme")
--                        checked: Prepare.PrepareUtil.usingDarkTheme
--                        onCheckedChanged: {
--                            if (checked !== Prepare.PrepareUtil.usingDarkTheme) {
--                                Prepare.PrepareUtil.usingDarkTheme = checked;
--                        }
--                    }
++
 +            PlasmaSetupComponents.ChoiceCard {
 +                Layout.fillWidth: true
 +                Layout.preferredWidth: 1
@@ -424,10 +658,21 @@ index d2cf89f..45e81c4 100644
      },
      "NoDisplay": true,
 diff --git a/modules/prepareutil/prepareutil.cpp b/modules/prepareutil/prepareutil.cpp
-index e6b2f05..ca48136 100644
+index e6b2f05..4bf0414 100644
 --- a/modules/prepareutil/prepareutil.cpp
 +++ b/modules/prepareutil/prepareutil.cpp
-@@ -36,7 +36,8 @@ PrepareUtil::PrepareUtil(QObject *parent)
+@@ -10,7 +10,10 @@
+ 
+ #include <QDBusPendingCallWatcher>
+ #include <QDBusPendingReply>
++#include <QDebug>
++#include <QElapsedTimer>
+ #include <QProcess>
++#include <QTimer>
+ 
+ using namespace Qt::StringLiterals;
+ 
+@@ -36,7 +39,8 @@ PrepareUtil::PrepareUtil(QObject *parent)
      });
  
      // set property initially
@@ -437,18 +682,221 @@ index e6b2f05..ca48136 100644
  }
  
  int PrepareUtil::scaling() const
-@@ -93,9 +94,9 @@ void PrepareUtil::setUsingDarkTheme(bool usingDarkTheme)
+@@ -89,17 +93,148 @@ bool PrepareUtil::usingDarkTheme() const
+     return m_usingDarkTheme;
+ }
+ 
++PrepareUtil::~PrepareUtil()
++{
++    // Leaving the wizard must not cut a theme apply in half. finished() is
++    // emitted from inside waitForFinished, so finishApply knows to neither
++    // emit nor read config now, and to start a pending apply at most once.
++    m_shuttingDown = true;
++    QElapsedTimer deadline;
++    deadline.start();
++    while (m_applyProcess) {
++        QProcess *process = m_applyProcess;
++        const qint64 left = 5000 - deadline.elapsed();
++        if (left > 0 && process->waitForFinished(static_cast<int>(left))) {
++            continue; // finishApply may have started the pending one
++        }
++        if (m_applyProcess != process) {
++            continue; // it ended (or failed to start) meanwhile
++        }
++        // Past the deadline: give up on the rest.
++        m_hasPending = false;
++        process->disconnect(this);
++        process->kill();
++        process->waitForFinished(1000);
++        m_applyProcess = nullptr;
++    }
++}
++
++bool PrepareUtil::busy() const
++{
++    return m_busy;
++}
++
++void PrepareUtil::setBusy(bool busy)
++{
++    if (m_busy != busy) {
++        m_busy = busy;
++        Q_EMIT busyChanged();
++    }
++}
++
++bool PrepareUtil::currentSchemeIsDark()
++{
++    // Read the file again: plasma-apply-lookandfeel changed it behind our back.
++    m_colorsSettings->config()->reparseConfiguration();
++    m_colorsSettings->load();
++    return m_colorsSettings->colorScheme() == u"AtlasOSDark"_s;
++}
++
++// AtlasOS: the selection changes at once and the theme follows in the
++// background, so the window keeps painting (the page fades from the old look
++// to the new one meanwhile) instead of freezing.
+ void PrepareUtil::setUsingDarkTheme(bool usingDarkTheme)
++{
++    if (m_usingDarkTheme != usingDarkTheme) {
++        m_usingDarkTheme = usingDarkTheme;
++        Q_EMIT usingDarkThemeChanged();
++    }
++
++    if (m_applyProcess) {
++        // One at a time; the end state must match the last click.
++        m_hasPending = true;
++        m_pendingDark = usingDarkTheme;
++        return;
++    }
++    setBusy(true);
++    applyTheme(usingDarkTheme);
++}
++
++void PrepareUtil::applyTheme(bool dark)
  {
      // use plasma-apply-lookandfeel since it has logic for notifying the shell of changes
-     if (usingDarkTheme) {
+-    if (usingDarkTheme) {
 -        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.fedoraproject.fedoradark.desktop")});
-+        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.atlasos.dark.desktop")});
-     } else {
+-    } else {
 -        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.fedoraproject.fedora.desktop")});
-+        QProcess::execute(u"plasma-apply-lookandfeel"_s, {QStringLiteral("--apply"), QStringLiteral("org.atlasos.desktop")});
++    const QString theme = dark ? u"org.atlasos.dark.desktop"_s : u"org.atlasos.desktop"_s;
++
++    auto *process = new QProcess(this);
++    m_applyProcess = process;
++    process->setProcessChannelMode(QProcess::SeparateChannels);
++
++    // A hung apply must not leave the wizard waiting for ever.
++    auto *timeout = new QTimer(process);
++    timeout->setSingleShot(true);
++    connect(timeout, &QTimer::timeout, process, [process] {
++        qWarning() << "plasma-apply-lookandfeel took more than 30 s, stopping it";
++        process->kill();
++    });
++
++    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
++        // Only a failed start has no finished() after it.
++        if (error == QProcess::FailedToStart && m_applyProcess == process) {
++            const QString message = process->errorString();
++            m_applyProcess = nullptr;
++            process->deleteLater();
++            finishApply(false, message);
++        }
++    });
++    connect(process, &QProcess::finished, this, [this, process](int exitCode, QProcess::ExitStatus status) {
++        if (m_applyProcess != process) {
++            return;
++        }
++        m_applyProcess = nullptr;
++        const bool ok = status == QProcess::NormalExit && exitCode == 0;
++        const QString error = ok ? QString() : QString::fromLocal8Bit(process->readAllStandardError()).trimmed();
++        process->deleteLater();
++        finishApply(ok, ok ? QString() : (error.isEmpty() ? u"exit status %1"_s.arg(exitCode) : error));
++    });
++
++    process->start(u"plasma-apply-lookandfeel"_s, {u"--apply"_s, theme});
++    timeout->start(30000);
++}
++
++void PrepareUtil::finishApply(bool ok, const QString &error)
++{
++    if (!ok) {
++        qWarning() << "AtlasOS: applying the theme failed:" << error;
++    }
++
++    if (m_shuttingDown) {
++        // The destructor is waiting: run the newest wanted theme once, no signals.
++        if (m_hasPending) {
++            m_hasPending = false;
++            applyTheme(m_pendingDark);
++        }
++        return;
      }
  
-     m_usingDarkTheme = usingDarkTheme;
+-    m_usingDarkTheme = usingDarkTheme;
+-    Q_EMIT usingDarkThemeChanged();
++    if (m_hasPending) {
++        // A newer click came in; it decides the end state, so go on to it.
++        // themeApplied is left out on purpose: busy stays true and the page
++        // keeps the old look until the last wanted theme is in.
++        m_hasPending = false;
++        applyTheme(m_pendingDark);
++        return;
++    }
++
++    if (!ok) {
++        // Show what the desktop really has.
++        const bool actual = currentSchemeIsDark();
++        if (actual != m_usingDarkTheme) {
++            m_usingDarkTheme = actual;
++            Q_EMIT usingDarkThemeChanged();
++        }
++    }
++    setBusy(false);
++    Q_EMIT themeApplied(ok);
+ }
+ 
+ #include "moc_prepareutil.cpp"
+diff --git a/modules/prepareutil/prepareutil.h b/modules/prepareutil/prepareutil.h
+index b5d1bef..56a0f85 100644
+--- a/modules/prepareutil/prepareutil.h
++++ b/modules/prepareutil/prepareutil.h
+@@ -5,6 +5,8 @@
+ 
+ #include <QDBusServiceWatcher>
+ #include <QObject>
++#include <QPointer>
++#include <QProcess>
+ #include <qqmlintegration.h>
+ 
+ #include <kscreen/config.h>
+@@ -19,10 +21,15 @@ class PrepareUtil : public QObject
+ 
+     Q_PROPERTY(int scaling READ scaling WRITE setScaling NOTIFY scalingChanged)
+     Q_PROPERTY(QStringList scalingOptions READ scalingOptions CONSTANT)
++    Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
+     Q_PROPERTY(bool usingDarkTheme READ usingDarkTheme WRITE setUsingDarkTheme NOTIFY usingDarkThemeChanged)
+ 
+ public:
+     explicit PrepareUtil(QObject *parent = nullptr);
++    ~PrepareUtil() override;
++
++    // A theme is being applied (until the last wanted one is in).
++    bool busy() const;
+ 
+     int scaling() const;
+     void setScaling(int scaling);
+@@ -35,10 +42,28 @@ public:
+ Q_SIGNALS:
+     void scalingChanged();
+     void usingDarkThemeChanged();
++    // AtlasOS: the Global Theme is applied in the background. Emitted once
++    // the last wanted theme is in place (ok), or could not be applied (not
++    // ok; usingDarkTheme is then back at the real colour scheme).
++    void themeApplied(bool ok);
++    void busyChanged();
+ 
+ private:
+-    int m_scaling;
+-    bool m_usingDarkTheme;
++    void setBusy(bool busy);
++    void applyTheme(bool dark);
++    void finishApply(bool ok, const QString &error);
++    bool currentSchemeIsDark();
++
++    int m_scaling = 100;
++    bool m_usingDarkTheme = false;
++
++    // AtlasOS: at most one plasma-apply-lookandfeel runs at a time; clicks
++    // made meanwhile leave only the latest wanted value in m_pendingDark.
++    QPointer<QProcess> m_applyProcess;
++    bool m_busy = false;
++    bool m_shuttingDown = false;
++    bool m_hasPending = false;
++    bool m_pendingDark = false;
+ 
+     ColorsSettings *m_colorsSettings;
+     KScreen::ConfigPtr m_config;
 diff --git a/modules/time/contents/ui/main.qml b/modules/time/contents/ui/main.qml
 index c259c36..8d801a8 100644
 --- a/modules/time/contents/ui/main.qml
@@ -550,10 +998,10 @@ index a3856f2..cc7c1c2 100644
  target_link_libraries(componentsplugin PRIVATE
 diff --git a/src/components/qml/AtlasButton.qml b/src/components/qml/AtlasButton.qml
 new file mode 100644
-index 0000000..8c6d3c3
+index 0000000..2ed952d
 --- /dev/null
 +++ b/src/components/qml/AtlasButton.qml
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,127 @@
 +// SPDX-FileCopyrightText: 2026 AtlasOS
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +
@@ -562,8 +1010,9 @@ index 0000000..8c6d3c3
 +import org.kde.kirigami as Kirigami
 +
 +/*!
-+    AtlasOS's pill button, as in the Atlas apps: the accent colour when
-+    prominent (the step forward), a quiet tint otherwise.
++    AtlasOS's button, as in Atlas.Ui 1.4: small rounded corners (4 px, 6 px
++    while pressed), 28 px tall, a grey hover and press layer; the accent
++    colour when prominent (the step forward), a quiet tint otherwise.
 +*/
 +T.AbstractButton {
 +    id: control
@@ -575,7 +1024,7 @@ index 0000000..8c6d3c3
 +    readonly property color textTint: Kirigami.Theme.textColor
 +
 +    implicitWidth: Math.max(Math.round(Kirigami.Units.gridUnit * (large ? 9 : 5.5)), contentItem.implicitWidth + leftPadding + rightPadding)
-+    implicitHeight: Math.round(Kirigami.Units.gridUnit * (large ? 2.4 : 1.9))
++    implicitHeight: large ? 38 : 28
 +    leftPadding: Kirigami.Units.gridUnit * (large ? 1.5 : 1)
 +    rightPadding: leftPadding
 +    hoverEnabled: true
@@ -633,27 +1082,46 @@ index 0000000..8c6d3c3
 +    }
 +
 +    background: Rectangle {
-+        radius: height / 2
++        // Small rounded corners (Atlas.Ui's radiusSmall, 4 px); pressed, 6 px.
++        radius: control.down && control.enabled ? 6 : 4
 +        color: {
 +            if (control.prominent) {
-+                if (!control.enabled) {
-+                    return Qt.alpha(control.textTint, 0.12);
-+                }
-+                return control.down ? Qt.darker(control.accent, 1.2) : control.hovered ? Qt.lighter(control.accent, 1.12) : control.accent;
++                return control.enabled ? control.accent : Qt.alpha(control.textTint, 0.12);
 +            }
-+            return Qt.alpha(control.textTint, control.down ? 0.2 : control.hovered ? 0.12 : 0.07);
++            return Qt.alpha(control.textTint, 0.07);
 +        }
-+        border.width: control.prominent ? 0 : 1
-+        border.color: Qt.alpha(control.textTint, 0.14)
++        border.width: control.prominent && control.enabled ? 0 : 1
++        border.color: Qt.alpha(control.textTint, 0.2)
++        Behavior on radius {
++            NumberAnimation {
++                duration: Kirigami.Units.shortDuration
++                easing.type: Easing.OutCubic
++            }
++        }
 +        Behavior on color {
 +            ColorAnimation {
 +                duration: Kirigami.Units.shortDuration
 +            }
 +        }
++        // The state layer: a grey over the fill, never the accent.
++        Rectangle {
++            anchors.fill: parent
++            radius: parent.radius
++            color: !control.enabled ? "transparent"
++                : control.down ? Qt.alpha(control.textTint, 0.16)
++                : control.hovered ? Qt.alpha(control.textTint, 0.08)
++                : "transparent"
++            Behavior on color {
++                ColorAnimation {
++                    duration: Kirigami.Units.shortDuration
++                }
++            }
++        }
++        // The keyboard focus ring, outside the button.
 +        Rectangle {
 +            anchors.fill: parent
 +            anchors.margins: -3
-+            radius: height / 2
++            radius: parent.radius + 3
 +            color: "transparent"
 +            border.width: 2
 +            border.color: Qt.alpha(control.accent, 0.6)
@@ -663,10 +1131,10 @@ index 0000000..8c6d3c3
 +}
 diff --git a/src/components/qml/ChoiceCard.qml b/src/components/qml/ChoiceCard.qml
 new file mode 100644
-index 0000000..8b323bf
+index 0000000..9df0640
 --- /dev/null
 +++ b/src/components/qml/ChoiceCard.qml
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,128 @@
 +// SPDX-FileCopyrightText: 2026 AtlasOS
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +
@@ -713,13 +1181,19 @@ index 0000000..8b323bf
 +                anchors.margins: -4
 +                radius: Kirigami.Units.cornerRadius * 2 + 4
 +                color: "transparent"
-+                border.width: 3
++                border.width: control.checked ? 3 : 2
 +                border.color: control.checked ? Kirigami.Theme.highlightColor
 +                    : control.hovered || control.visualFocus ? Qt.alpha(Kirigami.Theme.highlightColor, 0.45)
 +                    : "transparent"
 +                Behavior on border.color {
 +                    ColorAnimation {
 +                        duration: Kirigami.Units.shortDuration
++                    }
++                }
++                Behavior on border.width {
++                    NumberAnimation {
++                        duration: Kirigami.Units.shortDuration
++                        easing.type: Easing.OutCubic
 +                    }
 +                }
 +            }
@@ -752,6 +1226,11 @@ index 0000000..8b323bf
 +                color: control.checked ? Kirigami.Theme.highlightColor : "transparent"
 +                border.width: control.checked ? 0 : 1
 +                border.color: Qt.alpha(Kirigami.Theme.textColor, 0.35)
++                Behavior on color {
++                    ColorAnimation {
++                        duration: Kirigami.Units.shortDuration
++                    }
++                }
 +                Kirigami.Icon {
 +                    anchors.centerIn: parent
 +                    width: parent.width * 0.75
@@ -786,7 +1265,7 @@ index 0000000..8b323bf
 +}
 diff --git a/src/components/qml/DesktopPreview.qml b/src/components/qml/DesktopPreview.qml
 new file mode 100644
-index 0000000..31eef8c
+index 0000000..4ad30e5
 --- /dev/null
 +++ b/src/components/qml/DesktopPreview.qml
 @@ -0,0 +1,286 @@
@@ -1200,7 +1679,7 @@ index 4af56a1..98f00b1 100644
  
              SessionMenu {
 diff --git a/src/qml/SessionMenu.qml b/src/qml/SessionMenu.qml
-index 5369a03..f6dfecc 100644
+index 5369a03..b93cd0d 100644
 --- a/src/qml/SessionMenu.qml
 +++ b/src/qml/SessionMenu.qml
 @@ -11,6 +11,7 @@ import QtQuick.Controls
@@ -1216,7 +1695,7 @@ index 5369a03..f6dfecc 100644
          model: filteredModel
  
 -        delegate: ToolButton {
-+        // AtlasOS: quiet pill buttons, light on the dark wallpaper.
++        // AtlasOS: quiet buttons, light on the dark wallpaper.
 +        delegate: AtlasButton {
              required property int index
              required property var model
@@ -1242,7 +1721,7 @@ index 5369a03..f6dfecc 100644
      }
  }
 diff --git a/src/qml/Wizard.qml b/src/qml/Wizard.qml
-index 79fb025..25dfb29 100644
+index 79fb025..6ab8738 100644
 --- a/src/qml/Wizard.qml
 +++ b/src/qml/Wizard.qml
 @@ -196,7 +196,9 @@ Kirigami.Page {
@@ -1304,7 +1783,7 @@ index 79fb025..25dfb29 100644
                  }
  
                  // bottom footer
-+                // AtlasOS: pill buttons (the step forward in the accent
++                // AtlasOS: buttons (the step forward in the accent
 +                // colour), with a dot for each step between them.
                  RowLayout {
                      id: stepFooter

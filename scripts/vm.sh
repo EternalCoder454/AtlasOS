@@ -21,7 +21,8 @@
 # virtio video with 3D acceleration, so Plasma runs on the host GPU (virgl) as
 # it would on real hardware, shown over SPICE with OpenGL. QEMU can't read
 # a SPICE OpenGL display back, so once Plasma draws, scripts/vmctl.py takes
-# screenshots inside the guest instead (see session_screenshot there).
+# screenshots inside the guest instead (see session_screenshot there), or
+# NOGL=1 (below) drops the 3D so `virsh screenshot` works.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -45,11 +46,21 @@ common=(
 	--osinfo fedora-unknown
 	--boot uefi
 	--network network=default,model=virtio
-	--graphics "spice,listen=none,gl.enable=yes,gl.rendernode=$rendernode"
-	--video model.type=virtio,model.acceleration.accel3d=yes
 	--serial pty --console pty,target_type=serial
 	--noautoconsole
 )
+
+# NOGL=1: no 3D acceleration. Plasma draws in software (llvmpipe), slower
+# but readable from the host, so `virsh screenshot` works at any moment,
+# before login too (the first-run wizard, the login screen) and fast enough
+# to catch an animation's frames.
+# shellcheck disable=SC2054
+if [ -n "${NOGL-}" ]; then
+	common+=(--graphics spice,listen=none --video model.type=virtio)
+else
+	common+=(--graphics "spice,listen=none,gl.enable=yes,gl.rendernode=$rendernode"
+		--video model.type=virtio,model.acceleration.accel3d=yes)
+fi
 
 # T480=1: a ThinkPad T480 with its fastest CPU, the i7-8650U (4 cores, 15 W),
 # for `run` (the test VM). Each vCPU gets a performance core of its own

@@ -7,11 +7,11 @@ import org.kde.plasma.plasmoid 2.0
 
 Rectangle {
 
-    // AtlasOS: Atlas.Ui SearchField's pill.
-    radius: height / 2
-    color: Qt.alpha(Kirigami.Theme.textColor, textField.hovered && !textField.activeFocus ? 0.09 : 0.06)
+    // AtlasOS: Atlas.Ui SearchField (radiusSmall, 4 px).
+    radius: 4
+    color: Qt.alpha(Kirigami.Theme.textColor, textField.hovered && !textField.activeFocus ? 0.11 : 0.055)
     border.width: textField.activeFocus ? 2 : 1
-    border.color: textField.activeFocus ? Qt.alpha(Kirigami.Theme.highlightColor, 0.7) : Qt.alpha(Kirigami.Theme.textColor, 0.1)
+    border.color: textField.activeFocus ? Qt.alpha(Kirigami.Theme.highlightColor, 0.7) : Qt.alpha(Kirigami.Theme.textColor, 0.22)
 
     property alias textField: textField
 

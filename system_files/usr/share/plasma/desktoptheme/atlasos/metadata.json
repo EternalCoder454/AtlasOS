@@ -5,7 +5,7 @@
                 "Name": "AtlasOS"
             }
         ],
-        "Description": "AtlasOS's shell style: rounded translucent popups and tooltips, pill buttons, soft fields, sliders and switches like the Atlas apps, and the dock's tiles and underline",
+        "Description": "AtlasOS's shell style: rounded translucent popups and tooltips, buttons and fields with small corners, sliders and switches like the Atlas apps, and the dock's tiles and underline",
         "EnabledByDefault": true,
         "Id": "atlasos",
         "License": "Apache-2.0",

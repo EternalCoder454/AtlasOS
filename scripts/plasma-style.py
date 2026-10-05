@@ -43,15 +43,17 @@ TILE_RADIUS = 10
 # Popups (the app launcher's too): a DIALOG_R card, Breeze's 4 px margins
 # (the launcher's layout counts on them) and a soft shadow SHADOW px wide.
 # The sizes below match scripts/gen-kvantum-themes.py and Atlas.Ui.
-DIALOG_R = 12
+DIALOG_R = 8  # radiusLarge
 DIALOG_MARGIN = 4
 SHADOW = 10
 TOOLTIP_R = 6
 DIALOG_ALPHA = 0.78  # see-through, so KWin's blur shows behind it
-FIELD_R = 8
-CARD_R = 10
-ITEM_R = 6  # list and view items, tabs, tool buttons
-BTN_R = 13  # buttons are pills
+FIELD_R = 4  # radiusSmall
+CARD_R = 6  # radius
+ITEM_R = 4  # list and view items, tool buttons (radiusSmall)
+TAB_R = 6  # the selected tab, like the segmented control's cell (radius)
+BTN_R = 4  # buttons: radiusSmall, growing to BTN_PRESSED_R while pressed
+BTN_PRESSED_R = 6
 SLIDER_GROOVE = 6
 SLIDER_HANDLE = 18
 SCROLL_W = 10  # the scrollbar's track; the thumb is SCROLL_W - 2 * SCROLL_PAD
@@ -443,28 +445,28 @@ def checkmarks():
 
 def button():
     """Buttons: Plasma draws "normal", then the pointer-over, keyboard-focus
-    and pressed frames on top. Raised buttons are pills tinted with the
-    accent; flat (tool) buttons only show a rounded tile on hover or press."""
+    and pressed frames on top. Raised buttons are Atlas.Ui's: the control
+    fill, a hairline border and a grey hover and press overlay; flat (tool) buttons only show a rounded tile on hover or press."""
     hl, text = "ColorScheme-Highlight", "ColorScheme-Text"
-    m = margins(6, left=14)
+    m = margins(5, left=12)
     body = []
-    body += card("normal", BTN_R, [(hl, 0.16)], m)[1]
+    body += card("normal", BTN_R, [(text, 0.055), (text, 0.22, 1)], m)[1]
     body += card("mask-normal", BTN_R, [(text, 1)], bounds=False)[1]
-    body += card("hover", BTN_R, [(hl, 0.16)], margins(0))[1]
-    body += card("pressed", BTN_R, [(hl, 0.45)], m)[1]
+    body += card("hover", BTN_R, [(text, 0.055)], margins(0))[1]
+    body += card("pressed", BTN_PRESSED_R, [(text, 0.10)], m)[1]
     # The focus ring sits 2 px outside the button.
     body += card("focus", BTN_R + 2, [(hl, 0.9, 2)], margins(2))[1]
     body += card("shadow", BTN_R, [], margins(0))[1]
     body += card("toolbutton-hover", ITEM_R, [(text, 0.10)], margins(4))[1]
-    body += card("toolbutton-pressed", ITEM_R, [(hl, 0.35)], margins(4))[1]
+    body += card("toolbutton-pressed", ITEM_R, [(text, 0.16)], margins(4))[1]
     body += card("toolbutton-focus", ITEM_R + 2, [(hl, 0.9, 2)], margins(2))[1]
-    return HEADER.format(what="Buttons.", w=2 * BTN_R + 10, h=2 * BTN_R + 10) + "\n".join(body) + "\n</svg>\n"
+    return HEADER.format(what="Buttons.", w=2 * BTN_PRESSED_R + 10, h=2 * BTN_PRESSED_R + 10) + "\n".join(body) + "\n</svg>\n"
 
 
 def lineedit():
     view, text, hl = "ColorScheme-ViewBackground", "ColorScheme-Text", "ColorScheme-Highlight"
     body = [rect_el("hint-focus-over-base", 0, 0, 2, 2)]
-    body += card("base", FIELD_R, [(view, 1), (text, 0.18, 1)], margins(6, left=8))[1]
+    body += card("base", FIELD_R, [(view, 1), (text, 0.22, 1)], margins(5, left=8))[1]
     body += card("hover", FIELD_R, [(text, 0.4, 1)], margins(0))[1]
     for prefix in ("focus", "focusframe"):
         body += card(prefix, FIELD_R, [(hl, 1, 2)], margins(0))[1]
@@ -491,9 +493,9 @@ def tabbar():
     edge the bar is on, and no underline."""
     body = []
     for side in ("north", "south", "east", "west"):
-        body += card(f"{side}-active-tab", ITEM_R, [("ColorScheme-Highlight", 0.22)],
+        body += card(f"{side}-active-tab", TAB_R, [("ColorScheme-Highlight", 0.22)],
                      margins(4, left=10))[1]
-    return HEADER.format(what="Tab bars.", w=2 * ITEM_R + 10, h=2 * ITEM_R + 10) + "\n".join(body) + "\n</svg>\n"
+    return HEADER.format(what="Tab bars.", w=2 * TAB_R + 10, h=2 * TAB_R + 10) + "\n".join(body) + "\n</svg>\n"
 
 
 def viewitem():

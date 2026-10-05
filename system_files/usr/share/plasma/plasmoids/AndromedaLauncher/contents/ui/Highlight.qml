@@ -1,7 +1,7 @@
 import QtQuick
 import org.kde.kirigami as Kirigami
 
-// AtlasOS: the selection pill of Atlas.Ui's SidebarItem (8 px radius, accent
+// AtlasOS: the selection of Atlas.Ui's SidebarItem (4 px radius, accent
 // tint) in place of the style's viewitem frame; no glow-effect masking.
 Rectangle {
     id: highlight
@@ -20,7 +20,7 @@ Rectangle {
         return view ? view.width - view.leftMargin - view.rightMargin : undefined;
     }
 
-    radius: 8
+    radius: 4
     z: -20
     color: highlight.hideBg ? "transparent" : Qt.alpha(Kirigami.Theme.highlightColor, highlight.pressed ? 0.26 : 0.18)
 
