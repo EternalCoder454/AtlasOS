@@ -170,6 +170,9 @@ jobs:
           VERSION: ${{ steps.pick.outputs.version }}
           DIGEST: ${{ steps.pick.outputs.digest }}
           ISO: ${{ steps.pick.outputs.iso }}
+          # make-iso.sh checks the image against AtlasOS's key; its default
+          # (../AtlasOS/cosign.pub beside the installer) doesn't exist here.
+          ATLASOS_COSIGN_PUB: ${{ github.workspace }}/cosign.pub
         run: |
           set -euo pipefail
           command -v skopeo >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q skopeo; }
