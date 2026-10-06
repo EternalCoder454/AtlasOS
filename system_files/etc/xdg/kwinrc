@@ -20,6 +20,3 @@ VirtualKeyboardEnabled=false
 BlurStrength=13
 NoiseStrength=4
 
-# Meta alone opens Atlas Launcher (service, path, interface, method).
-[ModifierOnlyShortcuts]
-Meta=net.eterneon.atlas.launcher,/net/eterneon/atlas/launcher,net.eterneon.atlas.Launcher1,ToggleStart

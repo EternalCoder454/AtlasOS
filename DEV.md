@@ -422,7 +422,10 @@ sudo bootc status                       # booted / staged / rollback
   (`EternalCoder454/atlasos-launcher`, built from its pinned commit): its dock
   button plasmoid (`net.eterneon.atlas.launcher.button`) is the dock's first
   item, `atlas-launcher.service` (enabled for every user by `build.sh`) runs
-  it, and `[ModifierOnlyShortcuts] Meta=` in `/etc/xdg/kwinrc` opens it. Its
+  it, and Meta opens it through plasmashell's "Activate Application
+  Launcher" shortcut, which reaches the dock button (it provides
+  `org.kde.plasma.launchermenu`); KWin 6.7 no longer reads
+  `[ModifierOnlyShortcuts]`. Its
   default pins are `/etc/xdg/atlas-launcher/pinned.list` (from system_files,
   over the package's). (Andromeda Launcher and Simple Kickoff are gone; the
   `atlasos-20261005-launcher.js` update swaps them, Kickoff and Kicker out of
