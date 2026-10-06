@@ -209,6 +209,16 @@ vendor_repo_remove ghostty
 # folder even with a Ghostty window open): one entry is enough. A plain rm, so the
 # build fails if the package moves it.
 rm /usr/share/kio/servicemenus/com.mitchellh.ghostty.desktop
+# Started by its Exec line, not by D-Bus. The package's desktop file says
+# DBusActivatable=true, so the dock, the launcher and Ctrl+Alt+T (KIO) asked
+# D-Bus to start it through the systemd user unit app-com.mitchellh.ghostty
+# (Type=notify-reload) and waited for its reply. When that unit never
+# reported ready, nothing opened and KIO showed "Did not receive a reply"
+# after 25 s. The Exec line starts Ghostty directly and still joins a running
+# instance. Done before the kglobalaccel copy below so both say the same; the
+# grep fails the build if the package stops setting the key.
+grep -qx 'DBusActivatable=true' /usr/share/applications/com.mitchellh.ghostty.desktop
+sed -i 's/^DBusActivatable=true$/DBusActivatable=false/' /usr/share/applications/com.mitchellh.ghostty.desktop
 # Ctrl+Alt+T opens it, as it opened Konsole. Plasma takes launch shortcuts
 # from the desktop files in /usr/share/kglobalaccel.
 sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
