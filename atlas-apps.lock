@@ -5,15 +5,15 @@
 # checks the file.
 #
 # name       GitHub repository                 commit (40 hex)                           release
-framework    EternalCoder454/atlas-framework   9ca3a067c87fef2fe8b468b52190c9a3449fe990  v1.5.1
+framework    EternalCoder454/atlas-framework   b9d72940fb94178f400c3f074fe8f9744b6c6f53  v1.6.0
 updater      EternalCoder454/atlasos-updater   929677ca1b6997dcf69889f525f8231f7f182d19  v0.2.0
 monitor      EternalCoder454/atlasos-monitor   b195770c4d5b241ea119d75879eaec75b6a0c5a2
 notepad      EternalCoder454/atlasos-notepad   2a1ef05125d644713870e533b77d9c84b82aa8fd
 settings     EternalCoder454/atlasos-settings  bbcb3b4b845140f44b17ccea3b42c8cb1e4c05f0  v0.1.0
 wizard       EternalCoder454/atlasos-wizard    6be3dd1d23b24a1c5fc1cc36b48448ae372765e6
-store        EternalCoder454/atlasos-store     b256cd7cd1efca83bf5d4e83041e5a958e415835
+store        EternalCoder454/atlasos-store     a6523698a113436cd80aa721d21c78a79e3bd99c
 explorer     EternalCoder454/atlasos-explorer  b95524f6376c80b001d2acb1525e8ee31a1f989c  v0.1.0
 archive      EternalCoder454/atlasos-archive   e840d2a62eb77941543e456cfbf92d3e549c5f84  v0.1.0
-launcher     EternalCoder454/atlasos-launcher  9b2730d0d8f964bbc0483c63c69a932932f9cfd6  v0.1.1
+launcher     EternalCoder454/atlasos-launcher  5fb8d9531e4c6cb4bf75ee1a4a39f254a407900e  v0.2.0
 screenshot   EternalCoder454/atlasos-screenshot  7622637bef7b475a8b1872183b89cba3ee39e11c  v0.1.0
-installer    EternalCoder454/atlasos-installer  d0c42a4f20f2602fe3b5396a8010b6a4103622fc
+installer    EternalCoder454/atlasos-installer  ff8fe64ae5f4d4dc20e3213e5be65f684d7b6d39
