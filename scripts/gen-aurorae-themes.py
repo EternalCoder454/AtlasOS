@@ -120,10 +120,14 @@ def decoration(t):
         cell("top", 2 * CW + 40 - 10, 0, 8, TH,
              '<rect width="8" height="%s" fill="%s"/><rect y="%s" width="8" height="%s" fill="%s"/>'
              % (f(PT), tg, f(PT), f(TITLE_H), bar))
-        # left/right: shadow band, then the bar colour under the client
+        # left/right: shadow band, then the bar colour under the client. The
+        # innermost column (always under the client) stays transparent: the
+        # side elements are stretched along the window, and at a fractional
+        # scale the outer edge samples across to the inner one, which drew a
+        # line of the bar colour beside every window at 1.7x.
         lgx = svg.grad("linear", 'x1="0" y1="0" x2="%s" y2="0"' % f(PL), [(0, 0)] + [(1 - o, a) for o, a in reversed(fall(sh))][1:])
         left = ('<rect width="%s" height="8" fill="%s"/><rect x="%s" width="%s" height="8" fill="%s"/>'
-                % (f(PL), lgx, f(PL), f(RADIUS), bar))
+                % (f(PL), lgx, f(PL), f(RADIUS - 1), bar))
         cell("left", 0, TH + 10, CW, 8, left)
         cell("right", CW + 20, TH + 10, CW, 8, '<g transform="translate(%s 0) scale(-1 1)">%s</g>' % (f(CW), left))
         # bottom-left: bar strip, corner radial, bottom band
