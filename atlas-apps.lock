@@ -15,4 +15,5 @@ store        EternalCoder454/atlasos-store     b256cd7cd1efca83bf5d4e83041e5a958
 explorer     EternalCoder454/atlasos-explorer  b95524f6376c80b001d2acb1525e8ee31a1f989c  v0.1.0
 archive      EternalCoder454/atlasos-archive   e840d2a62eb77941543e456cfbf92d3e549c5f84  v0.1.0
 launcher     EternalCoder454/atlasos-launcher  9b2730d0d8f964bbc0483c63c69a932932f9cfd6  v0.1.1
+screenshot   EternalCoder454/atlasos-screenshot  7622637bef7b475a8b1872183b89cba3ee39e11c  v0.1.0
 installer    EternalCoder454/atlasos-installer  d0c42a4f20f2602fe3b5396a8010b6a4103622fc

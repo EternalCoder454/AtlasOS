@@ -156,6 +156,19 @@ RUN --mount=type=cache,target=/var/cache/atlas-launcher-cargo,sharing=locked \
     ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
     CARGO_HOME=/var/cache/atlas-launcher-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
+# AtlasOS Screenshot (Meta+Shift+S: freeze, drag, copy; Ctrl for OCR text,
+# Alt for a redacted PNG), built from the build context named
+# "atlas-screenshot". No Qt, so no framework RPMs; its build-rpm.sh tars the
+# tree it is given (no git needed). The pinned commit is labelled in
+# net.eterneon.atlas.screenshot.revision.
+FROM registry.fedoraproject.org/fedora:44 AS screenshot-app
+COPY --from=atlas-screenshot --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/atlas-screenshot-cargo,sharing=locked \
+    --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    CARGO_HOME=/var/cache/atlas-screenshot-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+
 # Atlas Explorer (Files), the file manager and its index service, built the same
 # way from the build context named "atlas-explorer"; the pinned commit is
 # labelled in net.eterneon.atlas.explorer.revision.
@@ -250,6 +263,7 @@ RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
     --mount=type=bind,from=explorer-app,source=/out,target=/atlas-explorer-rpms \
     --mount=type=bind,from=archive-app,source=/out,target=/atlas-archive-rpms \
     --mount=type=bind,from=launcher-app,source=/out,target=/atlas-launcher-rpms \
+    --mount=type=bind,from=screenshot-app,source=/out,target=/atlas-screenshot-rpms \
     --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh

@@ -30,8 +30,8 @@ dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 rpm -q atlas-ui atlas-symbols-fonts atlas-symbols
 [ -f /etc/dnf/protected.d/atlas-framework.conf ]
 [ -f /usr/lib64/qt6/qml/Atlas/Ui/qmldir ]
-"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm /atlas-archive-rpms/*.rpm /atlas-launcher-rpms/*.rpm
-rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer atlas-archive atlas-launcher
+"${dnf[@]}" install /atlas-rpms/*.rpm /atlas-monitor-rpms/*.rpm /atlas-notepad-rpms/*.rpm /atlas-settings-rpms/*.rpm /atlas-wizard-rpms/*.rpm /atlas-store-rpms/*.rpm /atlas-explorer-rpms/*.rpm /atlas-archive-rpms/*.rpm /atlas-launcher-rpms/*.rpm /atlas-screenshot-rpms/*.rpm
+rpm -q atlas-system-helper atlas-updater atlas-monitor atlas-notepad atlas-settings atlas-wizard atlas-store atlas-explorer atlas-archive atlas-launcher atlasos-screenshot
 # (rpm -q matches package names, not what a package provides.)
 if rpm -q --quiet atlas-core; then
 	echo "apps.sh: atlas-core is still installed beside atlas-system-helper" >&2
@@ -85,6 +85,18 @@ fi
 [ -d /usr/share/plasma/plasmoids/net.eterneon.atlas.launcher.button ]
 [ -f /etc/xdg/atlas-launcher/pinned.list ]
 [ -f /usr/share/applications/net.eterneon.atlas.launcher.desktop ]
+# AtlasOS Screenshot takes Meta+Shift+S (its .desktop, in kglobalaccel too, so
+# KDE's ScreenShot2 grant matches the binary); Spectacle keeps Print and its
+# other shortcuts. The kglobalaccel copy of Spectacle's file is a symlink.
+[ -x /usr/bin/atlasos-screenshot ]
+grep -qx 'X-KDE-Shortcuts=Meta+Shift+S' /usr/share/kglobalaccel/net.eterneon.atlas.screenshot.desktop
+grep -qx 'X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2' /usr/share/applications/net.eterneon.atlas.screenshot.desktop
+sed -i 's/^X-KDE-Shortcuts=Print,Meta+Shift+S$/X-KDE-Shortcuts=Print/' /usr/share/applications/org.kde.spectacle.desktop
+if grep -q 'Meta+Shift+S' /usr/share/applications/org.kde.spectacle.desktop; then
+	echo "apps.sh: Spectacle still claims Meta+Shift+S" >&2
+	exit 1
+fi
+grep -qx 'X-KDE-Shortcuts=Print' /usr/share/applications/org.kde.spectacle.desktop
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(atlas-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,
