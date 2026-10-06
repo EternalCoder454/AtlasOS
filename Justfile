@@ -3,8 +3,10 @@ image := "localhost/" + image_name
 # The rechunker (see `rechunk`).
 chunkah := "quay.io/coreos/chunkah@sha256:0da1fa543fafe92468ad667d00580aea544a384198f668f1499675c241642e11"
 # What compresses its layers with zstd (see `rechunk`): pinned, since another
-# encoder version could compress the same layer to other bytes.
-skopeo := "quay.io/skopeo/stable:v1.22.3@sha256:249b92db7297e5c801e19172dbb3b56fde88094a49740a5ededac8c2958bf2c0"
+# encoder version could compress the same layer to other bytes. The
+# -immutable tag: quay rebuilds v1.22.3 every day and deletes the digests the
+# tag leaves behind, so a pin on it stopped pulling ("manifest unknown").
+skopeo := "quay.io/skopeo/stable:v1.22.3-immutable@sha256:c0ee1f4edca5c01cb8d5611124f92f3cc47196ecab68aee5d0f90834e00574d5"
 # The SBOM generator and vulnerability scanner (see `sbom`).
 syft := "ghcr.io/anchore/syft:v1.54.0@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c"
 grype := "ghcr.io/anchore/grype:v0.120.0@sha256:5c88961f4130e830542d441c7ed6c78baa28e799163abac53d2be4923fb5ab7d"
