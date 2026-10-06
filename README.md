@@ -77,7 +77,10 @@ rolls itself back.
 **Less stuff, on purpose**
 - No Akonadi, no Baloo indexer, no KDE Connect, no pile of apps you'll never
   open. No browser is preinstalled (pick Brave or Firefox in the installer),
-  and Flathub is set up for everything else.
+  and Flathub is set up for everything else. Brave comes with Leo AI,
+  Rewards, Wallet, VPN, News, Talk, Tor windows, Playlist and its usage
+  reports turned off by policy (`/etc/brave/policies/managed/atlasos.json`,
+  read by the Flatpak too), close to what Brave Origin leaves out.
 - No telemetry. Crash reports are **off** by default, and if you turn them on
   you see every report in full and decide each time. See
   [PRIVACY.md](docs/PRIVACY.md).
