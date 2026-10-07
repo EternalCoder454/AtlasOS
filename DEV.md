@@ -76,8 +76,11 @@ label is the Telamon OS commit the image was built from,
   shows what is staged and offers the restart. Discover's notifier is removed
   and its unattended updates are off; the build checks both.
 - **Release notes:** the GitHub releases are the changelog Telamon Updater
-  shows. Each testing build gets a pre-release tagged with its version, with
-  notes written by hand. Promoting it to stable moves the tag to the commit
+  shows. Each testing build gets a pre-release tagged with its version.
+  `build.yml` writes it after the push (`scripts/build-notes.py`): the app
+  pins that moved, each with the pull requests and commits it brings, this
+  repository's own changes since the previous release, and the day's Fedora
+  updates. Notes written by hand before the build finishes are kept. Promoting it to stable moves the tag to the commit
   the image came from and makes it the latest release, notes kept. A stable
   build with no pre-release gets the commits since the previous stable
   release, grouped by what they touch (`scripts/release-notes.sh`; the first

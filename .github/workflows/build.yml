@@ -95,7 +95,8 @@ jobs:
     needs: runner
     runs-on: ${{ fromJSON(needs.runner.outputs.labels) }}
     permissions:
-      contents: read
+      # write: the testing build's changelog is a GitHub pre-release.
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -717,6 +718,28 @@ jobs:
 
       # The SBOM, signed with the same key, beside the image on the registry
       # (`cosign download attestation`), then checked against cosign.pub.
+      # Every testing build gets its changelog, the GitHub pre-release named
+      # after its version that Telamon Updater shows as "What's New": the app
+      # pins that moved (with what each brings) and this repository's own
+      # changes since the previous release (scripts/build-notes.py). Notes
+      # written by hand first are kept; promote-stable.yml later turns the
+      # pre-release into the stable release.
+      - name: Changelog
+        if: steps.push.outcome == 'success' && steps.decide.outputs.tag == 'testing'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "The ${VERSION} release exists already; its notes are kept."
+            exit 0
+          fi
+          git fetch --quiet --unshallow --tags origin || git fetch --quiet --tags origin
+          scripts/build-notes.py "$VERSION" "$GITHUB_SHA" >"$RUNNER_TEMP/notes.md"
+          gh release create "$VERSION" --target "$GITHUB_SHA" --prerelease \
+            --title "Telamon OS ${VERSION}" --notes-file "$RUNNER_TEMP/notes.md"
+
       - name: Attest the SBOM
         if: steps.push.outcome == 'success' && steps.signing.outputs.enabled == 'true'
         env:
