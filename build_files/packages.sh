@@ -489,14 +489,18 @@ rpm -q plasma-login-manager | grep -q '\.atlas1\.' || {
 	echo "packages.sh: plasma-login-manager and kcm-plasmalogin are from different builds" >&2
 	exit 1
 }
-# The patched placeholder is in the built greeter (Qt keeps the QML as a UTF-16
-# string table in the binary).
+# The patched placeholder is in the built greeter (Qt keeps QML strings in
+# the binary as Latin-1 or UTF-16), and QML has no file access.
 python3 - <<'PYEOF2'
 import sys
 d = open("/usr/libexec/plasma-login-greeter", "rb").read()
-for s in ("Password or PIN", "with-pin", "QML_XHR_ALLOW_FILE_READ"):
+for s in ("Password or PIN", "pinSignIn", "TelamonSignIn", "/etc/authselect/authselect.conf"):
     if s.encode("utf-16le") not in d and s.encode() not in d:
         sys.exit(f"packages.sh: the login greeter has no {s!r}: the patch is not in it")
+# QML must not get file access in the pre-authentication greeter
+for s in ("QML_XHR_ALLOW_FILE_READ",):
+    if s.encode("utf-16le") in d or s.encode() in d:
+        sys.exit(f"packages.sh: the login greeter allows QML file reads ({s})")
 PYEOF2
 
 ### First-run wizard

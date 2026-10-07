@@ -485,11 +485,13 @@ stops applying; drop the stage once Fedora ships the fix.
 (`build_files/login/`, same method as the KIO one). The sign-in PIN is typed in
 the login screen's password field, whose "Password" placeholder is fixed in the
 greeter's compiled QML (`Login.qml`), so no PAM change can relabel it. The patch
-makes `Login.qml` read `/etc/authselect/authselect.conf` once (QML
-`XMLHttpRequest`; `main()` sets `QML_XHR_ALLOW_FILE_READ` for that) and show
-"Password or PIN" when the file lists `with-pin`, "Password" otherwise (also if
-the file can't be read). Only the placeholder changes; the file is world-readable
-(`etc_t`). The Containerfile's `login` stage downloads the source RPM of
+makes the greeter's `main()` read `/etc/authselect/authselect.conf` once (a
+bounded read of 4 KiB, any failure meaning "no") and expose one boolean to QML
+(`PlasmaLogin.TelamonSignIn.pinSignIn`); `Login.qml` shows "Password or PIN"
+when it is true, "Password" otherwise. The greeter runs before anyone has
+authenticated, so QML gets no file access (`QML_XHR_ALLOW_FILE_READ` stays
+off, and `packages.sh` checks the binary for it). Only the placeholder
+changes; the file is world-readable (`etc_t`). The Containerfile's `login` stage downloads the source RPM of
 exactly the version in the base image from Koji (checked against Fedora's key),
 builds it with release `.atlas1` (plasma-login-manager and kcm-plasmalogin),
 and `packages.sh` upgrades the image's two packages with those RPMs, with every

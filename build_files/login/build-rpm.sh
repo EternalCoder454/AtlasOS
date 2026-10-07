@@ -9,9 +9,9 @@
 # placeholder is a fixed "Password" in the greeter's compiled QML, which no
 # PAM module can change. With the authselect feature with-pin
 # (/etc/authselect/authselect.conf) it now says "Password or PIN". Only the
-# placeholder: nothing in authentication changes. The greeter reads the file
-# through QML's XMLHttpRequest, which needs QML_XHR_ALLOW_FILE_READ, so the
-# patch sets it at the start of main().
+# placeholder: nothing in authentication changes. The greeter is a
+# pre-authentication process, so QML gets no file access: main() makes one
+# bounded read of that file and hands QML a single boolean (TelamonSignIn).
 #
 # Remove this stage when Fedora's plasma-login-manager has a placeholder that
 # can be set (or says "PIN" itself): the build fails here when the patch no
