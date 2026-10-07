@@ -64,6 +64,8 @@ has $ks '[org.telamon.menubar-toggle.desktop]'
 has $ks '_launch=Meta+N,Meta+M,Show menu bar'
 has $ks 'Window Close=Alt+F4,Alt+F4,Close Window'
 has $ks '[services][org.kde.dolphin.desktop]'
+has $ks '[services][net.eterneon.telamon.launcher.desktop]'
+has $ks '_launch=Alt+Space'
 # the new group existed already: it wins, and the old one stays where it was
 has $ks '_launch=Ctrl+Alt+N,none,Telamon Notepad'
 has $ks '[net.eterneon.atlas.notepad.desktop]'

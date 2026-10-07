@@ -45,7 +45,7 @@ s/org\.atlasos\.(menu|appmenu|dockseparator|menubar-toggle)/org.telamon.\1/g
 s/AtlasOS(Light|Dark)(Solid)?([^A-Za-z]|\$)/Telamon\1\2\3/g
 s/__aurorae__svg__AtlasOS-(Light|Dark)/__aurorae__svg__Telamon-\1/g
 s#wallpapers/AtlasOS-Login#wallpapers/Telamon-Login#g
-s#wallpapers/AtlasOS([^A-Za-z-]|\$)#wallpapers/Telamon\1#g
+s#wallpapers/AtlasOS([^A-Za-z0-9-]|\$)#wallpapers/Telamon\1#g
 s/net\.eterneon\.atlas\.($apps)([^A-Za-z0-9]|\$)/net.eterneon.telamon.\1\2/g
 EOF
 
@@ -105,11 +105,13 @@ done
 # Kvantum's own name for the light theme was the bare "AtlasOS".
 kv=$cfg/Kvantum/kvantum.kvconfig
 if [ -f "$kv" ]; then
-	rewrite "$kv" 's/^(theme *= *)AtlasOS *$/\1Telamon/'
+	rewrite "$kv" 's/^(theme *= *)AtlasOS *$/\1Telamon/;s/^(theme *= *)AtlasOSSolid *$/\1TelamonSolid/'
 fi
 
 # Ghostty: only its theme line.
-rewrite "$cfg/ghostty/config" '/^[[:space:]]*theme[[:space:]]*=/ s/AtlasOS (Light|Dark)/Telamon \1/g'
+for g in config config.ghostty; do
+	rewrite "$cfg/ghostty/$g" '/^[[:space:]]*theme[[:space:]]*=/ s/AtlasOS (Light|Dark)/Telamon \1/g'
+done
 
 # A user's autostart choice for a renamed app (a file of Hidden=true that
 # turned it off) is the same file under the new id.
@@ -134,11 +136,12 @@ if [ -f "$ks" ]; then
 		FNR == NR { if ($0 ~ /^\[.*\]$/) have[$0] = 1; next }
 		/^\[.*\]$/ {
 			h = $0; n = h
-			if (match(h, /^\[net\.eterneon\.atlas\.[a-z]+\.desktop\]$/)) {
+			if (match(h, /^\[(services\]\[)?net\.eterneon\.atlas\.[a-z]+\.desktop\]$/)) {
+				pre = (h ~ /^\[services\]/) ? "[services][" : "["
 				name = h
-				sub(/^\[net\.eterneon\.atlas\./, "", name)
+				sub(/^\[(services\]\[)?net\.eterneon\.atlas\./, "", name)
 				sub(/\.desktop\]$/, "", name)
-				if (name in ok) n = "[net.eterneon.telamon." name ".desktop]"
+				if (name in ok) n = pre "net.eterneon.telamon." name ".desktop]"
 			} else if (h == "[org.atlasos.menubar-toggle.desktop]") {
 				n = "[org.telamon.menubar-toggle.desktop]"
 			}

@@ -708,10 +708,12 @@ dangling=$(find "$themes" /usr/share/plasma/desktoptheme -xtype l)
 # are exactly the new ones. Remove them with the migration's last release.
 for v in Light Dark; do
 	cp -p "/usr/share/color-schemes/Telamon$v.colors" "/usr/share/color-schemes/AtlasOS$v.colors"
+	sed -i 's/^Name=.*/& (old name)/' "/usr/share/color-schemes/AtlasOS$v.colors"
 	a=/usr/share/aurorae/themes/AtlasOS-$v
 	cp -a "/usr/share/aurorae/themes/Telamon-$v" "$a"
 	mv "$a/Telamon-${v}rc" "$a/AtlasOS-${v}rc"
 	sed -i 's/Telamon-/AtlasOS-/g' "$a/metadata.desktop" "$a/AtlasOS-${v}rc"
+	sed -i 's/^Name=.*/& (old name)/' "$a/metadata.desktop"
 	[ -f "$a/AtlasOS-${v}rc" ] && grep -qx "X-KDE-PluginInfo-Name=AtlasOS-$v" "$a/metadata.desktop"
 done
 cp -a "$themes/org.telamon.desktop" "$themes/org.atlasos.desktop"

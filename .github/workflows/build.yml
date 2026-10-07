@@ -483,7 +483,7 @@ jobs:
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages
           # nothing has downloaded for a month before it is saved.
-          find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
+          find "${TELAMON_DNF_CACHE:-${ATLAS_DNF_CACHE:-build/cache/dnf}}" -name '*.rpm' -mtime +30 -delete
 
       # The build time as a label, set on the built image: only its metadata
       # changes (no layer).

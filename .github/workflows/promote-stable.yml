@@ -247,6 +247,20 @@ jobs:
             echo "base=$base"
           } >>"$GITHUB_OUTPUT"
 
+      # Before anything moves: the old name's copy of this digest must verify
+      # too, so telamonos and atlasos are promoted together or neither is
+      # (a failure after the first copy is not retried on a fast day, which
+      # only looks for a newer image than telamonos's).
+      - name: Check the old name's signature
+        if: steps.choose.outputs.go == 'true'
+        env:
+          DIGEST: ${{ steps.pick.outputs.digest }}
+        run: |
+          set -euo pipefail
+          legacy="${IMAGE_REGISTRY}/${LEGACY_IMAGE_NAME}"
+          scripts/verify-image.sh "$legacy" "$DIGEST" >/dev/null ||
+            { echo "::error::${legacy}@${DIGEST} does not verify against cosign.pub for this repository (the build signs both names); not promoting."; exit 1; }
+
       - name: Copy by digest
         if: steps.pick.outputs.copy == 'true'
         env:

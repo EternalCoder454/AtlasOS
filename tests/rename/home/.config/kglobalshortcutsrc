@@ -21,3 +21,6 @@ _launch=Meta+N,Meta+M,Show menu bar
 
 [services][org.kde.dolphin.desktop]
 _launch=none
+
+[services][net.eterneon.atlas.launcher.desktop]
+_launch=Alt+Space
