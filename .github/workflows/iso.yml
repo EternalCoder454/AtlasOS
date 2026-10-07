@@ -1,9 +1,15 @@
 name: Live ISO
 
-# The live installer ISO of a published stable image, made with AtlasOS
+# The live installer ISO of a published stable image, made with Telamon
 # Installer's iso/make-iso.sh, and uploaded to https://telamon.eterneon.net/
 # (the VPS, ci/iso-hosting). promote-stable.yml calls it for each image whose
 # stable tags it moved; run it by hand to rebuild one.
+#
+# The images are still named atlasos and atlasos-nvidia here, and so are the
+# ISO files and <image>.json (the website reads them): the builds are published
+# under those names as well as telamonos and telamonos-nvidia (CI.md, "The
+# image's two names"), and the stable tags are kept in step by promote-stable.yml.
+# Renaming the files is for the website's phase.
 #
 # On the VPS each image keeps one version: <image>-44.YYYYMMDD-N.iso, its
 # .sha256, and <image>.json, which names the current version for the site's
@@ -46,7 +52,7 @@ on:
         type: boolean
         default: true
       installer_ref:
-        description: AtlasOS Installer branch, tag or commit to build with
+        description: Telamon Installer branch, tag or commit to build with
         type: string
         default: main
 
@@ -154,7 +160,7 @@ jobs:
         if: steps.pick.outputs.skip != 'true'
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
 
-      - name: Checkout AtlasOS Installer
+      - name: Checkout Telamon Installer
         if: steps.pick.outputs.skip != 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -170,7 +176,7 @@ jobs:
           VERSION: ${{ steps.pick.outputs.version }}
           DIGEST: ${{ steps.pick.outputs.digest }}
           ISO: ${{ steps.pick.outputs.iso }}
-          # make-iso.sh checks the image against AtlasOS's key; its default
+          # make-iso.sh checks the image against Telamon OS's key; its default
           # (../AtlasOS/cosign.pub beside the installer) doesn't exist here.
           ATLASOS_COSIGN_PUB: ${{ github.workspace }}/cosign.pub
         run: |

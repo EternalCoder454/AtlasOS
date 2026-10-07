@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""The Atlas app pins in atlas-apps.lock: which commit of atlas-framework and
-of each Atlas app goes in the image.
+"""The Telamon app pins in telamon-apps.lock: which commit of telamon-framework and
+of each Telamon app goes in the image.
 
-  atlas-pins.py list                 name, repository, commit and release, checked
-  atlas-pins.py get <name>           the pinned commit
-  atlas-pins.py repo <name>          the repository
-  atlas-pins.py verify               each pin is on its repository's default
+  telamon-pins.py list                 name, repository, commit and release, checked
+  telamon-pins.py get <name>           the pinned commit
+  telamon-pins.py repo <name>          the repository
+  telamon-pins.py verify               each pin is on its repository's default
                                      branch, and its release tag (if any) names it
-  atlas-pins.py latest <name>        "<commit> <release or ->": the newest release,
+  telamon-pins.py latest <name>        "<commit> <release or ->": the newest release,
                                      or the default branch's head with none; the
                                      pin itself when that doesn't come after it
-  atlas-pins.py log <name> <commit>  the commits from the pin to <commit>
-  atlas-pins.py set [--force] <name> <commit> [release]
+  telamon-pins.py log <name> <commit>  the commits from the pin to <commit>
+  telamon-pins.py set [--force] <name> <commit> [release]
                                      move a pin forward (never back or sideways;
                                      --force only when the app rewrote history)
-  atlas-pins.py fetch <name> <dir>   <dir>, under build/pinned/, holds the pinned
+  telamon-pins.py fetch <name> <dir>   <dir>, under build/pinned/, holds the pinned
                                      commit (local builds)
 
 The file is checked line by line against the one shape it may have, so a bad
@@ -36,7 +36,7 @@ import urllib.error
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LOCK = ROOT / "atlas-apps.lock"
+LOCK = ROOT / "telamon-apps.lock"
 NAMES = ("framework", "updater", "monitor", "notepad", "settings", "wizard", "store", "explorer", "archive", "launcher", "screenshot", "installer")
 REPO = re.compile(r"EternalCoder454/[A-Za-z0-9][A-Za-z0-9._-]{0,99}(?<!\.git)")
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -52,7 +52,7 @@ LINE = re.compile(
 
 
 def die(msg: str) -> None:
-    sys.exit(f"atlas-pins: {msg}")
+    sys.exit(f"telamon-pins: {msg}")
 
 
 def read() -> tuple[list[str], dict[str, dict]]:
@@ -92,7 +92,7 @@ def api(path: str, allow_404: bool = False):
     set, raises the rate limit; the repositories are public without it."""
     req = urllib.request.Request(
         f"https://api.github.com/{path}",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "atlasos-pins"},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "telamon-pins"},
     )
     if os.environ.get("GH_TOKEN"):
         # Unredirected: a redirect, wherever it leads, goes without the token.
@@ -245,7 +245,7 @@ def log(p: dict, new: str) -> list[str]:
 
 def write(lines: list[str]) -> None:
     """Atomically: a crash leaves the old file or the new one, never half."""
-    fd, tmp = tempfile.mkstemp(dir=LOCK.parent, prefix=".atlas-apps.lock.")
+    fd, tmp = tempfile.mkstemp(dir=LOCK.parent, prefix=".telamon-apps.lock.")
     try:
         with os.fdopen(fd, "w", encoding="ascii") as f:
             f.write("\n".join(lines) + "\n")

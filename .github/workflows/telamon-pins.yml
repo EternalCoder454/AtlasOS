@@ -1,6 +1,6 @@
-name: Update Atlas app pins
+name: Update Telamon app pins
 
-# Daily, and by hand: moves the pins in atlas-apps.lock forward to each Atlas
+# Daily, and by hand: moves the pins in telamon-apps.lock forward to each Telamon
 # app's newest release (or its main branch's head, for an app with no
 # releases yet) on the pins/update branch, and opens a pull request that
 # lists what each one brings. Nothing reaches the image until that pull
@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: atlas-pins
+  group: telamon-pins
   cancel-in-progress: false
 
 defaults:
@@ -60,7 +60,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           body="$RUNNER_TEMP/body.md"
-          printf 'New versions of the Atlas apps for the image, from `atlas-apps.lock`.\n\n' >"$body"
+          printf 'New versions of the Telamon apps for the image, from `telamon-apps.lock`.\n\n' >"$body"
           moved="" failed=""
           # One app's trouble doesn't hold back the others: each runs in its
           # own subshell with -e, and the job fails at the end if any did.
@@ -69,21 +69,21 @@ jobs:
             set +e
             (
               set -euo pipefail
-              newest=$(scripts/atlas-pins.py latest "$n")
+              newest=$(scripts/telamon-pins.py latest "$n")
               read -r sha tag <<<"$newest"
               # The pin as "commit release-or-dash": a release cut at the
               # pinned commit changes the second part only.
-              cur=$(scripts/atlas-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')
+              cur=$(scripts/telamon-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')
               [ "$sha $tag" != "$cur" ] || exit 0
               read -r old _ <<<"$cur"
-              repo=$(scripts/atlas-pins.py repo "$n")
+              repo=$(scripts/telamon-pins.py repo "$n")
               # The entry is written before `set`, and added to the body after
               # it: a failure never leaves the lock moved without its entry.
               entry="$RUNNER_TEMP/entry-$n.md"
               if [ "$sha" = "$old" ]; then
                 printf '### %s: `%s` is now release %s\n\n' "$n" "${sha:0:7}" "$tag" >"$entry"
               else
-                list=$(scripts/atlas-pins.py log "$n" "$sha")
+                list=$(scripts/telamon-pins.py log "$n" "$sha")
                 [ -n "$list" ] || { echo "::error::$n: no commits listed from $old to $sha"; exit 1; }
                 {
                   printf '### %s: `%s` → `%s`%s\n\n' "$n" "${old:0:7}" "${sha:0:7}" \
@@ -94,7 +94,7 @@ jobs:
                   printf '```text\n%s\n```\n\n' "$list"
                 } >"$entry"
               fi
-              scripts/atlas-pins.py set "$n" "$sha" "$tag"
+              scripts/telamon-pins.py set "$n" "$sha" "$tag"
               cat "$entry" >>"$body"
             )
             rc=$?
@@ -103,8 +103,8 @@ jobs:
               failed="$failed $n"
               continue
             fi
-            [ "$(scripts/atlas-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')" = \
-              "$(git show HEAD:atlas-apps.lock | awk -v n="$n" '$1 == n { print $3, ($4 == "" ? "-" : $4) }')" ] ||
+            [ "$(scripts/telamon-pins.py list | awk -v n="$n" '$1 == n { print $3, $4 }')" = \
+              "$(git show HEAD:telamon-apps.lock | awk -v n="$n" '$1 == n { print $3, ($4 == "" ? "-" : $4) }')" ] ||
               moved="$moved $n"
           done
           printf 'Merge after the test build of this branch passes and the image is checked in a VM.\n' >>"$body"
@@ -144,7 +144,7 @@ jobs:
               exit 1
             fi
             # The same pins as last time: nothing to push or build again.
-            if git diff --quiet "$tip" -- atlas-apps.lock; then
+            if git diff --quiet "$tip" -- telamon-apps.lock; then
               echo "same=true" >>"$GITHUB_OUTPUT"
               exit 0
             fi
@@ -155,7 +155,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "$BOT"
           git switch -c "$BRANCH"
-          git commit -q -m "Pin newer Atlas apps: $MOVED" atlas-apps.lock
+          git commit -q -m "Pin newer Telamon apps: $MOVED" telamon-apps.lock
           # Replaces only the tip fetched above, never a commit pushed since.
           # The token goes in through the environment, not the command line.
           GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader GIT_CONFIG_VALUE_0="$auth" \
@@ -168,7 +168,7 @@ jobs:
           MOVED: ${{ steps.move.outputs.moved }}
           BODY: ${{ steps.move.outputs.body }}
         run: |
-          title="Pin newer Atlas apps: $MOVED"
+          title="Pin newer Telamon apps: $MOVED"
           pr=$(gh pr list --head "$BRANCH" --base main --state open --limit 100 --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
           if [ -n "$pr" ]; then
             gh pr edit "$pr" --title "$title" --body-file "$BODY"
@@ -202,7 +202,7 @@ jobs:
           [ -n "$pr" ] || exit 0
           # Delete the branch only when every commit on it is the bot's.
           del=--delete-branch
-          note="main already pins every Atlas app's newest version."
+          note="main already pins every Telamon app's newest version."
           if git fetch -q origin "refs/heads/$BRANCH"; then
             authors=$(git log --format=%ae "HEAD..FETCH_HEAD")
             others=$(printf '%s\n' "$authors" | grep -vFx -e "$BOT" -e '' || true)

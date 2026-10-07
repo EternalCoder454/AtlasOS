@@ -1,4 +1,4 @@
-# CI: where AtlasOS builds, and how long it takes
+# CI: where Telamon OS builds, and how long it takes
 
 ## Where builds run
 
@@ -213,9 +213,9 @@ GitHub's runners start empty every time; their only cache is dnf's downloads
 
 | What | Where (runner container) | Saves |
 |---|---|---|
-| Podman's images and layers | `/home/podman/.local/share/containers` | Pulling Kinoite and Fedora (about 4 GB); every Containerfile stage and step whose inputs didn't change: branding, the Atlas apps' RPMs, KIO, and the image's own steps (see below) |
-| Rust build cache | `/var/tmp` (Podman's `RUN --mount=type=cache`, `ATLAS_BUILD_CACHE`) | Crates and their build output: when Atlas Updater changes, its dependencies come from the cache and only its own crates and app recompile (the checkout gives every source file a new time) |
-| dnf's downloads | `/cache/dnf` (`ATLAS_DNF_CACHE`) | Fedora packages for the build |
+| Podman's images and layers | `/home/podman/.local/share/containers` | Pulling Kinoite and Fedora (about 4 GB); every Containerfile stage and step whose inputs didn't change: branding, the Telamon apps' RPMs, KIO, and the image's own steps (see below) |
+| Rust build cache | `/var/tmp` (Podman's `RUN --mount=type=cache`, `TELAMON_BUILD_CACHE`) | Crates and their build output: when Telamon Updater changes, its dependencies come from the cache and only its own crates and app recompile (the checkout gives every source file a new time) |
+| dnf's downloads | `/cache/dnf` (`TELAMON_DNF_CACHE`) | Fedora packages for the build |
 
 The image itself is built in steps (Containerfile, last stage), each rerun
 only when its inputs change, and everything after it with it:
@@ -223,14 +223,14 @@ only when its inputs change, and everything after it with it:
 | Step | Reruns when |
 |---|---|
 | `packages.sh`: packages, KIO, plasma-setup removal, greenboot | New Kinoite, the script or KIO changed, or a new day (`PACKAGES_DATE`, so Brave's and Fedora's updates arrive daily) |
-| `apps.sh`: the Atlas apps | Atlas Updater changed |
+| `apps.sh`: the Telamon apps | Telamon Updater changed |
 | `build.sh`: services, settings, branding, initramfs | `system_files`, branding or the script changed |
 | `version.sh`: the version in os-release | Every build (a few seconds) |
 
 So the first push of a day reinstalls the packages; later pushes that day
 only redo what they changed.
 
-The Rust cache needs `packaging/build-rpm.sh` with `ATLAS_BUILD_CACHE`
+The Rust cache needs `packaging/build-rpm.sh` with `TELAMON_BUILD_CACHE`
 support in atlasos-updater; with an older one the build still works, uncached.
 
 The runner has a 50 GB disk; a build from empty caches peaks at about 30 GB
@@ -290,7 +290,7 @@ The VPS runs, oldest first:
 
 - 37103067656 and 37104350309: every cache empty (the cleanup then cleared
   them after each job). KIO and the Rust apps compile from scratch.
-- 37130390547: the caches kept. Only the Rust apps (Atlas Updater had
+- 37130390547: the caches kept. Only the Rust apps (Telamon Updater had
   changed, 6 minutes) and the steps after the packages step reran.
 - 37136001901: the first with chunkah (see `just rechunk`), nothing to
   rebuild. Rechunking went from about 8.5 minutes per image to 2. Its pushes
@@ -306,7 +306,7 @@ The VPS runs, oldest first:
 A build where nothing changed takes about 8 minutes for both images: rechunking
 (2 minutes each), NVIDIA's driver step (2 minutes, rerun on every build because
 the image under it carries the date and commit) and the pushes. A change to
-Atlas Updater adds about 6 minutes with the old build flags (its stage, with
+Telamon Updater adds about 6 minutes with the old build flags (its stage, with
 the Rust cache) and should add about 3 with the new ones (not yet measured on
 the VPS), the daily package update about 2. A new Kinoite or a cleared cache
 reruns the stages built on it: KIO and the Rust apps from scratch take about 40 minutes.
@@ -317,11 +317,11 @@ about 6 GB of memory stayed free. rpm-ostree's chunker ran on one CPU for
 most of its 8.5 minutes, which is why chunkah, using all four, made the
 largest difference.
 
-### The Atlas Updater RPM's build flags
+### The Telamon Updater RPM's build flags
 
 atlasos-updater 7830fb6 builds the Rust code with 4 codegen units and no LTO
 (Fedora's flags ask for 1 and the profile for thin LTO), the C++ app without
-LTO, and atlas-system-helper beside the app. The binaries are about 4 MB
+LTO, and telamon-system-helper beside the app. The binaries are about 4 MB
 larger. Measured locally in a container limited to 4 CPUs and 7.6 GB, the
 VPS's size; the RPM's `%build`, in seconds:
 
@@ -334,3 +334,37 @@ VPS's size; the RPM's `%build`, in seconds:
 Peak memory stayed under 5 GB. The VPS is about 4 times slower than that
 container: the old flags' 66 seconds took 4m 20s in 37130390547. A change to
 the spec's Rust flags starts the Rust cache over, like a new compiler.
+
+
+## The image's two names
+
+Since the rename to Telamon the image is `ghcr.io/eternalcoder454/telamonos`
+(and `telamonos-nvidia`), and the same builds are still published as
+`atlasos` and `atlasos-nvidia`, which every install made before the rename
+follows. In `build.yml`: Push copies the rechunked image to both repositories
+(one digest), Sign and Attest do each of them (a signature names its
+repository), the Decide step numbers a build from the tags of both, and a
+scheduled run isn't skipped while the old name is behind. In
+`promote-stable.yml`: the promotion works on `telamonos`, "Mirror to the old
+name" copies the verified digest to `atlasos` (checked against `cosign.pub` for
+that repository first), and the NVIDIA job does the same for
+`atlasos-nvidia`. The ISO workflow still builds from `atlasos` and
+`atlasos-nvidia` and keeps the file names. Images built before the rename
+carry `org.atlasos.built` and `org.atlasos.base-image`; the new ones carry
+both these and `org.telamon.built` and `org.telamon.base-image`.
+
+After the first merge: run "Promote stable" once by hand (the new repositories
+have no `:stable` yet), then the weekly and fast promotions go as before.
+Secrets keep their names (`ATLAS_PINS_TOKEN`, `ATLAS_FRAMEWORK_TOKEN`,
+`ATLAS_UPDATER_TOKEN`, `SIGNING_SECRET`, ...) and so does the runner label
+`atlasos-vps`.
+
+### The app pins (`telamon-apps.lock`)
+
+Renamed from `atlas-apps.lock` (and `scripts/telamon-pins.py`, the "Update
+Telamon app pins" workflow, `just pins` and `just pins-update`). The apps' repos
+are still `EternalCoder454/atlasos-*` and `atlas-framework`. While the apps'
+`rename/telamon` pull requests are open, the pins still name the commits from
+before the rename (except the framework, at v2.0.0): they are moved to the
+merged commits with `just pins-update` after those pull requests merge and
+before this one does, or the build's `apps.sh` checks fail.

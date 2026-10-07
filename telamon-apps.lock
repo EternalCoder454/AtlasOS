@@ -1,11 +1,19 @@
-# The Atlas apps and atlas-framework that go in the image, each pinned to one
+# The Telamon apps and telamon-framework that go in the image, each pinned to one
 # commit. CI and `just build` build exactly these; nothing follows a branch.
-# Change a pin with `just pins-update [name]` (or the "Update Atlas app pins"
-# workflow's pull request), never by hand-typing a hash; scripts/atlas-pins.py
+# Change a pin with `just pins-update [name]` (or the "Update Telamon app pins"
+# workflow's pull request), never by hand-typing a hash; scripts/telamon-pins.py
 # checks the file.
 #
+# RENAME TO TELAMON (phase 3): except for the framework (v2.0.0), these pins are
+# still the commits from before each app was renamed, so that `just pins` and
+# `pins-update` keep verifying them. The image's checks (build_files/apps.sh) are
+# for the renamed apps: before the rename branch is merged, and after every
+# app's rename pull request is, run `just pins-update` (each app moves to its
+# newest release or its main branch's head) and commit this file; until then
+# the image does not build in CI. See CI.md, "The app pins".
+#
 # name       GitHub repository                 commit (40 hex)                           release
-framework    EternalCoder454/atlas-framework   2c4440a1db0ce9efce4c82bd40955771375b78f4  v1.6.1
+framework    EternalCoder454/atlas-framework   8e6a53569363aec3d7e42920875d03ca113ef3eb  v2.0.0
 updater      EternalCoder454/atlasos-updater   8043efe9627e0001ab0592630f3d66186c71e13f
 monitor      EternalCoder454/atlasos-monitor   045f5263ae8ab7f50ec986625361c5b55be26b2c
 notepad      EternalCoder454/atlasos-notepad   910b7dcdca94570af296807f5e821596dacbbfc2
