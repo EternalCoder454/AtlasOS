@@ -6,10 +6,10 @@
 #
 # name       GitHub repository                 commit (40 hex)                           release
 framework    EternalCoder454/atlas-framework   2c4440a1db0ce9efce4c82bd40955771375b78f4  v1.6.1
-updater      EternalCoder454/atlasos-updater   7751a7d29be4a56e30dcab6337600a7bf447456c
+updater      EternalCoder454/atlasos-updater   8043efe9627e0001ab0592630f3d66186c71e13f
 monitor      EternalCoder454/atlasos-monitor   045f5263ae8ab7f50ec986625361c5b55be26b2c
 notepad      EternalCoder454/atlasos-notepad   910b7dcdca94570af296807f5e821596dacbbfc2
-settings     EternalCoder454/atlasos-settings  437a297f3beb41e6f4658113948221c491f1e62e  v0.1.1
+settings     EternalCoder454/atlasos-settings  74b396e03c6525ee8edaa4bdbb711a7fdd3e94a6  v0.2.0
 wizard       EternalCoder454/atlasos-wizard    6be3dd1d23b24a1c5fc1cc36b48448ae372765e6  v0.1.1
 store        EternalCoder454/atlasos-store     2461613d9706b801c8a151a22711cfdc615708e5
 explorer     EternalCoder454/atlasos-explorer  c10b61bb2e286206a44ea8a6954cab45f6c609e5
