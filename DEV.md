@@ -1,13 +1,14 @@
-# AtlasOS: developer notes
+# Telamon OS: developer notes
 
-How AtlasOS is built, updated and tested. For what AtlasOS is and how to
+How Telamon OS is built, updated and tested. For what Telamon OS is and how to
 install it, see the [README](README.md). Test reports are in
 [docs/](docs/): [PHASE1.md](docs/PHASE1.md) (the base image),
 [UPDATES.md](docs/UPDATES.md) (the update system) and
 [PRIVACY.md](docs/PRIVACY.md) (what is sent and kept).
 
-AtlasOS is a Fedora Kinoite 44 [bootc](https://bootc-dev.github.io/bootc/)
-image. Images: `ghcr.io/eternalcoder454/atlasos`
+Telamon OS is a Fedora Kinoite 44 [bootc](https://bootc-dev.github.io/bootc/)
+image. Images: `ghcr.io/eternalcoder454/telamonos`, and the same builds under
+their old name, `ghcr.io/eternalcoder454/atlasos` ("The two image names" below).
 
 | Tag | Channel | Built from |
 |---|---|---|
@@ -15,16 +16,16 @@ image. Images: `ghcr.io/eternalcoder454/atlasos`
 | `stable`, `latest`, `44`, `44.YYYYMMDD-N` | Stable: weekly | the newest testing image, copied by digest (never rebuilt) |
 | `beta`, `beta-44.YYYYMMDD-N` | Beta | `beta` |
 
-`ghcr.io/eternalcoder454/atlasos-nvidia` has the same tags: each AtlasOS
-image plus NVIDIA's driver (see NVIDIA below).
+`ghcr.io/eternalcoder454/telamonos-nvidia` (and `atlasos-nvidia`) has the same
+tags: each Telamon OS image plus NVIDIA's driver (see NVIDIA below).
 
 `latest` is `stable`. The version `44.YYYYMMDD-N` (the build's UTC date, and
 N its number that day across all channels, from 1) is the same in the image's `org.opencontainers.image.version` label, in
 `/etc/os-release` and in the tags. The `org.opencontainers.image.revision`
-label is the AtlasOS commit the image was built from,
-`net.eterneon.atlas.framework.revision` the atlas-framework commit,
-`net.eterneon.atlas.updater.revision` the Atlas Updater commit, and
-`net.eterneon.atlas.monitor.revision` the Atlas Monitor commit.
+label is the Telamon OS commit the image was built from,
+`net.eterneon.telamon.framework.revision` the telamon-framework commit,
+`net.eterneon.telamon.updater.revision` the Telamon Updater commit, and
+`net.eterneon.telamon.monitor.revision` the Telamon Monitor commit.
 
 ## Updates
 
@@ -43,8 +44,8 @@ label is the AtlasOS commit the image was built from,
   before the download against the registry, and after it against what was
   staged (`check_staged` in `update-stage`), which takes an older image out
   again with `rpm-ostree cleanup -p` and fails the run; it also does that when
-  it can't tell. Both use `/usr/share/atlasos/image-age.jq`, the same rule as
-  Atlas Updater's `ImageStatus::is_older_than`. The service is sandboxed as
+  it can't tell. Both use `/usr/share/telamon/image-age.jq`, the same rule as
+  Telamon Updater's `ImageStatus::is_older_than`. The service is sandboxed as
   far as bootc allows (no `ProtectSystem` or `RestrictNamespaces`: it writes
   `/sysroot`, `/boot`, `/etc` and `/var`, and needs mount namespaces;
   `CAP_SYS_PTRACE` stays because bootc reads `/proc/1/ns/mnt`). An older
@@ -54,7 +55,7 @@ label is the AtlasOS commit the image was built from,
   labels the running policy doesn't know yet (a new image can bring new
   types). Fedora's policy enters it from a unit whose ExecStart is bootc
   (`init_t`) or a root shell, not from `unconfined_service_t`, where
-  `update-stage`, Atlas Updater's helper, `atlas-record-boot`,
+  `update-stage`, Telamon Updater's helper, `telamon-record-boot`,
   `grub-greenboot` and the greenboot checks run. `selinux/atlasos_bootc.te`
   adds that transition (with `nnp_transition`, for `grub-greenboot`'s
   `NoNewPrivileges`). Without it, bootc's probe (`chcon` to a made-up type)
@@ -71,25 +72,25 @@ label is the AtlasOS commit the image was built from,
   `bootc-fetch-apply-updates.timer` (which reboots) and
   `rpm-ostreed-automatic.timer` stay disabled; `build.sh` fails if they are
   enabled.
-- **Notifier:** [Atlas Updater](https://github.com/EternalCoder454/atlasos-updater)
+- **Notifier:** [Telamon Updater](https://github.com/EternalCoder454/atlasos-updater)
   shows what is staged and offers the restart. Discover's notifier is removed
   and its unattended updates are off; the build checks both.
-- **Release notes:** the GitHub releases are the changelog Atlas Updater
+- **Release notes:** the GitHub releases are the changelog Telamon Updater
   shows. Each testing build gets a pre-release tagged with its version, with
   notes written by hand. Promoting it to stable moves the tag to the commit
   the image came from and makes it the latest release, notes kept. A stable
   build with no pre-release gets the commits since the previous stable
   release, grouped by what they touch (`scripts/release-notes.sh`; the first
   stable lists the newest commits). Older releases are plain `44.YYYYMMDD`.
-- **Atlas apps are system components.** `atlas-system-helper` (called
-  `atlas-core` before 0.1.0-2), `atlas-updater`, `atlas-monitor` and
-  `atlas-notepad`, `atlas-settings`, `atlas-wizard`, and the framework they share (`atlas-ui`, the Atlas.Ui
-  QML module in `/usr/lib64/qt6/qml/Atlas/Ui`, with `atlas-symbols-fonts`
-  and the `atlas-symbols` gallery), are RPMs built into the image under
+- **Telamon apps are system components.** `telamon-system-helper` (called
+  `atlas-system-helper` before 0.3.0 and `atlas-core` before 0.1.0-2), `telamon-updater`, `telamon-monitor` and
+  `telamon-notepad`, `telamon-settings`, `telamon-wizard`, and the framework they share (`telamon-ui`, the Telamon.Ui
+  QML module in `/usr/lib64/qt6/qml/Telamon/Ui`, with `telamon-symbols-fonts`
+  and the `telamon-symbols` gallery), are RPMs built into the image under
   `/usr`, so Discover (its backends here are Flatpak and fwupd, no
   PackageKit) has no way to uninstall them, and
-  `/etc/dnf/protected.d/atlas-framework.conf` (from `atlas-ui`), `atlas.conf`
-  (from `atlas-system-helper`), `atlas-monitor.conf`, `atlas-notepad.conf`, `atlas-settings.conf` and `atlas-wizard.conf`
+  `/etc/dnf/protected.d/telamon-framework.conf` (from `telamon-ui`), `telamon-updater.conf`
+  (from `telamon-system-helper`), `telamon-monitor.conf`, `telamon-notepad.conf`, `telamon-settings.conf` and `telamon-wizard.conf`
   stop dnf removing them. The build fails without them. Root can still run
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
@@ -139,7 +140,7 @@ To add an update:
    `--testmode` doesn't record the `Id`, so it runs again each time.
 
 `build.sh` checks that the scripts are executable and the `Id`s unique. The
-first entry fills look-and-feel keys of the user's AtlasOS theme that they
+first entry fills look-and-feel keys of the user's Telamon OS theme that they
 never set.
 
 ## Boot health checks and rollback
@@ -160,7 +161,7 @@ healthy machine. Every check passes ("skipped") when:
 
 - there is no rollback deployment (greenboot's `bootc rollback` fails with one,
   so a failure could only reboot in a loop: a fresh install);
-- login and Plasma: first-run setup is not done (neither `/etc/atlasos/setup-done` nor `/etc/plasma-setup-done` exists, the wizard runs before the display manager, with no greeter), the
+- login and Plasma: first-run setup is not done (neither `/etc/telamon/setup-done` nor `/etc/plasma-setup-done` exists, the wizard runs before the display manager, with no greeter), the
   boot isn't graphical (`systemd.unit=`, `single`, `1`-`4`, `rescue`,
   `emergency`), the default target isn't `graphical.target`, the display manager
   isn't plasmalogin or it is masked, or at the end there is no `/dev/dri/card*`.
@@ -199,11 +200,11 @@ A drop-in sets its `TimeoutStartSec=infinity` (the checks bound themselves).
 `red.d/10_atlasos_red.sh` logs `atlasos-health: boot health check failed ...`
 to the journal on every failed boot. Only at the **last** failure (boot counter
 0, when the rollback happens) it also calls
-`/usr/libexec/atlas-system-helper record-event health-check-failed` and appends
+`/usr/libexec/telamon-system-helper record-event health-check-failed` and appends
 the image digest to `/var/lib/atlasos/bad-image-digests`;
 `update-stage-condition` then skips staging while the newest image on the
 registry has that digest, so a rolled-back update isn't downloaded again (a
-newer image has a new digest), and Atlas Updater shows it as an update that
+newer image has a new digest), and Telamon Updater shows it as an update that
 didn't start properly instead of offering it. `green.d/10_atlasos_green.sh` records
 `health-check-passed` once per deployment, on its first good boot (the last 20
 passed digests are in `/var/lib/atlasos/health-passed-digests`; a digest that
@@ -226,8 +227,8 @@ reboot must not depend on them. Each check leaves its result in
 3. If the counter reaches 0 inside GRUB, the snippet boots `default=1`, the
    previous deployment, and sets `boot_counter=-1`. On that boot greenboot sees
    the booted image differs from `greenboot_next_deployment_id` and runs
-   `bootc rollback` itself to make it permanent. No AtlasOS script is needed.
-4. `atlas-system-helper record-boot` then sees the rollback in the boot history.
+   `bootc rollback` itself to make it permanent. No Telamon OS script is needed.
+4. `telamon-system-helper record-boot` then sees the rollback in the boot history.
 
 Stale counter: if the user runs `bootc rollback` while `boot_counter` is set,
 `atlasos-grub-greenboot.service` unsets it at that shutdown (`ExecStop`, from
@@ -248,7 +249,7 @@ bootc-image-builder) pastes the snippets of `/usr/lib/bootupd/grub2-static/confi
 into one `/boot/grub2/grub.cfg` ("Generated by bootupd / do not edit"), and
 `bootupctl update` only updates the EFI binaries, never `grub.cfg`. So the
 snippet reaches new installs only. For installs made before,
-`atlasos-grub-greenboot.service` (`/usr/libexec/atlasos/grub-greenboot`) runs at
+`atlasos-grub-greenboot.service` (`/usr/libexec/telamon/grub-greenboot`) runs at
 every boot, after `ostree-remount` and `bootloader-update` and before greenboot:
 when `grub.cfg` has no `08_greenboot.cfg` section it puts the same snippet into
 `/boot/grub2/custom.cfg`, between `# BEGIN/# END atlasos-greenboot` markers
@@ -283,7 +284,7 @@ sudo bootc status                       # booted / staged / rollback
   System Monitor, Plasma Welcome, Partition Manager, KDebugSettings and the
   Firewall app (firewalld itself stays). Firefox, Konsole, and with it
   DrKonqi, KDE's crash reporter, which needs it. Also Fedora's wallpapers
-  (F44, Default, Breeze's Next: the picker shows only AtlasOS's, checked at
+  (F44, Default, Breeze's Next: the picker shows only Telamon OS's, checked at
   build time; `kde-settings-plasma` requires the Fedora set, so its packages
   stay installed and `build.sh` deletes only the pictures), Fedora's bookmarks,
   Chromium policy packages (Brave doesn't read them) and Fedora Linux's
@@ -291,8 +292,8 @@ sudo bootc status                       # booted / staged / rollback
   of `plasma-desktop`. Menu Editor and Kvantum Manager are hidden from the
   app menu by `packages.sh`; Menu Editor still opens from the launcher's
   "Edit Applications".)
-- **Network:** firewalld's default zone is `AtlasOS`
-  (`/usr/lib/firewalld/zones/AtlasOS.xml`, set in `firewalld-workstation.conf`
+- **Network:** firewalld's default zone is `Telamon OS`
+  (`/usr/lib/firewalld/zones/Telamon.xml`, set in `firewalld-workstation.conf`
   by `build.sh`): Fedora Workstation's zone without its open ports
   1025-65535, so nothing on the network reaches this computer except replies,
   DHCPv6, mDNS (printers and other devices), Windows file share browsing, and
@@ -311,7 +312,7 @@ sudo bootc status                       # booted / staged / rollback
   timer (dnf can't change an image-based system anyway), and Fedora's
   on-screen keyboard (System Settings > Keyboard > Virtual Keyboard turns it
   back on).
-- **Added:** Atlas Updater (the update screen and tray, with its `atlas-core`
+- **Added:** Telamon Updater (the update screen and tray, with its `telamon-system-helper`
   helper), Flathub, Ghostty as the terminal (Ctrl+Alt+T), from the
   [scottames/ghostty](https://copr.fedorainfracloud.org/coprs/scottames/ghostty/)
   COPR that Ghostty's install guide points to, since Fedora doesn't package
@@ -324,7 +325,7 @@ sudo bootc status                       # booted / staged / rollback
   dependencies are off). They are the default for images, PDFs, video and
   audio (`mimeapps.list`), and Okular starts without a menu bar and with small
   toolbar icons (`/etc/xdg/okularrc`). Haruna and Qalculate! read only their
-  own `~/.config` files, so AtlasOS can't set their defaults system-wide;
+  own `~/.config` files, so Telamon OS can't set their defaults system-wide;
   Haruna's hardware decoding is on (`auto`) by default anyway.
 - **Third-party repos (Ghostty's COPR, NVIDIA's container
   toolkit):** never trusted on first use. Each repo's `.repo` file is in
@@ -355,29 +356,29 @@ sudo bootc status                       # booted / staged / rollback
   separate package.
 - **Kept:** Plasma, KWin, Dolphin, Discover for Flatpaks,
   NetworkManager, PipeWire, Bluetooth, CUPS printing, Flatpak, zram swap.
-- **Branding:** AtlasOS boot splash, Plasma splash, launcher icon, About page,
-  login screen and wallpaper; `os-release` says AtlasOS (`ID=atlasos`,
-  `ID_LIKE=fedora`, `VERSION_ID=44`), and so do `/etc/system-release` and
-  `/etc/redhat-release` ("AtlasOS release 44 (version)", in
-  `/usr/lib/atlasos-release`; `/etc/fedora-release` stays Fedora's). Plymouth's
+- **Branding:** Telamon OS boot splash, Plasma splash, launcher icon, About page,
+  login screen and wallpaper; `os-release` says Telamon OS (`ID=telamonos`,
+  `ID_LIKE="atlasos fedora"`, `VERSION_ID=44`), and so do `/etc/system-release` and
+  `/etc/redhat-release` ("Telamon OS release 44 (version)", in
+  `/usr/lib/telamon-release`; `/etc/fedora-release` stays Fedora's). Plymouth's
   font is IBM Plex Sans: its label plugin ignores the theme's `Font=` and
   loads the file `Plymouth.ttf`, so a dracut module
   (`system_files/usr/lib/dracut/modules.d/50atlasos-plymouth-font`) links
   that to Plex in the initramfs. Ghostty has no system-wide config, so
-  `/etc/skel/.config/ghostty/config` (JetBrains Mono, padding, themes `AtlasOS
-  Light` and `AtlasOS Dark` in `/usr/share/ghostty/themes`, following the
+  `/etc/skel/.config/ghostty/config` (JetBrains Mono, padding, themes `Telamon OS
+  Light` and `Telamon Dark` in `/usr/share/ghostty/themes`, following the
   system's light and dark setting) is copied once to each user's
   `~/.config/ghostty/config` at their first Plasma session, unless they have
   one; their file overrides it from then on.
 - **Windows 11 and macOS-style desktop:** a macOS-style menu bar along the
   top, as three floating islands each only as wide as what it holds: the
-  AtlasOS menu and the active app's menus (File, Edit, View...) on the left,
+  Telamon OS menu and the active app's menus (File, Edit, View...) on the left,
   the time over the date in the middle (the calendar opens on a click), and
   the tray on the right. The islands hide while a window covers them
   (`dodgewindows`), so maximized and fullscreen apps get the whole screen,
   and come back when the pointer reaches the top edge. **Meta+M**
-  (`/usr/libexec/atlasos/menubar-toggle`, registered by
-  `/usr/share/kglobalaccel/org.atlasos.menubar-toggle.desktop`, a link to
+  (`/usr/libexec/telamon/menubar-toggle`, registered by
+  `/usr/share/kglobalaccel/org.telamon.menubar-toggle.desktop`, a link to
   its `applications/` file) switches them to staying on top of windows
   (`windowsgobelow`), which keep their size, and back. Existing desktops'
   one-piece bar becomes the islands through `atlasos-20261004-islands.js`,
@@ -388,19 +389,19 @@ sudo bootc status                       # booted / staged / rollback
   left island the menus are never missing, as on macOS: Plasma's App Menu
   shows the ones an app exports (on Wayland only Qt and KDE apps do: GTK's
   module needs X11, libadwaita has no menu bar, Chromium and Electron export
-  none), and our `org.atlasos.appmenu` plasmoid, hidden when the active window
+  none), and our `org.telamon.appmenu` plasmoid, hidden when the active window
   has menus registered, shows the app's name in bold with a default File,
   Edit, View, Window and Help (Task Manager requests and KWin shortcuts;
   Wayland allows no synthesized Cut/Copy/Paste), and on the desktop a
   File/Go/Window/Help set. Existing desktops get it from
   `atlasos-20261003-appmenu.js`. A dock
   along the bottom (floating, centred, as wide as its icons) with the app
-  launcher, a separator (our own small `org.atlasos.dockseparator`
+  launcher, a separator (our own small `org.telamon.dockseparator`
   plasmoid: Plasma's only draws a gap), then pinned and open apps, like
   macOS's: 48 px icons packed at a 60 px pitch on a rounded, see-through
   plate. Open apps get a short underline (accent colour for the active
   one) and a rounded tile covering the whole item on hover. All of that is
-  the AtlasOS Plasma style (`system_files/usr/share/plasma/desktoptheme/atlasos/`:
+  the Telamon OS Plasma style (`system_files/usr/share/plasma/desktoptheme/telamon/`:
   the task frames, the dock's and menu bar's background, and every surface
   Plasma draws from its theme: popups (`dialogs/background`, 8 px card,
   hairline, soft shadow, see-through so KWin's blur shows), tooltips, desktop
@@ -418,22 +419,22 @@ sudo bootc status                       # booted / staged / rollback
   launcher (Plasma opens the first one it finds). Both bars are
   see-through, with a strong blur and a little noise behind them like
   Windows 11's acrylic (`[Effect-blur]` in `/etc/xdg/kwinrc`, which the
-  menus and popups share). The launcher is Atlas Launcher
+  menus and popups share). The launcher is Telamon Launcher
   (`EternalCoder454/atlasos-launcher`, built from its pinned commit): its dock
-  button plasmoid (`net.eterneon.atlas.launcher.button`) is the dock's first
-  item, `atlas-launcher.service` (enabled for every user by `build.sh`) runs
+  button plasmoid (`net.eterneon.telamon.launcher.button`) is the dock's first
+  item, `telamon-launcher.service` (enabled for every user by `build.sh`) runs
   it, and Meta opens it through plasmashell's "Activate Application
   Launcher" shortcut, which reaches the dock button (it provides
   `org.kde.plasma.launchermenu`); KWin 6.7 no longer reads
   `[ModifierOnlyShortcuts]`. Its
-  default pins are `/etc/xdg/atlas-launcher/pinned.list` (from system_files,
+  default pins are `/etc/xdg/telamon-launcher/pinned.list` (from system_files,
   over the package's). (Andromeda Launcher and Simple Kickoff are gone; the
   `atlasos-20261005-launcher.js` update swaps them, Kickoff and Kicker out of
   existing panels and copies their favourites into the button's `ImportPins`.)
   The launcher's search is the only search: KRunner (Alt+Space) is retired
   by `build.sh`, which deletes its program, shortcuts file and D-Bus
   activation and masks `plasma-krunner.service` (the KRunner library and
-  its plugins stay; Atlas Launcher runs them in its own process, and Settings'
+  its plugins stay; Telamon Launcher runs them in its own process, and Settings'
   Plasma Search page still picks them). Notifications drop down at the top
   centre (`PopupPosition=TopCenter`, added to `/etc/xdg/plasmanotifyrc` by
   `build.sh`), sliding down from the top edge, just under the clock island;
@@ -444,25 +445,25 @@ sudo bootc status                       # booted / staged / rollback
   configured; nothing extra runs.
 - **macOS-style login and lock screens:** the wallpaper blurred and tinted
   with the logo's ink (done once at build time, not live), with the clock
-  above the avatar and password field, in AtlasOS colours and IBM Plex Sans.
-- **Two themes, and only two:** AtlasOS Light (the default) and AtlasOS Dark,
+  above the avatar and password field, in Telamon OS colours and IBM Plex Sans.
+- **Two themes, and only two:** Telamon Light (the default) and Telamon Dark,
   Global Themes with colour schemes taken from the logo's violets. Breeze's
   and Fedora's Global Themes, colour schemes and Plasma Styles are removed.
 - **Cursors:** [Bibata Modern](https://github.com/ful1e5/Bibata_Cursor)
-  (GPL-3.0, `branding/cursors/`): Ice, white, with AtlasOS Light and as the
-  default everywhere else; Classic, black, with AtlasOS Dark. Breeze's
+  (GPL-3.0, `branding/cursors/`): Ice, white, with Telamon Light and as the
+  default everywhere else; Classic, black, with Telamon Dark. Breeze's
   cursors are removed (the empty `breeze-cursor-theme` package stays, since
   `plasma-integration` requires it), and a settings update moves existing
   users off them.
 - **Icons:** [Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
   (GPL-3.0, Fedora's `papirus-icon-theme` and `-dark`): Papirus with
-  AtlasOS Light and Papirus-Dark with Dark, set in each global theme's
+  Telamon Light and Papirus-Dark with Dark, set in each global theme's
   `defaults`; their panel and symbolic icons follow the colour scheme.
   `build.sh` turns the folders violet, as papirus-folders does: it points
   the `folder-*.svg` and `user-*.svg` links in each `places/` directory at
   the `-violet-` files instead of the `-blue-` ones, and fails if any is
   missing. A settings update (`atlasos-20261003-papirus.sh`) moves users
-  from Dracula, which AtlasOS used before, to the matching Papirus.
+  from Dracula, which Telamon OS used before, to the matching Papirus.
 
 ## Patched KIO
 
@@ -477,25 +478,25 @@ stops applying; drop the stage once Fedora ships the fix.
 
 ## First-run setup
 
-The wizard on first boot is Atlas Wizard (`atlas-wizard`, built from the
+The wizard on first boot is Telamon Setup (`telamon-wizard`, built from the
 `wizard-app` stage, pinned like the other apps). It replaces Fedora's
 `plasma-setup`, which `packages.sh` removes. Its design is in the wizard
 repository's `docs/DESIGN.md`. In short:
 
-- `atlas-wizard-boot.service` (enabled by the RPM's preset and again in
+- `telamon-wizard-boot.service` (enabled by the RPM's preset and again in
   `apps.sh`) runs before the display manager on every boot. With no done
   marker it writes a plasmalogin autologin drop-in
-  (`/etc/plasmalogin.conf.d/99-atlas-wizard.conf`) for the locked
-  `atlas-setup` user (a sysusers.d user of the RPM) and its `atlas-wizard`
+  (`/etc/plasmalogin.conf.d/99-telamon-wizard.conf`) for the locked
+  `telamon-setup` user (a sysusers.d user of the RPM) and its `telamon-wizard`
   session; once setup is done it removes it and locks the user again. After
   repeated failures it starts a text-mode fallback instead.
-- Setup is done when `/etc/atlasos/setup-done` exists. The wizard also writes
+- Setup is done when `/etc/telamon/setup-done` exists. The wizard also writes
   `/etc/plasma-setup-done`, which health-lib, `pin-setup`,
   `fingerprint-setup` and `nvidia-key-setup` still read, and an existing
   `/etc/plasma-setup-done` counts as done.
 
 To see the wizard again in a VM:
-`sudo rm /etc/atlasos/setup-done /etc/plasma-setup-done` and reboot.
+`sudo rm /etc/telamon/setup-done /etc/plasma-setup-done` and reboot.
 Test VMs skip it by creating both markers (`vmctl.py`, `vmswitch.py`).
 
 ## Fingerprint readers and smart cards
@@ -510,9 +511,9 @@ enrolled finger, so other machines see no change, and fprintd is D-Bus
 activated, so nothing runs at idle. Images updated from older ones pick it up
 through the /etc merge, as long as nobody changed authselect locally.
 
-Asking to set one up is `/usr/libexec/atlasos/fingerprint-setup`, an XDG
+Asking to set one up is `/usr/libexec/telamon/fingerprint-setup`, an XDG
 autostart (`/etc/xdg/autostart/atlasos-fingerprint-setup.desktop`). It is not a
-wizard page: the wizard runs as its own `atlas-setup` user before the account
+wizard page: the wizard runs as its own `telamon-setup` user before the account
 exists, and enrolling needs the account. At login, once the wizard is done, it
 asks fprintd (`Manager.GetDevices`) for readers; with one and no finger
 enrolled it shows a kdialog and, on "Set Up Fingerprint", opens System
@@ -634,7 +635,7 @@ password always keeps working.
   It refuses PINs that are not 4 to 8 digits, one repeated digit, or a straight
   run (1234, 4321). `pin-admin status` needs no pkexec. The user-facing pieces
   are `pin-setup` (kdialog; the "Set Up PIN" launcher entry), and
-  `atlas pin set|remove|status`.
+  `telamon pin set|remove|status`.
 - **First login.** `/etc/xdg/autostart/atlasos-pin-setup.desktop` runs
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes
@@ -652,21 +653,21 @@ password always keeps working.
   conversation program (counting prompts; call `pam_authenticate`,
   `pam_setcred`, `pam_open_session`): run `pin-daemon` on a socket with
   `systemd-socket-activate --inetd -a -l /run/atlasos/pin.sock
-  /usr/libexec/atlasos/pin-daemon`, then authenticate with service `kde`
+  /usr/libexec/telamon/pin-daemon`, then authenticate with service `kde`
   (as the user), `plasmalogin` (as root) and `sshd` or `sudo`. A probe module
   placed in place of the wallet lines shows what they would be given.
   SELinux and the real greeters are not covered that way.
 
 ## NVIDIA
 
-`atlasos-nvidia` (`Containerfile.nvidia`, `just build-nvidia`) is the AtlasOS
+`atlasos-nvidia` (`Containerfile.nvidia`, `just build-nvidia`) is the Telamon OS
 image plus NVIDIA's driver from RPM Fusion's NVIDIA repository (the one Fedora
 ships disabled). It uses NVIDIA's open kernel modules, so it supports GeForce
 GTX 16 and RTX 20 series cards and newer; older NVIDIA cards stay on the main
 image with nouveau.
 
 - **Kernel modules:** built in a throwaway stage with `akmods` for exactly the
-  image's kernel (headers from Koji), then signed with the AtlasOS module key
+  image's kernel (headers from Koji), then signed with the Telamon OS module key
   so they load with Secure Boot on. The image has no compilers and no akmods.
 - **Secure Boot:** the firmware must trust the key once, and it is a dialog,
   not a terminal step. At login, when an NVIDIA display device is present,
@@ -693,7 +694,7 @@ image with nouveau.
   command line while it is shown; it only confirms someone at the keyboard
   at boot and can only enrol this one certificate. MokAuth (its hash) is
   root-only. From a terminal,
-  `sudo /usr/libexec/atlasos/nvidia-enroll-key` still works (it asks for the
+  `sudo /usr/libexec/telamon/nvidia-enroll-key` still works (it asks for the
   password itself). With Secure Boot off nothing is needed.
 - **Also in it:** CUDA's driver libraries, VA-API video decoding
   (`libva-nvidia-driver`), the suspend/resume services, and NVIDIA's container
@@ -703,31 +704,132 @@ image with nouveau.
 - **The signing key:** the private key is `secrets/nvidia-signing.key`
   (gitignored, kept out of `build/` so `just clean` leaves it) and, for CI,
   the `NVIDIA_SIGNING_KEY` repository secret. The public half is
-  `system_files_nvidia/usr/share/atlasos/nvidia/atlasos-module-signing.der`.
+  `system_files_nvidia/usr/share/telamon/nvidia/telamon-module-signing.der`.
   It is a build secret: never in an image layer. Losing it means a new key,
   and every user enrolling again.
+
+## The rename to Telamon
+
+AtlasOS became Telamon OS in October 2026 (the brand is "Telamon"). What moved,
+what kept its old name for now, and why:
+
+**Moved.** The image's name (`telamonos`), `os-release` (`NAME="Telamon OS"`,
+`ID=telamonos`, `ID_LIKE="atlasos fedora"`, `HOME_URL=https://telamon.eterneon.net`,
+`DEFAULT_HOSTNAME=telamon`, `LOGO=telamon`), the packages (`telamon-*`, with
+`Obsoletes:` and `Provides:` of `atlas-*`), `/usr/libexec/telamon`,
+`/usr/share/telamon` (`telamon.just`, `image-age.jq`, the NVIDIA module key),
+`/etc/telamon` (setup markers), `/etc/xdg/telamonrc`,
+`/etc/xdg/telamon-launcher/pinned.list`, the `telamon` command (`atlas` is a
+link to it), the Global Themes `org.telamon.desktop` and
+`org.telamon.dark.desktop`, the colour schemes `TelamonLight` and `TelamonDark`,
+the Kvantum themes `Telamon`, `TelamonDark`, `TelamonSolid` and
+`TelamonDarkSolid`, the Aurorae themes `Telamon-Light` and `Telamon-Dark`, the
+Plasma style `telamon`, the plasmoids `org.telamon.menu`, `.appmenu` and
+`.dockseparator`, the icon `telamon`, the wallpapers `Telamon` and
+`Telamon-Login`, the Plymouth theme `telamon`, the Ghostty themes
+`Telamon Light` and `Telamon Dark`, the firewall zone `Telamon`, and the desktop
+IDs of the apps (`net.eterneon.telamon.*`) in the default apps, the launcher's
+pins and the dock's layout. The apps are built from the contexts
+`telamon-<app>`, and the image's labels are `net.eterneon.telamon.<app>.revision`
+and `org.telamon.base-image` / `org.telamon.built`.
+
+**Kept, because renaming would reset what a user chose or touch security
+policy, and nothing outside the image reads the name:**
+the systemd units (`atlasos-update-stage.timer`, `atlasos-pin.socket`,
+`atlasos-kconf-update.service`, ...: a timer a user turned off must stay off),
+the kconf_update and Plasma update scripts' file names and `Id`s
+(`atlasos.upd`, `atlasos-2026*`: a new name would run them again for everyone),
+the PIN's PAM module (`pam_atlasos_pin`), authselect profile (`custom/atlasos`),
+SELinux modules and types (`atlasos_pin`, `atlasos_bootc`), polkit action ids
+(`org.atlasos.pin.manage`, `org.atlasos.nvidia.enroll-key`), and the state
+directories `/var/lib/atlasos` (PIN hashes, bad digests) and `/run/atlasos`
+(the telamon-framework crates read the same path), the greenboot script names,
+the GRUB markers in `/boot/grub2/custom.cfg`, and `~/.local/state/atlasos` (the
+"already asked" markers). The module signing certificate still says "AtlasOS
+module signing": a new name needs a new key and every NVIDIA user enrolling it
+again, so that is a decision for later. The VM test scripts keep their
+`build/atlasos.qcow2` and domain names.
+
+**Kept for one release, as hidden aliases** (the apps move to the new names
+one by one, and what a user's files name has to resolve meanwhile):
+`AtlasOSLight.colors` and `AtlasOSDark.colors`, the Aurorae themes
+`AtlasOS-Light` and `AtlasOS-Dark`, the Global Themes `org.atlasos.desktop` and
+`org.atlasos.dark.desktop` (their name says "(old name)"), the plasmoids
+`org.atlasos.menu`, `.appmenu` and `.dockseparator` (`NoDisplay`), the icon
+`atlasos`, the Ghostty themes `AtlasOS Light` and `AtlasOS Dark`, the firewall
+zone `AtlasOS`, the commands `atlas`, `/usr/bin/atlasos-screenshot` and the
+other old binaries (the packages' own links), the label `org.atlasos.base-image`
+(the VPS runner's cleanup looks for it) and `org.atlasos.built`. `build.sh`
+makes the copies from the new ones, so they can't differ. Remove them, the
+Obsoletes and the apps' own links together, in the release after this one.
+
+### What happens to an existing user
+
+`system_files/usr/share/kconf_update/telamon-20261007-rename.sh` (the first
+`Id` of `atlasos.upd`) runs once per user at the next Plasma login, before
+KWin, the shell and `kded6` read their settings. It rewrites, in
+`kdeglobals`, `kdedefaults/*`, `kwinrc`, `plasmarc`, `ksplashrc`,
+`kscreenlockerrc`, `plasma-org.kde.plasma.desktop-appletsrc`, `mimeapps.list`
+and Kvantum's `kvantum.kvconfig`: the Global Theme, the colour scheme, the
+window decoration, the Plasma style (`name=atlasos`), the Kvantum theme, the
+wallpaper paths, the plasmoid ids of the panels (`plugin=`), and every
+`net.eterneon.atlas.<app>.desktop` (the dock's `launchers=`, the default apps).
+It also changes the theme line of Ghostty's config, gives an autostart
+override of a renamed app its new name, and renames the groups of
+`kglobalshortcutsrc` (a shortcut the user changed for Monitor, Screenshot or the
+menu bar toggle) unless the new group already exists. It does not touch
+`AtlasOSHighContrast*`, which Settings and Setup make. Every file it changes is
+copied first to `~/.local/state/telamon/migrated-from-atlasos/`, which is how
+to go back to an image from before the rename (the new names mean nothing
+to it): copy the files back into `~/.config`. `kvantum-sync` accepts the old
+Kvantum names as well and reads `atlasrc` until there is a `telamonrc`.
+
+The Launcher's package installs its own Plasma update script,
+`telamon-20261007-launcher-button.js`, which swaps the dock button in the
+panels of users who never had this migration run; after it, that script finds
+nothing to do.
+
+Test it with a throwaway `HOME` in a container (the image has
+`kconf_update`): seed `~/.config` with an AtlasOS-era `kdeglobals`, Kvantum
+config and appletsrc, run `/usr/libexec/kf6/kconf_update
+/usr/share/kconf_update/atlasos.upd`, and diff.
+
+### The two image names
+
+Installed computers follow `ghcr.io/eternalcoder454/atlasos:<channel>` (or
+`atlasos-nvidia`), and their Updater's driver switch names the same. Every
+build is therefore pushed and signed under both names, the same digest;
+`promote-stable.yml` promotes both. The image accepts both under the same key
+(`policy.json`, `registries.d`, `update-stage`). Moving installed computers to
+`telamonos` is a later step (the Updater's, with a signed origin), and only
+after they have booted an image that has the `telamonos` entries in
+`policy.json`: on an older image the new name matches no entry and its default
+accepts anything, so the pull wouldn't check the signature. Until then nothing
+needs to change on them. The
+ISOs and `/dl/*.json` keep their file names (`atlasos-44.*.iso`,
+`atlasos.json`, `atlasos-nvidia.json`): the website reads them.
 
 ## Switching an existing Fedora Atomic install
 
 ```sh
-sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
+sudo bootc switch ghcr.io/eternalcoder454/telamonos:latest
 ```
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `Containerfile` | The image: stages for branding, the Atlas apps, the patched KIO and the restyled wizard (RPMs), then Kinoite plus the scripts below, one build step each so a change reruns only its step and those after it |
+| `Containerfile` | The image: stages for branding, the Telamon apps, the patched KIO and the restyled wizard (RPMs), then Kinoite plus the scripts below, one build step each so a change reruns only its step and those after it |
 | `build_files/packages.sh` | Package removals and additions, the patched KIO and wizard, greenboot |
-| `build_files/apps.sh` | The Atlas apps |
+| `build_files/apps.sh` | The Telamon apps |
 | `build_files/build.sh` | Services, settings, branding, initramfs |
 | `build_files/version.sh` | The image's version in os-release (last: it changes daily) |
 | `build_files/kio/` | The KIO crash fix: rebuilds Fedora's `kf6-kio` with one patch |
 | `build_files/drop-build-deps.sh` | Runs a builder stage's build, then removes its build dependencies |
-| `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `atlasos-nvidia` image |
+| `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `telamonos-nvidia` image (and `atlasos-nvidia`) |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |
 | `system_files/` | Files copied as-is into the image (`/etc`, `/usr`), including the two Global Themes, their colour schemes, the menu bar and dock layout and the launcher |
-| `branding/source/` | The AtlasOS logo SVGs (copies, never edited) |
+| `branding/source/` | The Telamon OS logo SVGs (copies, never edited) |
 | `branding/cursors/` | Bibata cursors, as a tarball with its license |
 | `branding/wallpaper.jpg`, `wallpaper-dark.jpg` | The wallpaper and its night picture for Dark, 4K copies of the originals; the light one also blurred for the login screen |
 | `branding/render.sh` | Renders icons, splash images and wallpapers (plain and blurred) at build time |
@@ -737,24 +839,24 @@ sudo bootc switch ghcr.io/eternalcoder454/atlasos:latest
 | `.github/workflows/build.yml` | Builds, rechunks, pushes and signs testing and beta |
 | `.github/workflows/promote-stable.yml` | Weekly: testing becomes stable, then tag and release |
 | `scripts/release-notes.sh` | Writes a stable release's notes from the git log |
-| `scripts/plasma-style.py` | Writes the AtlasOS Plasma style's SVGs (dock tasks, panels, popups, tooltips, buttons, fields, sliders, switches, scrollbars, tabs, items) |
+| `scripts/plasma-style.py` | Writes the Telamon OS Plasma style's SVGs (dock tasks, panels, popups, tooltips, buttons, fields, sliders, switches, scrollbars, tabs, items) |
 
 ## Building and testing locally
 
 Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
-The Atlas apps' shared base, atlas-framework (Atlas.Ui and its fonts), and the
-Atlas apps (Atlas Updater with atlas-system-helper, Atlas Monitor, Atlas
-Notepad, Atlas Settings, Atlas Wizard, Atlas Explorer (Files, the default file manager), Atlas Archive (replaces Ark), Atlas Launcher (replaces Andromeda), AtlasOS Screenshot (Meta+Shift+S; Spectacle keeps Print), Atlas Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
-named build context: `atlas-framework`, `atlas-updater`, `atlas-monitor`, `atlas-notepad`,
-`atlas-settings`, `atlas-wizard`, `atlas-store`, `atlas-explorer`, `atlas-archive`, `atlas-launcher`, `atlasos-screenshot` and `atlas-installer` (no RPM: its `firstboot/` is bound into the
-`apps.sh` step, which runs `install.sh`). atlas-framework's `framework` stage makes the RPMs; the app
-stages build against them (`ATLAS_LOCAL_RPMS`), and `apps.sh` installs them
-before the apps. Atlas.Ui changes go there, never into an app.
+The Telamon apps' shared base, telamon-framework (Telamon.Ui and its fonts), and the
+Telamon apps (Telamon Updater with telamon-system-helper, Telamon Monitor, Telamon
+Notepad, Telamon Settings, Telamon Setup, Telamon Explorer (Files, the default file manager), Telamon Archive (replaces Ark), Telamon Launcher (replaces Andromeda), Telamon Screenshot (Meta+Shift+S; Spectacle keeps Print), Telamon Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
+named build context: `telamon-framework`, `telamon-updater`, `telamon-monitor`, `telamon-notepad`,
+`telamon-settings`, `telamon-wizard`, `telamon-store`, `telamon-explorer`, `telamon-archive`, `telamon-launcher`, `telamon-screenshot` and `telamon-installer` (no RPM: its `firstboot/` is bound into the
+`apps.sh` step, which runs `install.sh`). telamon-framework's `framework` stage makes the RPMs; the app
+stages build against them (`TELAMON_LOCAL_RPMS`), and `apps.sh` installs them
+before the apps. Telamon.Ui changes go there, never into an app.
 
 ### App pins
 
-Which commit of each goes in the image is pinned in `atlas-apps.lock`, one
+Which commit of each goes in the image is pinned in `telamon-apps.lock`, one
 line per app: name, repository, the full commit, and its release tag when it
 has one. An app's new version reaches the image only through a commit here
 that moves its pin, never because its main branch moved, so a new app or
@@ -763,9 +865,9 @@ exactly what it holds.
 
 - `just build` fetches each pinned commit into `build/pinned/<name>` (reused
   while it still is the pin) and builds from there. To build a local checkout
-  instead while working on an app, point `ATLAS_FRAMEWORK_SRC`,
-  `ATLAS_UPDATER_SRC`, `ATLAS_MONITOR_SRC`, `ATLAS_NOTEPAD_SRC`, `ATLAS_SETTINGS_SRC`, `ATLAS_WIZARD_SRC`, `ATLAS_STORE_SRC`, `ATLAS_EXPLORER_SRC`, `ATLAS_ARCHIVE_SRC`, `ATLAS_LAUNCHER_SRC`, `ATLAS_SCREENSHOT_SRC` or `ATLAS_INSTALLER_SRC` at it.
-- Each build records the commits in the `net.eterneon.atlas.<name>.revision`
+  instead while working on an app, point `TELAMON_FRAMEWORK_SRC`,
+  `TELAMON_UPDATER_SRC`, `TELAMON_MONITOR_SRC`, `TELAMON_NOTEPAD_SRC`, `TELAMON_SETTINGS_SRC`, `TELAMON_WIZARD_SRC`, `TELAMON_STORE_SRC`, `TELAMON_EXPLORER_SRC`, `TELAMON_ARCHIVE_SRC`, `TELAMON_LAUNCHER_SRC`, `TELAMON_SCREENSHOT_SRC` or `TELAMON_INSTALLER_SRC` at it.
+- Each build records the commits in the `net.eterneon.telamon.<name>.revision`
   labels, so a build from a local checkout can't pass for a pinned one.
 - `just pins` lists the pins and checks each: it must be on its repository's
   default branch (a commit that only exists in a fork can still be fetched
@@ -773,37 +875,38 @@ exactly what it holds.
 - `just pins-update [name]` moves pins forward to each app's newest release
   (or its main branch's head for an app with no releases), lists the commits
   each brings, and refuses to move a pin back or sideways. Build, VM-test and
-  commit `atlas-apps.lock` after.
-- The "Update Atlas app pins" workflow does the same daily on the
+  commit `telamon-apps.lock` after.
+- The "Update Telamon app pins" workflow does the same daily on the
   `pins/update` branch and opens a pull request with the commit lists; its
   test build runs from there. Merging it is what puts the new apps in
   `testing`. It needs an `ATLAS_PINS_TOKEN` secret or the "Allow GitHub
   Actions to create and approve pull requests" setting (see the workflow).
-- `scripts/atlas-pins.py` does the work; `set --force` exists only for an
+- `scripts/telamon-pins.py` does the work; `set --force` exists only for an
   app that rewrote its history so the old pin is gone.
 
 | Command | Does |
 |---|---|
-| `just build` | Build `localhost/atlasos:latest` with rootless Podman |
-| `just pins` | List the Atlas app pins and check them |
+| `just build` | Build `localhost/telamonos:latest` with rootless Podman |
+| `just pins` | List the Telamon app pins and check them |
 | `just pins-update [name]` | Move the pins forward to each app's newest version |
-| `just build-nvidia` | Build `localhost/atlasos-nvidia:latest` on top of it (needs the module signing key) |
+| `just build-nvidia` | Build `localhost/telamonos-nvidia:latest` on top of it (needs the module signing key) |
 | `just qcow2` | VM disk `build/atlasos.qcow2` (bootc-image-builder; **sudo**) |
-| `just iso` | Live installer ISO `build/atlasos.iso` of the published `:stable`, made with AtlasOS Installer (see below) |
+| `just iso` | Live installer ISO `build/atlasos.iso` of the published `:stable`, made with Telamon Installer (see below) |
 | `just iso-local` | The same from the local `just build` |
 | `just iso-anaconda` | The old Anaconda installer ISO `build/atlasos.iso` (bootc-image-builder; **sudo**) |
 | `just vm` | Boot the qcow2 in libvirt: UEFI, serial console |
 | `just vm-stop` | Stop it |
 | `just vm-update` | Without sudo: the qcow2 updated to the latest `just build`, as `build/vm/updated/atlasos-latest.qcow2` |
-| `just mem [disk]` | Stock Kinoite vs AtlasOS memory and services, 8 GB VMs |
+| `just mem [disk]` | Stock Kinoite vs Telamon OS memory and services, 8 GB VMs |
 | `just check` | Lint the Justfile and scripts |
 | `just sbom [tag] [dir]` | SBOM and vulnerability report of the built image into `build/sbom` (syft, grype) |
 
-`just iso` runs `iso/make-iso.sh` from the AtlasOS Installer repository,
-`../AtlasOS Installer` or `$ATLAS_INSTALLER_SRC`, without root. It builds
+`just iso` runs `iso/make-iso.sh` from the Telamon Installer repository,
+`../AtlasOS Installer` (the folder's name until the repositories are
+renamed) or `$TELAMON_INSTALLER_SRC`, without root. It builds
 the installer in that repository's dev container and boots into it
 full-screen. Give it a tag and a name to change the image, such as
-`just iso latest atlasos-nvidia`. The image goes on the ISO, and is
+`just iso latest atlasos-nvidia` (the ISO's image names are the old ones for now). The image goes on the ISO, and is
 installed, as `ghcr.io/eternalcoder454/<name>:stable`, which the installed
 system then follows. A published image is embedded with ghcr.io's own
 layers, so the first update downloads only what changed; a `just iso-local`
@@ -840,25 +943,25 @@ and pull requests (build only), daily, and by hand. Builds of `main` and tags
 run on the self-hosted runner on the VPS while it is online, everything else
 on GitHub's runners; [CI.md](CI.md) has the routing, the caches and build
 times, and [ci/vps-runner](ci/vps-runner/README.md) the runner's setup. It checks out the
-commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
-`scripts/atlas-pins.py verify`: `EternalCoder454/atlas-framework` as the
-`atlas-framework` build context (if private, with a token in the
+commits pinned in `telamon-apps.lock` (see [App pins](#app-pins)), after
+`scripts/telamon-pins.py verify`: `EternalCoder454/atlas-framework` as the
+`telamon-framework` build context (if private, with a token in the
 `ATLAS_FRAMEWORK_TOKEN` secret), `EternalCoder454/atlasos-updater` as the
-`atlas-updater` one (if private, with a token in `ATLAS_UPDATER_TOKEN`),
-`EternalCoder454/atlasos-monitor` as `atlas-monitor`, and
-`EternalCoder454/atlasos-notepad` as `atlas-notepad`,
-`EternalCoder454/atlasos-settings` as `atlas-settings`, and
-`EternalCoder454/atlasos-wizard` as `atlas-wizard`,
-`EternalCoder454/atlasos-store` as `atlas-store`,
-`EternalCoder454/atlasos-explorer` as `atlas-explorer`,
-`EternalCoder454/atlasos-archive` as `atlas-archive`,
-`EternalCoder454/atlasos-launcher` as `atlas-launcher`, and
-`EternalCoder454/atlasos-installer` as `atlas-installer`.
+`telamon-updater` one (if private, with a token in `ATLAS_UPDATER_TOKEN`),
+`EternalCoder454/atlasos-monitor` as `telamon-monitor`, and
+`EternalCoder454/atlasos-notepad` as `telamon-notepad`,
+`EternalCoder454/atlasos-settings` as `telamon-settings`, and
+`EternalCoder454/atlasos-wizard` as `telamon-wizard`,
+`EternalCoder454/atlasos-store` as `telamon-store`,
+`EternalCoder454/atlasos-explorer` as `telamon-explorer`,
+`EternalCoder454/atlasos-archive` as `telamon-archive`,
+`EternalCoder454/atlasos-launcher` as `telamon-launcher`, and
+`EternalCoder454/atlasos-installer` as `telamon-installer`.
 
 - `main` publishes `testing`; `beta` publishes `beta`.
 - The daily run rebuilds `main` only (GitHub runs schedules on the default
   branch), and skips the build when the published `testing` image already has
-  this commit, the same Atlas app commits and the current Kinoite digest.
+  this commit, the same Telamon app commits and the current Kinoite digest.
   GitHub pauses schedules in repos with no activity for 60 days.
 - `promote-stable.yml` runs weekly (Saturday) and by hand: `skopeo copy --all`
   of the `testing` image, by digest, to `stable`, `latest`, `44` and
@@ -886,15 +989,15 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 - Images are signed with cosign. The private key is `secrets/cosign.key`
   here (gitignored, no password) and the `SIGNING_SECRET` repository secret
   in CI; the public half is `cosign.pub`, which the image ships as
-  `/etc/pki/containers/atlasos.pub`. With `cosign.pub` in the repo, a push
+  `/etc/pki/containers/telamon.pub`. With `cosign.pub` in the repo, a push
   build fails before pushing when the secret is empty or holds a key that
   isn't `cosign.pub`'s, and after signing CI verifies the signature against
   `cosign.pub` once more. A
   signature belongs to a digest, so one signature covers every tag of a
   promoted image; the promote workflow signs it again.
-- The image accepts `ghcr.io/eternalcoder454/atlasos` and `atlasos-nvidia`
-  only with that signature (`/etc/containers/policy.json`, written by
-  build.sh, and `/etc/containers/registries.d/atlasos.yaml`); bootc,
+- The image accepts `ghcr.io/eternalcoder454/telamonos`, `telamonos-nvidia`
+  and the old `atlasos` and `atlasos-nvidia` only with that signature (`/etc/containers/policy.json`, written by
+  build.sh, and `/etc/containers/registries.d/telamon.yaml`, key `/etc/pki/containers/telamon.pub`); bootc,
   rpm-ostree and Podman all check it, from the first signed image an install
   runs, even with an `ostree-unverified-registry` origin (VM-checked: a
   plain `bootc upgrade` refused a bad signature). `update-stage` then records
@@ -918,8 +1021,8 @@ commits pinned in `atlas-apps.lock` (see [App pins](#app-pins)), after
 
 Rounded-square caption buttons (26 px, 7 px corners, 10 px apart, tinted at rest,
 accent on hover, red close) come from two Aurorae themes,
-`system_files/usr/share/aurorae/themes/AtlasOS-Light` and `AtlasOS-Dark`
-(theme ids `__aurorae__svg__AtlasOS-Light` / `-Dark`, `library=org.kde.kwin.aurorae`),
+`system_files/usr/share/aurorae/themes/Telamon-Light` and `Telamon-Dark`
+(theme ids `__aurorae__svg__Telamon-Light` / `-Dark`, `library=org.kde.kwin.aurorae`),
 selected in `/etc/xdg/kwinrc` and each look-and-feel's `defaults`. The files are
 generated: change sizes or colours in `scripts/gen-aurorae-themes.py`, run it, and
 commit the output. Title bar colours are the schemes' `[Colors:Header]` colours.
@@ -930,34 +1033,34 @@ commit the output. Title bar colours are the schemes' `[Colors:Header]` colours.
 Qt and KDE apps (Dolphin, System Settings, Discover...) use the Kvantum widget
 style (`widgetStyle=kvantum`: `/etc/xdg/kdeglobals`, the look-and-feel
 `defaults`, and `atlasos-20261003-kvantum.sh` for users still on Breeze) with
-the AtlasOS themes in `system_files/usr/share/Kvantum/`: `AtlasOS`,
-`AtlasOSDark`, and `AtlasOSSolid` / `AtlasOSDarkSolid` (no translucency or
-blur). The look is Atlas.Ui 1.4.0's: 4 px corners on buttons, fields,
+the Telamon OS themes in `system_files/usr/share/Kvantum/`: `Telamon OS`,
+`TelamonDark`, and `TelamonSolid` / `TelamonDarkSolid` (no translucency or
+blur). The look is Telamon.Ui 1.4.0's: 4 px corners on buttons, fields,
 tool buttons and selections (6 px while a button is pressed), 6 px cards, menus
 and tooltips, grey hover and press, an accent cell for the selected tab; no
 pills. The themes live in `/usr`, so an image update changes them for every
 user and apps pick them up when restarted: no kconf_update is needed. The `opaque=` list in each `.kvconfig` keeps browsers, video players,
-editors, games, terminals and the Atlas apps opaque.
+editors, games, terminals and the Telamon apps opaque.
 
 The themes are generated: edit colours and sizes in
-`scripts/gen-kvantum-themes.py` (colours come from the AtlasOS colour schemes),
+`scripts/gen-kvantum-themes.py` (colours come from the Telamon OS colour schemes),
 run `python3 scripts/gen-kvantum-themes.py`, commit the output. Splitters stay
 2 px wide, near Breeze's 1 px: Dolphin's floating status bar cuts its text off
 under a wider splitter (its width sum assumes Breeze's).
 
-`/usr/libexec/atlasos/kvantum-sync` writes `theme=` in
+`/usr/libexec/telamon/kvantum-sync` writes `theme=` in
 `~/.config/Kvantum/kvantum.kvconfig`: Dark when the `ColorScheme` in kdeglobals
 contains "Dark" (read like the session does: `~/.config/kdeglobals`, then
 `~/.config/kdedefaults/kdeglobals`, where applying a Global Theme puts it, then
-`/etc/xdg`), Solid when `atlasrc` `[Appearance] Transparency` is false (the
-switch the Atlas apps use). It leaves a Kvantum theme the user picked that
+`/etc/xdg`), Solid when `telamonrc` `[Appearance] Transparency` is false (the
+switch the Telamon apps use). It leaves a Kvantum theme the user picked that
 isn't one of ours alone. The user units `atlasos-kvantum-sync.service` and
 `.path` (both enabled globally) run it at login and on any save directly in
 `~/.config` or `~/.config/kdedefaults`. The path unit watches the folders, not
 the files: KConfig saves by renaming a new file over the old one, and a
 `PathChanged=` on the file misses some of those saves. Started by the
 path unit, kvantum-sync first checks a stamp in `$XDG_RUNTIME_DIR` and stops
-unless kdeglobals, kdedefaults/kdeglobals or atlasrc was saved since its last
+unless kdeglobals, kdedefaults/kdeglobals or telamonrc was saved since its last
 read (other apps' saves cost only that check); then it waits a second for a
 theme switch's burst of saves to settle, and reads again (twice at most) if
 one landed while it ran, since that starts nothing new. Running apps keep their style until restarted.

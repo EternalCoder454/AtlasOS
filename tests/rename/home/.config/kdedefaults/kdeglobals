@@ -1,0 +1,8 @@
+[General]
+ColorScheme=AtlasOSDark
+
+[KDE]
+LookAndFeelPackage=org.atlasos.dark.desktop
+
+[Icons]
+Theme=Papirus-Dark

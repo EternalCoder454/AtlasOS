@@ -1,0 +1,11 @@
+[General]
+ColorScheme=AtlasOSDark
+TerminalApplication=ghostty --gtk-single-instance=false
+accentColorFromWallpaper=false
+
+[Icons]
+Theme=Papirus-Dark
+
+[KDE]
+LookAndFeelPackage=org.atlasos.dark.desktop
+widgetStyle=kvantum

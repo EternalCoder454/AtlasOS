@@ -1,0 +1,3 @@
+theme = light:AtlasOS Light,dark:AtlasOS Dark
+font-family = JetBrains Mono
+# keep: AtlasOS Dark stays in a comment about the font

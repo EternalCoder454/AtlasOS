@@ -1,0 +1,23 @@
+[kwin]
+Window Close=Alt+F4,Alt+F4,Close Window
+
+[net.eterneon.atlas.monitor.desktop]
+_k_friendly_name=Atlas Monitor
+_launch=Ctrl+Alt+M,Ctrl+Shift+Esc,Atlas Monitor
+
+[net.eterneon.atlas.screenshot.desktop]
+_k_friendly_name=AtlasOS Screenshot
+_launch=Meta+Alt+S,Meta+Shift+S,AtlasOS Screenshot
+
+[net.eterneon.telamon.notepad.desktop]
+_launch=Ctrl+Alt+N,none,Telamon Notepad
+
+[net.eterneon.atlas.notepad.desktop]
+_launch=Ctrl+Alt+P,none,Atlas Notepad
+
+[org.atlasos.menubar-toggle.desktop]
+_k_friendly_name=Show menu bar
+_launch=Meta+N,Meta+M,Show menu bar
+
+[services][org.kde.dolphin.desktop]
+_launch=none

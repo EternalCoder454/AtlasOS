@@ -1,6 +1,6 @@
 # Updates report
 
-The update system and Atlas Updater: background staging, the Atlas Updater
+The update system and Telamon Updater: background staging, the Telamon Updater
 app, channels, going back, boot health checks with automatic rollback, and
 opt-in crash reports. How each part works is in the README ("Updates",
 "Boot health checks and rollback"); this report says what was tested.
@@ -23,18 +23,18 @@ it is reasoned from documentation or code, not tested.
 
 | Tag | Version | What it adds |
 |---|---|---|
-| `update-e` | 44.20261020 | Atlas Updater restart fix |
+| `update-e` | 44.20261020 | Telamon Updater restart fix |
 | `update-f` | 44.20261021 | KCalc and a `[WM]` title bar colour (no visible effect, see below) |
 | `update-g` | 44.20261022 | KCalc and a purple `[Colors:Header]` title bar (`tests/update/b`) |
-| `update-h` | 44.20261023 | Atlas Updater fixes (banners, channel, accessibility) |
-| `update-i` | 44.20261024 | Atlas Updater fixes (keyboard focus, crash report screens) |
-| `update-j` | 44.20261025 | the stale check-result fix (stager and Atlas Updater) |
+| `update-h` | 44.20261023 | Telamon Updater fixes (banners, channel, accessibility) |
+| `update-i` | 44.20261024 | Telamon Updater fixes (keyboard focus, crash report screens) |
+| `update-j` | 44.20261025 | the stale check-result fix (stager and Telamon Updater) |
 | `update-k`, `update-l` | 44.20261026, 44.20261027 | J with only a newer version label |
-| `update-m` | 44.20261028 | the bad-update warning in Atlas Updater |
-| `update-n` | 44.20261030 | Atlas Updater scheduled restart, Flatpak updates, history |
+| `update-m` | 44.20261028 | the bad-update warning in Telamon Updater |
+| `update-n` | 44.20261030 | Telamon Updater scheduled restart, Flatpak updates, history |
 | `update-o-kconf` | 44.20261032 | the kconf_update fix, the plural fix, and a test settings update (`tests/update/kconf`) |
 | `update-p` | 44.20261033 | O with only a newer version label |
-| `update-q` | 44.20261034 | Atlas Updater wording in KDE's style |
+| `update-q` | 44.20261034 | Telamon Updater wording in KDE's style |
 | `broken` | 44.20261099-broken | a greeter and a plasmashell that exit at once (`tests/update/broken`), built on I and again on J |
 
 ## Results
@@ -46,11 +46,11 @@ it is reasoned from documentation or code, not tested.
   (`MemoryPeak`) for E; **995 MB** for the first broken image (one new 152 kB
   layer) and **751 MB** for the rebuilt one (one new 585 kB layer, staged in
   25 s). Most of the cost is the ostree deploy, not the download.
-- Evidence: Atlas Updater found F, G, H and I, showed their release notes,
+- Evidence: Telamon Updater found F, G, H and I, showed their release notes,
   downloaded and staged them, and **Restart to update** restarted into each.
   Each new boot reached `boot_success=1`.
 - Evidence: the updater updates itself. It is part of the image, so each new
-  image brought the new Atlas Updater (H's and I's fixes were tested on the
+  image brought the new Telamon Updater (H's and I's fixes were tested on the
   versions they installed).
 - Evidence: a restart Plasma doesn't confirm is reported on the Updates page,
   or with a notification when the window is closed. The earlier panic in
@@ -65,7 +65,7 @@ it is reasoned from documentation or code, not tested.
   cleared the schedule. The same on O into P (18:38).
 - Evidence (background staging, N): with no window open the stager staged O
   in 35 s and exited without restarting; `MemoryPeak` **1.8 GB**. The tray
-  process then sent "Update ready" with **Open Atlas Updater** and **Restart
+  process then sent "Update ready" with **Open Telamon Updater** and **Restart
   to update**, once for that digest.
 
 ### Release notes, apps and history
@@ -84,7 +84,7 @@ it is reasoned from documentation or code, not tested.
 ### What a user sees change
 
 - Evidence: after updating to G, KCalc is in the launcher and the active
-  window's title bar is AtlasOS purple; the inactive one keeps the light
+  window's title bar is Telamon OS purple; the inactive one keeps the light
   scheme's colour.
 - Evidence (the KWin finding): KWin colours title bars from the colour
   scheme's `[Colors:Header]` group. `[WM]` (`activeBackground`) is only read
@@ -126,12 +126,12 @@ it is reasoned from documentation or code, not tested.
   once, rather than the booted image, which changes at the restart).
 
 - Evidence (ghcr.io, 2026-10-02): the first stable release. `build.yml`
-  (workflow_dispatch, AtlasOS 5271896, Atlas Updater 4a9e9a1) pushed
+  (workflow_dispatch, Telamon OS 5271896, Telamon Updater 4a9e9a1) pushed
   `testing` and `testing-44.20261002`; `promote-stable.yml` copied that digest
   (`sha256:3c350ac1…`) to `stable`, `latest`, `44` and `44.20261002`, tagged
   `44.20261002` on 5271896 and published the GitHub release, which the release
-  notes URL Atlas Updater uses returns. A VM switched to
-  `ghcr.io/eternalcoder454/atlasos:stable` booted it; Atlas Updater's check
+  notes URL Telamon Updater uses returns. A VM switched to
+  `ghcr.io/eternalcoder454/atlasos:stable` booted it; Telamon Updater's check
   against the registry said it was up to date. Switching to testing in the app
   (admin password) staged `ghcr.io/eternalcoder454/atlasos:testing`, and after
   the restart the VM booted it with Testing shown as the channel.
@@ -176,7 +176,7 @@ deletes waiting ones.
 bootc records an `upgrade --check` result as the `cachedUpdate` of the commit
 the image's ostree ref points to: the image pulled last. After a rollback that
 is the rollback entry, and the booted entry keeps a stale `cachedUpdate` from
-an older check (bootc 1.16.13). Up to image I the stager and Atlas Updater read
+an older check (bootc 1.16.13). Up to image I the stager and Telamon Updater read
 the booted entry's, so after a rollback they skipped newer images, or went
 ahead with a bad one. From J both take the result of the entry whose commit
 is the ref's head (`/ostree/repo/refs/heads/ostree/container/image`, readable
@@ -192,16 +192,16 @@ without root), or that entry's own image when it has none.
 - Evidence (J, going back): J staged K by itself and booted it; **Go back**
   (`bootc rollback`) returned to J, and L was published. Booted J's
   `cachedUpdate` was K (stale, the rollback image), the rollback entry held L.
-  Atlas Updater showed "AtlasOS 44.20261027 is available", and the stager
+  Telamon Updater showed "Telamon OS 44.20261027 is available", and the stager
   staged L.
 - Evidence (J, greenboot): the broken image built on J failed four boots and
   was rolled back to J 14 minutes after the restart. Booted J's stale
   `cachedUpdate` was again K; the stager skipped: "is the version this machine
   went back from".
 
-### A bad update in Atlas Updater (image M)
+### A bad update in Telamon Updater (image M)
 
-From M, Atlas Updater reads `bad-image-digests` too (without root, next to
+From M, Telamon Updater reads `bad-image-digests` too (without root, next to
 the ref heads). An update with a listed digest isn't offered as a normal one:
 the Updates page says "Version X didn't start properly", with a warning icon
 and only "Download anyway", behind a confirmation. When the bad image is the
@@ -210,10 +210,10 @@ the usual button, also behind a confirmation. The digest leaves the list once
 that image boots healthy (green.d), and the warning with it.
 
 - Evidence (M, 2026-10-02): before the failure, "Check for updates" offered the
-  broken image (44.20261029, built on M) as "AtlasOS 44.20261029 is
+  broken image (44.20261029, built on M) as "Telamon OS 44.20261029 is
   available" with "Download update". After `bootc upgrade` and a restart it
   failed four boots, and greenboot rolled back to M about 14 minutes later; its
-  digest was in `bad-image-digests`. Atlas Updater then showed "Version
+  digest was in `bad-image-digests`. Telamon Updater then showed "Version
   44.20261029 didn't start properly", still after another check, and
   "Download anyway" opened "Download 44.20261029 anyway?". The Go back page
   showed "The previous version didn't start properly" with "Go back anyway"
@@ -224,11 +224,11 @@ that image boots healthy (green.d), and the warning with it.
 | | |
 |---|---|
 | Stager while staging (`atlasos-update-stage.service` `MemoryPeak`) | 1.3 GB (E), 1.8 GB (O) |
-| Idle, 2 minutes after login, image I (`just mem`, median of 3) | 1,059 MiB used (ps_mem 816 MiB); Atlas Updater in the tray 17.6 MiB |
+| Idle, 2 minutes after login, image I (`just mem`, median of 3) | 1,059 MiB used (ps_mem 816 MiB); Telamon Updater in the tray 17.6 MiB |
 
 ## Fixed during testing
 
-- Atlas Updater panicked on **Restart to update** (Tokio timer outside the
+- Telamon Updater panicked on **Restart to update** (Tokio timer outside the
   runtime).
 - A modal "Restart problem" dialog was replaced by the Updates page.
 - Radio rows didn't respond to the accessibility Toggle action, so a screen
@@ -242,11 +242,11 @@ that image boots healthy (green.d), and the warning with it.
 - Sent reports always highlighted Settings in the sidebar.
 - Settings said no crash server was set up after reports were turned off.
 - "Crash report sent" stayed on every page until dismissed.
-- After a rollback the stager and Atlas Updater read a stale check result
+- After a rollback the stager and Telamon Updater read a stale check result
   (see "After a rollback").
 - The broken test image only broke the greeter, so it passed on the autologin
   VM; it now breaks plasmashell too.
-- AtlasOS's settings updates (`atlasos.upd`) never ran (see "What a user sees
+- Telamon OS's settings updates (`atlasos.upd`) never ran (see "What a user sees
   change").
 - The restart warning said "Restarting in 5 minute(s)".
 - Buttons and titles were in sentence case; from image Q (44.20261034) they
@@ -256,7 +256,7 @@ that image boots healthy (green.d), and the warning with it.
 ## Known issues
 
 - If no deployment holds the image ref's commit any more (for example after
-  `rpm-ostree cleanup -r`), the stager and Atlas Updater fall back to the
+  `rpm-ostree cleanup -r`), the stager and Telamon Updater fall back to the
   booted entry's `cachedUpdate`, which can be stale (inference, from the code).
 - Installs made before the images were signed show their origin as
   `ostree-unverified-registry` until the background stager's next run
@@ -268,7 +268,7 @@ that image boots healthy (green.d), and the warning with it.
 - Without autologin the health checks only exercise the greeter, so a Plasma
   session that crashes right after login isn't caught (inference, from how the
   checks work; see the README).
-- `sudo rpm-ostree override remove atlas-updater` removes Atlas Updater (it
+- `sudo rpm-ostree override remove telamon-updater` removes Telamon Updater (it
   needs the admin password; `rpm-ostree override reset` undoes it). dnf
   refuses, the image build fails without it.
 - The stager peaks at 1.8 GB while staging, a lot on an 8 GB machine.
