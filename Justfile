@@ -183,6 +183,11 @@ build-nvidia tag="latest" *args:
 # Split the built image into up to 127 layers by package (chunkah), so an
 # update downloads only the parts that changed. CI does this before pushing;
 # local test builds don't need it.
+# Before that, build_files/layer-hints.sh runs in a throwaway copy of the
+# image: it zeroes the times left from the build and tells chunkah which files
+# belong together and how often they change (the locale archive, Telamon's own
+# files). Nothing in the image changes but times and two attributes per file.
+# `scripts/update-size.py` measures what an update then downloads.
 # With an oci directory, the result goes there (as oci:<dir>:<tag>) instead of
 # replacing the image: CI pushes it from there with skopeo, which uploads the
 # layers as compressed here, and only those the registry doesn't have.
@@ -197,7 +202,7 @@ build-nvidia tag="latest" *args:
 # zstd, not zstd:chunked, which bootc's ostree backend doesn't read reliably
 # yet. Levels above 7 took three times as long for 4% more.)
 [group('Build')]
-rechunk tag="latest" name=image_name oci="":
+rechunk tag="latest" name=image_name oci="" layers="127":
     #!/usr/bin/env bash
     set -euo pipefail
     img="localhost/{{ name }}:{{ tag }}"
@@ -214,22 +219,30 @@ rechunk tag="latest" name=image_name oci="":
     "" | . | .. | */. | */.. | *,*) echo "rechunk: no OCI directory at '{{ oci }}'" >&2; exit 1 ;;
     esac
     # chunkah's gzip copy goes when done or failed; so does the result when
-    # it only feeds the local image.
+    # it only feeds the local image, and the hinted copy of the image always.
     gz="$oci.gzip"
-    trap 'rm -rf "$gz"; [ -n "$keep" ] || rm -rf "$oci"' EXIT
+    hinted="localhost/{{ name }}-hinted:{{ tag }}"
+    trap 'rm -rf "$gz"; [ -n "$keep" ] || rm -rf "$oci"; podman rmi -f "$hinted" >/dev/null 2>&1 || true' EXIT
     rm -rf "$oci" "$gz"
     mkdir -p "$(dirname "$oci")"
     parent=$(realpath "$(dirname "$oci")")
+    # --no-cache: a RUN step's cache key doesn't include what is mounted into
+    # it, so a changed script would keep the old result.
+    printf 'FROM %s\nRUN --mount=type=bind,source=build_files/layer-hints.sh,target=/hints/layer-hints.sh --mount=type=bind,source=system_files,target=/hints/system_files bash /hints/layer-hints.sh /hints/system_files\n' "$img" |
+        podman build --quiet --no-cache --pull=never --security-opt label=disable \
+            --tag "$hinted" --file - . >/dev/null
     # The image's config (labels, command) carries over, without the base
     # image's OSTree labels, which describe a commit this image doesn't have.
-    config=$(podman image inspect "$img" | jq -c '.[0].Config')
+    config=$(podman image inspect "$hinted" | jq -c '.[0].Config')
+    # The time layers and the image are made at: the commit's, unless
+    # SOURCE_DATE_EPOCH says otherwise (reproducing an older build).
     podman run --rm --pull=missing --security-opt label=disable \
-        --mount=type=image,src="$img",target=/chunkah \
+        --mount=type=image,src="$hinted",target=/chunkah \
         --mount=type=bind,src="$parent",target=/out,rw \
         -e CHUNKAH_CONFIG_STR="$config" \
-        -e SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" \
+        -e SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}" \
         {{ chunkah }} build --rootfs /chunkah --prune /sysroot/ \
-        --max-layers 127 --compressed --compression-level 1 \
+        --max-layers {{ layers }} --compressed --compression-level 1 \
         --label ostree.commit- --label ostree.final-diffid- \
         --tag "{{ tag }}" --output "oci:/out/$(basename "$gz")"
     # (the image's entrypoint is skopeo)
