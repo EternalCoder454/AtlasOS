@@ -147,7 +147,7 @@ Why these numbers:
 
 ## Installing
 
-Download the ISO from [atlasos.eterneon.net](https://atlasos.eterneon.net/#download),
+Download the ISO from [telamon.eterneon.net](https://telamon.eterneon.net/#download),
 write it to a USB stick of 8 GB or more (Fedora Media Writer does it), and
 boot from it: the installer starts by itself. There's an NVIDIA ISO for
 GeForce GTX 16 / RTX 20 series cards and newer.
