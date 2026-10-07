@@ -73,7 +73,7 @@ OPAQUE = [
     "libreoffice", "soffice", "soffice.bin", "oosplash", "onlyoffice",
     "steam", "lutris", "heroic", "retroarch", "yuzu", "dolphin-emu",
     "ghostty", "konsole", "kitty", "alacritty",
-    "plasmashell", "kscreenlocker_greet", "ksplashqml", "spectacle",
+    "plasmashell", "kscreenlocker_greet", "ksplashqml", "telamon-screenshot-editor",
     "okular", "gwenview", "virt-manager", "qemu-system-x86_64", "remote-viewer",
 ]
 

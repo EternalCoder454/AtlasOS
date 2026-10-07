@@ -99,6 +99,24 @@ label is the Telamon OS commit the image was built from,
   tray autostart can be turned off in System Settings; background staging is
   a system timer and keeps working.
 
+- **Telamon Screenshot replaces Spectacle** (everything but screen
+  recording). `packages.sh` removes `spectacle`; `apps.sh` installs the
+  `telamon-screenshot` RPM and its `telamon-screenshot-spectacle-compat`
+  subpackage, which `Provides: spectacle`, `Conflicts: spectacle` and owns the
+  `org.kde.Spectacle` D-Bus service (`telamon-screenshot --dbus`), so what asks
+  Spectacle for a shot gets Telamon Screenshot's. Print takes a region; the
+  rest of Spectacle's shortcuts and action ids are kept (Meta+Shift+S is also
+  on the region action). The annotation editor is `telamon-screenshot-editor`
+  (Qt Quick on Telamon.Ui, so the app is built against the framework's
+  RPMs). `build.sh` gives its notifications Spectacle's Do Not Disturb
+  exemption in `/etc/xdg/plasmanotifyrc`. The Kvantum opaque list names the
+  editor where it named Spectacle. `telamon-20261008-remove-spectacle.sh`
+  (`kconf_update`, once per user) moves the shortcuts a user changed in
+  `kglobalshortcutsrc` from Spectacle's groups to Telamon Screenshot's, keeps
+  one the user already set there, drops ones still at Spectacle's defaults
+  (the new defaults then apply), and leaves the recording shortcuts behind.
+  Test it with `tests/remove-spectacle/run.sh [IMAGE]`.
+
 ## Flatpaks and Flathub
 
 Flathub is a system remote (`/usr/share/flatpak/remotes.d/flathub.flatpakrepo`)
@@ -850,7 +868,7 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Telamon apps' shared base, telamon-framework (Telamon.Ui and its fonts), and the
 Telamon apps (Telamon Updater with telamon-system-helper, Telamon Monitor, Telamon
-Notepad, Telamon Settings, Telamon Setup, Telamon Explorer (Files, the default file manager), Telamon Archive (replaces Ark), Telamon Launcher (replaces Andromeda), Telamon Screenshot (Meta+Shift+S; Spectacle keeps Print), Telamon Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
+Notepad, Telamon Settings, Telamon Setup, Telamon Explorer (Files, the default file manager), Telamon Archive (replaces Ark), Telamon Launcher (replaces Andromeda), Telamon Screenshot (Print and Meta+Shift+S; replaces Spectacle), Telamon Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
 named build context: `telamon-framework`, `telamon-updater`, `telamon-monitor`, `telamon-notepad`,
 `telamon-settings`, `telamon-wizard`, `telamon-store`, `telamon-explorer`, `telamon-archive`, `telamon-launcher`, `telamon-screenshot` and `telamon-installer` (no RPM: its `firstboot/` is bound into the
 `apps.sh` step, which runs `install.sh`). telamon-framework's `framework` stage makes the RPMs; the app

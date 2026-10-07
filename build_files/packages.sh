@@ -57,6 +57,10 @@ remove=(
 	# Ark: Telamon Archive replaces it (both ship KIO service menus)
 	ark
 	ark-libs
+	# Spectacle: Telamon Screenshot replaces it (everything but screen
+	# recording). Removed before apps.sh installs telamon-screenshot-spectacle-compat,
+	# which Conflicts with it and Provides spectacle for what asks for it.
+	spectacle
 	# KDE PIM: the Akonadi server and the MariaDB it runs on
 	akonadi-server
 	akonadi-server-mysql

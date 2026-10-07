@@ -158,15 +158,20 @@ RUN --mount=type=cache,target=/var/cache/telamon-launcher-cargo,sharing=locked \
 
 # Telamon Screenshot (Meta+Shift+S: freeze, drag, copy; Ctrl for OCR text,
 # Alt for a redacted PNG), built from the build context named
-# "telamon-screenshot". No Qt, so no framework RPMs; its build-rpm.sh tars the
-# tree it is given (no git needed). The pinned commit is labelled in
-# net.eterneon.telamon.screenshot.revision.
+# "telamon-screenshot". The capture program has no Qt; the annotation editor
+# (telamon-screenshot-editor) is Qt Quick on Telamon.Ui, so this stage builds
+# against the framework's RPMs. Its build-rpm.sh tars the tree it is given (no
+# git needed). Makes telamon-screenshot and the telamon-screenshot-spectacle-compat
+# subpackage (apps.sh installs both, packages.sh removes Spectacle first). The
+# pinned commit is labelled in net.eterneon.telamon.screenshot.revision.
 FROM registry.fedoraproject.org/fedora:44 AS screenshot-app
 COPY --from=telamon-screenshot --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/telamon-screenshot-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
     CARGO_HOME=/var/cache/telamon-screenshot-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # Telamon Explorer (Files), the file manager and its index service, built the same
