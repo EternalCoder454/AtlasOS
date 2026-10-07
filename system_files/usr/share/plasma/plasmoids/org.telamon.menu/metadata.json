@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Telamon OS"
+            }
+        ],
+        "Category": "Application Launchers",
+        "Description": "About this computer, settings, Force Quit and power, like the Apple menu",
+        "Icon": "telamon",
+        "Id": "org.telamon.menu",
+        "License": "Apache-2.0",
+        "Name": "Telamon OS Menu"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

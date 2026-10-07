@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Adds NVIDIA's driver to the AtlasOS image. Runs in Containerfile.nvidia's
+# Adds NVIDIA's driver to the Telamon OS image. Runs in Containerfile.nvidia's
 # last stage, with the signed modules from the nvidia-kmod stage at /kmod.
 set -euxo pipefail
 : >/tmp/atlasos-step-start # (see cleanup.sh, "Times")
@@ -86,16 +86,16 @@ sed -i -e 's/^VARIANT=.*/VARIANT="Desktop (NVIDIA)"/' \
 	-e 's/^IMAGE_ID=.*/IMAGE_ID=atlasos-nvidia/' /usr/lib/os-release
 grep -qx 'IMAGE_ID=atlasos-nvidia' /usr/lib/os-release
 
-for f in /usr/libexec/atlasos/nvidia-*; do [ -x "$f" ] && bash -n "$f"; done
+for f in /usr/libexec/telamon/nvidia-*; do [ -x "$f" ] && bash -n "$f"; done
 # The Secure Boot key dialog (DEV.md, "NVIDIA").
-[ -x /usr/libexec/atlasos/nvidia-enroll-key ]
-[ -x /usr/libexec/atlasos/nvidia-key-setup ]
+[ -x /usr/libexec/telamon/nvidia-enroll-key ]
+[ -x /usr/libexec/telamon/nvidia-key-setup ]
 [ -f /usr/share/polkit-1/actions/org.atlasos.nvidia.policy ]
 grep -q '<action id="org.atlasos.nvidia.enroll-key">' /usr/share/polkit-1/actions/org.atlasos.nvidia.policy
-grep -q '>/usr/libexec/atlasos/nvidia-enroll-key</annotate>' /usr/share/polkit-1/actions/org.atlasos.nvidia.policy
+grep -q '>/usr/libexec/telamon/nvidia-enroll-key</annotate>' /usr/share/polkit-1/actions/org.atlasos.nvidia.policy
 [ -f /usr/share/applications/atlasos-nvidia-key-setup.desktop ]
 [ -f /etc/xdg/autostart/atlasos-nvidia-key-setup.desktop ]
-[ -f /usr/share/atlasos/nvidia/atlasos-module-signing.der ]
+[ -f /usr/share/telamon/nvidia/telamon-module-signing.der ]
 
 rm -rf /var/cache/akmods
 /ctx/cleanup.sh

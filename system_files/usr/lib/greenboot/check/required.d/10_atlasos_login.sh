@@ -4,7 +4,7 @@
 # Runs for up to 190 s of boot time; limit 240 s.
 export hc_name=login
 # shellcheck source=/dev/null
-. /usr/libexec/atlasos/health-lib
+. /usr/libexec/telamon/health-lib
 hc_guard 240
 hc_skip_unless_plasmalogin
 hc_set_deadline 190

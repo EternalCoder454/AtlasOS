@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Turns stock Fedora Kinoite into AtlasOS, part 1 of 4: packages. Runs in the
+# Turns stock Fedora Kinoite into Telamon OS, part 1 of 4: packages. Runs in the
 # Containerfile's first RUN step on the base image, with the patched KIO
 # RPMs at /kio-rpms. Its own step, with
 # nothing else from the repository bound in, so a change to system_files,
-# branding or the Atlas apps doesn't reinstall every package: Podman reuses
+# branding or the Telamon apps doesn't reinstall every package: Podman reuses
 # this step until the base image, this script or those RPMs change, or the
 # day does (PACKAGES_DATE, so the repos' updates still arrive daily). Then
 # apps.sh, then build.sh.
@@ -54,7 +54,7 @@ vendor_repo_remove() {
 # user can see on a stock desktop is in "keep" below and checked afterwards.
 # Not here because Kinoite never had them: LibreOffice, ABRT and KDE games.
 remove=(
-	# Ark: Atlas Archive replaces it (both ship KIO service menus)
+	# Ark: Telamon Archive replaces it (both ship KIO service menus)
 	ark
 	ark-libs
 	# KDE PIM: the Akonadi server and the MariaDB it runs on
@@ -66,10 +66,10 @@ remove=(
 	# Discover's tray notifier, which checks for and applies updates in the
 	# background. Discover itself stays as the Flatpak front end.
 	plasma-discover-notifier
-	# Discover's OS updates: a second updater beside Atlas Updater. Its check
-	# (rpm-ostree's) never sees a new AtlasOS image, and its "new major
-	# version" offer rewrites the image tag (atlasos:stable to atlasos:45),
-	# which would take the machine off its channel. Atlas Updater handles the
+	# Discover's OS updates: a second updater beside Telamon Updater. Its check
+	# (rpm-ostree's) never sees a new Telamon OS image, and its "new major
+	# version" offer rewrites the image tag (telamonos:stable to telamonos:45),
+	# which would take the machine off its channel. Telamon Updater handles the
 	# OS; Discover keeps apps (Flatpak) and firmware (fwupd).
 	plasma-discover-rpm-ostree
 	# Kinoite's gdb: nothing in the image needs it, and the installer's
@@ -89,7 +89,7 @@ remove=(
 	krfb
 	krfb-libs
 	kwalletmanager5
-	# KWrite and the Kate library only it uses: Atlas Notepad is the editor.
+	# KWrite and the Kate library only it uses: Telamon Notepad is the editor.
 	kwrite
 	kate-libs
 	plasma-systemmonitor
@@ -118,7 +118,7 @@ remove=(
 	fedora-chromium-config
 	fedora-chromium-config-kde
 	# Fedora Linux's entry for Discover and other app stores (the OS itself,
-	# with its release notes link): AtlasOS is not Fedora Linux 44.
+	# with its release notes link): Telamon OS is not Fedora Linux 44.
 	fedora-appstream-metadata
 	# Left behind by the removals above, with nothing else using them:
 	# Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's
@@ -151,7 +151,7 @@ remove=(
 	# the journal, and AMD machines never ran it.
 	mcelog
 	# KDE Info Center (and System Settings' About page, which it carries):
-	# Atlas Monitor's System Info and Devices pages show the same, and the
+	# Telamon Monitor's System Info and Devices pages show the same, and the
 	# menu's About This Computer opens them. (kde-cli-tools' kinfo, which
 	# only prints what Info Center knows, says it isn't installed.)
 	kinfocenter
@@ -164,8 +164,9 @@ remove=(
 	python3-s3transfer python3-jmespath
 
 # NVIDIA's GSP firmware (about 100 MB, already xz-compressed, so it costs the
-# ISO the same) only serves nouveau on GeForce 16 / RTX 20 and newer. Atlas
-# Updater moves those machines to atlasos-nvidia, whose driver brings its own
+# ISO the same) only serves nouveau on GeForce 16 / RTX 20 and newer. Telamon
+# Updater moves those machines to atlasos-nvidia (the same image as
+# telamonos-nvidia), whose driver brings its own
 # GSP firmware, so the base image leaves it out. Older cards keep their small
 # nouveau firmware.
 # The gsp entries are directories or links to another chip's; a link left
@@ -180,16 +181,16 @@ find /usr/lib/firmware/nvidia -xtype l -delete
 "${dnf[@]}" remove tuned
 systemctl enable power-profiles-daemon.service
 
-# Fedora's logos out, the generic ones in; the AtlasOS ones go on top below.
+# Fedora's logos out, the generic ones in; the Telamon OS ones go on top below.
 "${dnf[@]}" swap fedora-logos generic-logos
 
 # IBM Plex Sans for the interface and JetBrains Mono for terminals and code
 # (fontconfig and kdeglobals in system_files make them the defaults).
 "${dnf[@]}" install ibm-plex-sans-fonts jetbrains-mono-fonts
 
-# Papirus is the icon theme: Papirus for AtlasOS Light, Papirus-Dark (a
-# separate package, mostly links into Papirus) for AtlasOS Dark. Not
-# -light: that is a variant in Breeze's colours that AtlasOS doesn't use.
+# Papirus is the icon theme: Papirus for Telamon Light, Papirus-Dark (a
+# separate package, mostly links into Papirus) for Telamon Dark. Not
+# -light: that is a variant in Breeze's colours that Telamon OS doesn't use.
 # build.sh turns its folders violet.
 "${dnf[@]}" install papirus-icon-theme papirus-icon-theme-dark
 [ -f /usr/share/icons/Papirus/index.theme ]
@@ -225,18 +226,18 @@ sed '/^\[Desktop Entry\]$/a X-KDE-Shortcuts=Ctrl+Alt+T' \
 	/usr/share/applications/com.mitchellh.ghostty.desktop \
 	>/usr/share/kglobalaccel/com.mitchellh.ghostty.desktop
 
-# Developer tools: AtlasOS is for developers. Containers (Podman with a
+# Developer tools: Telamon OS is for developers. Containers (Podman with a
 # `docker` command and compose; toolbox and distrobox for mutable dev
-# environments) and everyday command-line tools; just runs `atlas`, the
-# command menu (/usr/share/atlasos/atlas.just). gh, mise, gdb, strace and perf
+# environments) and everyday command-line tools; just runs `telamon`, the
+# command menu (/usr/share/telamon/telamon.just). gh, mise, gdb, strace and perf
 # are not preinstalled: the installer's "Choose your apps" step
-# offers them. (The text editor is Atlas Notepad, from apps.sh.) Docker CE stays out:
+# offers them. (The text editor is Telamon Notepad, from apps.sh.) Docker CE stays out:
 # podman-docker answers to `docker`, and Docker's daemon would run as root at
 # all times.
 "${dnf[@]}" install \
 	podman-compose podman-docker toolbox distrobox \
 	git jq ripgrep fd-find curl wget2-wget just
-# Kvantum is the application style (AtlasOS themes in usr/share/Kvantum): the
+# Kvantum is the application style (Telamon OS themes in usr/share/Kvantum): the
 # Qt6 style plugin and its themes, 8 MiB installed, no Qt5.
 "${dnf[@]}" install kvantum
 [ -f /usr/lib64/qt6/plugins/styles/libkvantum.so ]
@@ -250,7 +251,7 @@ leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*nvidia-contai
 	exit 1
 }
 
-# Everyday apps, native RPMs so they take the AtlasOS Kvantum style and the
+# Everyday apps, native RPMs so they take the Telamon OS Kvantum style and the
 # Papirus icons: Gwenview (images), Okular (PDFs and documents), Qalculate!
 # (the Qt calculator), Haruna (video and audio) and Camera (Plasma Camera:
 # photos and videos from the webcam, for a profile picture and the like; its
@@ -369,7 +370,7 @@ systemctl enable cups.socket
 
 # The firewall's page in System Settings (firewalld's backend for it), so a
 # port can be opened without a terminal. firewall-config, a separate app,
-# stays out. The AtlasOS zone (build.sh) is what it starts from.
+# stays out. The Telamon OS zone (build.sh) is what it starts from.
 "${dnf[@]}" install plasma-firewall-firewalld
 
 # The desktop the image promises. A removal above that took one of these with
@@ -396,7 +397,7 @@ for pkg in brave-origin brave-browser firefox gh mise gdb strace perf; do
 done
 
 # Everyday names for the everyday apps, in every language (as macOS calls
-# its file manager Finder everywhere): Terminal, Files (Atlas Explorer) and Discover. (Atlas
+# its file manager Finder everywhere): Terminal, Files (Telamon Explorer) and Discover. (Telamon
 # Notepad is called Notepad already.)
 # Only the app's own entry is renamed, not its actions; searching the old
 # name still finds it. Ghostty's shortcut copy above is renamed with it.
@@ -425,7 +426,7 @@ rename_app /usr/share/applications/org.kde.dolphin.desktop Dolphin
 rename_app /usr/share/applications/org.kde.discover.desktop Discover
 
 # Tools kept but left out of the app menu. Kvantum Manager would fight
-# kvantum-sync, which sets the theme from AtlasOS Light/Dark. Menu Editor
+# kvantum-sync, which sets the theme from Telamon Light/Dark. Menu Editor
 # can't go (plasma-desktop requires it) and stays a right-click away on the
 # launcher ("Edit Applications").
 hide_app() { # desktop file
@@ -444,7 +445,7 @@ hide_app /usr/share/applications/org.kde.kmenuedit.desktop
 
 ### KIO
 
-# Fedora's kf6-kio rebuilt with AtlasOS's fix for a crash on closing Dolphin
+# Fedora's kf6-kio rebuilt with Telamon OS's fix for a crash on closing Dolphin
 # (the kio stage of the Containerfile, bound in at /kio-rpms; see
 # kio/build-rpm.sh). Only the parts Kinoite has are updated, all to the
 # same release.
@@ -459,7 +460,7 @@ done
 [ ${#kio[@]} -gt 0 ]
 "${dnf[@]}" --disablerepo='*' upgrade "${kio[@]}"
 rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
-	echo "packages.sh: kf6-kio-core is not AtlasOS's build" >&2
+	echo "packages.sh: kf6-kio-core is not Telamon OS's build" >&2
 	exit 1
 }
 [ "$(rpm -qa --qf '%{RELEASE}\n' 'kf6-kio-*' | sort -u | wc -l)" -eq 1 ] || {
@@ -470,7 +471,7 @@ rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
 
 ### First-run wizard
 
-# Fedora's plasma-setup is not part of AtlasOS: Atlas Wizard (apps.sh) is the
+# Fedora's plasma-setup is not part of Telamon OS: Telamon Setup (apps.sh) is the
 # first-run setup. Kinoite ships it, so it goes here, and the build fails if
 # it is still there or if removing it took the desktop with it.
 if rpm -q --quiet plasma-setup; then
@@ -489,7 +490,7 @@ rpm -q plasma-workspace plasma-login-manager kwin >/dev/null
 # in /usr/lib/greenboot/check, reboots on failure, and rolls the update back
 # when the retries are used up. Not greenboot-default-health-checks: its
 # repository DNS check fails offline and would roll back good updates on
-# laptops without a network. The checks are AtlasOS's own, in system_files.
+# laptops without a network. The checks are Telamon OS's own, in system_files.
 "${dnf[@]}" install greenboot
 rpm -q greenboot
 # The health-check hooks and update-stage-condition use these.

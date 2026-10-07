@@ -77,7 +77,7 @@ def main() -> None:
         con.sudo(
             "mkdir -p /etc/plasmalogin.conf.d && "
             f"printf \"[Autologin]\\nUser={USER}\\nSession=plasma\\n\" "
-            ">/etc/plasmalogin.conf.d/zz-vmtest-autologin.conf && mkdir -p /etc/atlasos && touch /etc/atlasos/setup-done /etc/plasma-setup-done",
+            ">/etc/plasmalogin.conf.d/zz-vmtest-autologin.conf && mkdir -p /etc/telamon && touch /etc/telamon/setup-done /etc/plasma-setup-done",
             password,
         )
         power(con, password, "reboot")

@@ -1,0 +1,5 @@
+#!/bin/sh
+# `telamon`: Telamon OS's command menu, for the things the apps don't do (see
+# /usr/share/telamon/telamon.just, or run `telamon` for the list). `atlas`, its
+# name before Telamon, is a link to this file and keeps working.
+exec just --justfile /usr/share/telamon/telamon.just --working-directory "$HOME" "$@"

@@ -4,7 +4,7 @@
 #
 # greenboot retries a failed update with a boot counter (3, 2, 1, 0). Only the
 # last failure, counter 0, is the one that rolls the update back, so only that
-# one is reported to Atlas Updater's helper (crash reporting), and only that one
+# one is reported to Telamon Updater's helper (crash reporting), and only that one
 # records the image as bad: update-stage-condition won't stage it again.
 failed=
 for f in /run/atlasos/health/*; do
@@ -15,7 +15,7 @@ for f in /run/atlasos/health/*; do
 	esac
 done
 counter=$(grub2-editenv list 2>/dev/null | sed -n 's/^boot_counter=//p')
-msg="boot health check failed (boot counter ${counter:-unset}): ${failed:-no AtlasOS check reported}"
+msg="boot health check failed (boot counter ${counter:-unset}): ${failed:-no Telamon OS check reported}"
 echo "atlasos-health: $msg"
 logger -t atlasos-health -p daemon.crit "$msg" 2>/dev/null || true
 
@@ -29,7 +29,7 @@ if [ "$counter" = 0 ]; then
 		fi
 		logger -t atlasos-health -p daemon.crit "update $digest failed its health checks for the last time; it will be rolled back" 2>/dev/null || true
 	fi
-	helper=/usr/libexec/atlas-system-helper
+	helper=/usr/libexec/telamon-system-helper
 	if [ -x "$helper" ]; then
 		timeout 30 "$helper" record-event health-check-failed >/dev/null 2>&1 || true
 	fi

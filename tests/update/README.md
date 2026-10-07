@@ -2,8 +2,8 @@
 
 ## broken: an update that fails its health check
 
-`broken/Containerfile` builds a deliberately broken AtlasOS on top of another
-AtlasOS image (`--build-arg BASE=`, default `localhost/atlasos:update-a`),
+`broken/Containerfile` builds a deliberately broken Telamon OS on top of another
+Telamon OS image (`--build-arg BASE=`, default `localhost/telamonos:update-a`),
 labelled version `44.20261099-broken`. The machine still boots to a serial
 console, but `/usr/libexec/plasma-login-greeter` and `/usr/bin/plasmashell` are
 replaced by scripts that exit at once, so there is neither a login screen nor,
@@ -17,11 +17,11 @@ image with greenboot, and the VM must already be running one (see "Boot health
 checks and rollback" in the top-level README for the limits).
 
 ```sh
-podman build --build-arg BASE=localhost/atlasos:latest \
-    -f tests/update/broken/Containerfile -t localhost/atlasos:broken tests/update/broken
+podman build --build-arg BASE=localhost/telamonos:latest \
+    -f tests/update/broken/Containerfile -t localhost/telamonos:broken tests/update/broken
 ```
 
-In the VM: `bootc switch` (or Atlas Updater) to the broken image and reboot,
+In the VM: `bootc switch` (or Telamon Updater) to the broken image and reboot,
 then (each failed boot takes about 3 minutes, 4 boots, so allow 15 minutes) watch `sudo grub2-editenv list` and `journalctl -b -u greenboot-healthcheck.service`
 on the serial console. Expect `boot_counter` 3, 2, 1, 0 over four failed boots,
 then a boot of the previous image with `bootc status` showing the broken one as
@@ -30,13 +30,13 @@ the rollback entry.
 ## b: a visible change to update to
 
 `b/Containerfile` adds one app (KCalc) and turns the active window's header,
-title bar included, AtlasOS purple, on top of any AtlasOS image (`--build-arg A=`).
+title bar included, Telamon OS purple, on top of any Telamon OS image (`--build-arg A=`).
 After the update both are easy to check: KCalc is in the launcher and its title
 bar is purple. Give it a newer version label than the image the VM runs:
 
 ```sh
-podman build -v "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" --build-arg A=localhost/atlasos:update-e \
-    --label org.opencontainers.image.version=44.20261022 -t localhost/atlasos:update-g tests/update/b
+podman build -v "$PWD/build/cache/dnf:/var/cache/libdnf5:Z" --build-arg A=localhost/telamonos:update-e \
+    --label org.opencontainers.image.version=44.20261022 -t localhost/telamonos:update-g tests/update/b
 ```
 
 KWin colours title bars from the scheme's `[Colors:Header]` group; `[WM]` is
@@ -45,5 +45,5 @@ changed `[WM]` had no visible effect.
 
 ## Release notes
 
-`notes-*.md` are release notes for the test images, in the Markdown Atlas
+`notes-*.md` are release notes for the test images, in the Markdown Telamon
 Updater renders: `scripts/vm.sh publish <tag> <channel> tests/update/notes-f.md`.

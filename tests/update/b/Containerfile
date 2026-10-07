@@ -1,13 +1,13 @@
 # Version B of the update test: one new app (KCalc) and one changed Plasma
-# setting (the active window's header, title bar included, turns AtlasOS
+# setting (the active window's header, title bar included, turns Telamon OS
 # purple). KWin colours title bars from the scheme's [Colors:Header] group;
 # [WM] is only used by schemes without one. Plasma copies the scheme into
 # ~/.config/kdeglobals and re-applies it at login when the file's hash no
 # longer matches ColorSchemeHash, so changing the scheme file is enough.
-ARG A=localhost/atlasos:update-a
+ARG A=localhost/telamonos:update-a
 FROM ${A}
 RUN dnf -y install kcalc && dnf clean all && rm -rf /var/lib/dnf /var/cache/libdnf5/* /var/log/dnf5.log*
-RUN f=/usr/share/color-schemes/AtlasOSLight.colors && \
+RUN f=/usr/share/color-schemes/TelamonLight.colors && \
     sed -i -e '/^\[Colors:Header\]$/,/^\[/{s/^BackgroundNormal=.*/BackgroundNormal=104,88,226/;s/^ForegroundNormal=.*/ForegroundNormal=255,255,255/}' "$f" && \
     sed -n '/^\[Colors:Header\]$/,/^\[/p' "$f" | grep -q '^BackgroundNormal=104,88,226$' && \
     sed -n '/^\[Colors:Header\]\[Inactive\]$/,/^\[/p' "$f" | grep -q '^BackgroundNormal=243,242,250$'

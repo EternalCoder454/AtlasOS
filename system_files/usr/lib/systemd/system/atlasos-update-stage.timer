@@ -1,5 +1,5 @@
 [Unit]
-Description=Look for AtlasOS updates in the background
+Description=Look for Telamon OS updates in the background
 Documentation=https://github.com/EternalCoder454/AtlasOS
 
 [Timer]

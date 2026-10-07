@@ -1,6 +1,6 @@
 [KDE]
-LookAndFeelPackage=org.atlasos.desktop
-# Qt/KDE apps use the AtlasOS Kvantum theme (kvantum-sync picks which)
+LookAndFeelPackage=org.telamon.desktop
+# Qt/KDE apps use the Telamon OS Kvantum theme (kvantum-sync picks which)
 widgetStyle=kvantum
 # Animations a notch quicker than Plasma's (System Settings' speed slider one
 # step towards Faster): KWin and Kirigami's 100/200/400 ms become 71/141/283,
@@ -18,7 +18,7 @@ AnimationDurationFactor=0.7071
 # window's folder instead of the one asked for. A separate instance inherits
 # the folder. Ctrl+Alt+T and the launcher still use the desktop file.
 [General]
-ColorScheme=AtlasOSLight
+ColorScheme=TelamonLight
 TerminalApplication=ghostty --gtk-single-instance=false
 fixed=JetBrains Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 font=IBM Plex Sans,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1

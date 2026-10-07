@@ -16,7 +16,7 @@ sed -i -e "s/^VERSION=\"44 (dev)\"\$/VERSION=\"44 ($v)\"/" \
 	-e "s/^IMAGE_VERSION=\"dev\"\$/IMAGE_VERSION=\"$v\"/" "$f"
 grep -qx "IMAGE_VERSION=\"$v\"" "$f"
 # system-release, written by build.sh with "dev" the same way.
-grep -qx 'AtlasOS release 44 (dev)' /usr/lib/atlasos-release
-echo "AtlasOS release 44 ($v)" >/usr/lib/atlasos-release
+grep -qx 'Telamon OS release 44 (dev)' /usr/lib/telamon-release
+echo "Telamon OS release 44 ($v)" >/usr/lib/telamon-release
 
 /ctx/cleanup.sh

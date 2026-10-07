@@ -1,9 +1,9 @@
 #!/bin/sh
-# Moves existing AtlasOS users to the AtlasOS Plasma style (Breeze with the
+# Moves existing Telamon OS users to the Telamon OS Plasma style (Breeze with the
 # dock's rounded highlights and underlines) and the Dracula icons. Only users
-# still on what AtlasOS set before (Breeze, or nothing set) are moved; a
+# still on what Telamon OS set before (Breeze, or nothing set) are moved; a
 # Plasma style or icon theme the user chose is left alone, and so are users
-# on a theme that is not AtlasOS's.
+# on a theme that is not Telamon OS's.
 set -eu
 
 cfg=${XDG_CONFIG_HOME:-$HOME/.config}
@@ -15,13 +15,13 @@ user_value() { # file group key
 
 pkg=$(user_value kdeglobals KDE LookAndFeelPackage)
 case $pkg in
-"$unset_marker" | org.atlasos.desktop | org.atlasos.dark.desktop) ;;
+"$unset_marker" | org.telamon.desktop | org.telamon.dark.desktop) ;;
 *) exit 0 ;;
 esac
 
 case $(user_value plasmarc Theme name) in
 "$unset_marker" | default)
-	kwriteconfig6 --file "$cfg/plasmarc" --group Theme --key name atlasos
+	kwriteconfig6 --file "$cfg/plasmarc" --group Theme --key name telamon
 	;;
 esac
 

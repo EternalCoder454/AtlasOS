@@ -1,11 +1,11 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
-    The menu bar showed menus only for apps that export them. The AtlasOS App
-    Menu (org.atlasos.appmenu) goes right after Plasma's App Menu and fills
+    The menu bar showed menus only for apps that export them. The Telamon OS App
+    Menu (org.telamon.appmenu) goes right after Plasma's App Menu and fills
     the bar for every other app and for the desktop. Only the menu bar
-    AtlasOS made is changed: a top panel with the AtlasOS Menu. Plasma runs
+    Telamon OS made is changed: a top panel with the Telamon OS Menu. Plasma runs
     each script here once per user (plasmashellrc, [Updates]); never rename
     this file.
 
@@ -16,21 +16,21 @@
 */
 
 panels().forEach(function (panel) {
-    if (panel.location !== "top" || panel.widgets("org.atlasos.menu").length === 0) {
+    if (panel.location !== "top" || panel.widgets("org.telamon.menu").length === 0) {
         return;
     }
-    if (panel.widgets("org.atlasos.appmenu").length > 0) {
+    if (panel.widgets("org.telamon.appmenu").length > 0) {
         return;
     }
     panel.currentConfigGroup = ["General"];
     var order = String(panel.readConfig("AppletOrder", ""));
     var ids = order ? order.split(";") : panel.widgetIds.map(String);
-    var appmenu = panel.addWidget("org.atlasos.appmenu");
+    var appmenu = panel.addWidget("org.telamon.appmenu");
     var after = panel.widgets("org.kde.plasma.appmenu");
     var at = after.length > 0 ? ids.indexOf(String(after[0].id)) : -1;
     if (at < 0) {
-        // No App Menu in the bar: after the AtlasOS Menu
-        at = ids.indexOf(String(panel.widgets("org.atlasos.menu")[0].id));
+        // No App Menu in the bar: after the Telamon OS Menu
+        at = ids.indexOf(String(panel.widgets("org.telamon.menu")[0].id));
     }
     if (at < 0) {
         // Neither is in the order: leave it to Plasma, which puts the widget last

@@ -1,0 +1,17 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Telamon OS"
+            }
+        ],
+        "Description": "Telamon OS's shell style: rounded translucent popups and tooltips, buttons and fields with small corners, sliders and switches like the Telamon apps, and the dock's tiles and underline",
+        "EnabledByDefault": true,
+        "Id": "telamon",
+        "License": "Apache-2.0",
+        "Name": "Telamon OS",
+        "Version": "1.1",
+        "Website": "https://github.com/EternalCoder454/AtlasOS"
+    },
+    "X-Plasma-API": "5.0"
+}

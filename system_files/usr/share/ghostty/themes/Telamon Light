@@ -1,0 +1,25 @@
+# Telamon Light: Telamon Light.colors' Window colours (background, foreground),
+# the violet accent for cursor and selection, and ANSI colours that keep at
+# least 4.4:1 contrast on the background.
+palette = 0=#1B1748
+palette = 1=#C4263A
+palette = 2=#1A7F46
+palette = 3=#8F5E00
+palette = 4=#2F5FD0
+palette = 5=#A63CB8
+palette = 6=#0A7584
+palette = 7=#5A5580
+palette = 8=#6B658C
+palette = 9=#CC2B40
+palette = 10=#177A40
+palette = 11=#8A5800
+palette = 12=#2A58C8
+palette = 13=#A038B2
+palette = 14=#0A7686
+palette = 15=#1B1748
+background = #F3F2FA
+foreground = #1B1748
+cursor-color = #6858E2
+cursor-text = #FFFFFF
+selection-background = #C3B8FF
+selection-foreground = #1B1748

@@ -1,12 +1,12 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
     The Classic app launcher (Simple Kickoff) is gone: Modern (Andromeda) is
     the only one. A dock or panel that still holds the Classic launcher would
     show a broken widget, so each gets Andromeda in its place: at the same
     spot in the panel, set up as the Global Themes' layout does (centred,
-    the AtlasOS icon). Desktops without Simple Kickoff are left alone, and a
+    the Telamon OS icon). Desktops without Simple Kickoff are left alone, and a
     second run finds nothing to change. Plasma runs each script here once per
     user (plasmashellrc, [Updates]); never rename this file.
 */

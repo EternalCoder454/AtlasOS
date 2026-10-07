@@ -1,5 +1,5 @@
 [Unit]
-Description=AtlasOS PIN verifier (%i)
+Description=Telamon OS PIN verifier (%i)
 Documentation=https://github.com/EternalCoder454/AtlasOS
 # Root (it reads and writes /var/lib/atlasos/pin, which only root can), with
 # nothing else: the only writable path is that folder, no network, no new
@@ -7,9 +7,9 @@ Documentation=https://github.com/EternalCoder454/AtlasOS
 RefuseManualStart=yes
 
 [Service]
-ExecStart=/usr/libexec/atlasos/pin-daemon
+ExecStart=/usr/libexec/telamon/pin-daemon
 # Its own SELinux domain (selinux/atlasos_pin.te), set here rather than by
-# the file's label: an image's files carry only types every older AtlasOS
+# the file's label: an image's files carry only types every older Telamon OS
 # already knows, or updating to it fails.
 SELinuxContext=system_u:system_r:atlasos_pin_t:s0
 StandardInput=socket

@@ -1,0 +1,6 @@
+# Settings shared by every Telamon app (Telamon Updater, Telamon Monitor, ...).
+# A user's ~/.config/telamonrc overrides these.
+[Appearance]
+# Windows-style blur behind Telamon app windows. Each app's Settings has the
+# "Transparency effects" switch; it applies to all Telamon apps.
+Transparency=true

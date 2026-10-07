@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Signs the modules build-kmod.sh built with the AtlasOS module key, so they
+# Signs the modules build-kmod.sh built with the Telamon OS module key, so they
 # load with Secure Boot on once the key is enrolled (see
-# system_files_nvidia/usr/libexec/atlasos/nvidia-enroll-key). $1 is the
+# system_files_nvidia/usr/libexec/telamon/nvidia-enroll-key). $1 is the
 # output directory; /unsigned holds build-kmod.sh's output, /signing.der the
 # public certificate, and /signing.key the private key.
 # Runs in Containerfile.nvidia's nvidia-kmod stage, the only RUN that mounts

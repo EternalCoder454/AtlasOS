@@ -1,4 +1,4 @@
-# Runs AtlasOS's settings updates (kconf_update) at the start of each Plasma
+# Runs Telamon OS's settings updates (kconf_update) at the start of each Plasma
 # session, before KWin and the shell read the settings. kded6 runs
 # kconf_update too, but it only picks a .upd file whose mtime differs from the
 # one recorded, and ostree gives every file in /usr mtime 0, the same as "never
@@ -7,7 +7,7 @@
 # Login waits for it (Before=), so a hung script is killed after 30 s and the
 # session starts anyway; a failure never stops the session (no Requires=).
 [Unit]
-Description=AtlasOS settings updates for this user
+Description=Telamon OS settings updates for this user
 ConditionPathExists=/usr/share/kconf_update/atlasos.upd
 Before=plasma-kwin_wayland.service plasma-plasmashell.service plasma-kded6.service
 

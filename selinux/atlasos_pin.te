@@ -2,7 +2,7 @@ policy_module(atlasos_pin, 1.0.0)
 
 ########################################
 #
-# AtlasOS PIN verifier (atlasos-pin@.service, /usr/libexec/atlasos/pin-daemon).
+# Telamon OS PIN verifier (atlasos-pin@.service, /usr/libexec/telamon/pin-daemon).
 # Its own domain, so the login screen (xdm_t, where plasmalogin runs PAM) and
 # the user's session (unconfined_t, where the lock screen runs PAM; already allowed) may reach
 # only this daemon's socket, not every unconfined_service_t one.

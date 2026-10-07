@@ -1,0 +1,36 @@
+#!/usr/bin/bash
+# For the man page index (fedora-atomic-desktop-mandb-update.service, run by
+# atlasos-mandb.timer). Man pages come from packages, so the index only needs
+# making again when the installed packages changed, which on Telamon OS means an
+# update. Fedora's unit has no such check and reindexed at every boot.
+#   mandb-needed          ExecCondition: exit 0 to reindex, 1 to skip
+#   mandb-needed --done   ExecStartPost: remember the packages it indexed
+set -u -o pipefail
+stamp=/var/cache/man/atlasos-packages
+
+# What identifies the installed packages: the rpm database itself, which only
+# changes with them (read-only in the image; layered packages change it too).
+# Hashing the file costs a tenth of a second; asking rpm for the list took
+# 1.5 s of CPU and 160 MB.
+packages() {
+	local db
+	db=$(rpm --eval '%{_dbpath}') || return 1
+	sha256sum "$db/rpmdb.sqlite" | cut -d' ' -f1
+}
+
+if [ "${1:-}" = --done ]; then
+	now=$(packages) || exit 0
+	mkdir -p "${stamp%/*}" || exit 0
+	tmp=$(mktemp "$stamp.XXXXXX") || exit 0
+	if echo "$now" >"$tmp" && mv -f "$tmp" "$stamp"; then
+		exit 0
+	fi
+	rm -f "$tmp"
+	exit 0
+fi
+
+# Can't tell (rpm failed, no stamp yet): reindex, as before.
+now=$(packages) || exit 0
+[ -s "$stamp" ] && [ "$(cat "$stamp")" = "$now" ] || exit 0
+echo "the man page index already covers the installed packages; not rebuilding it"
+exit 1

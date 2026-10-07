@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Show or Hide the Menu Bar
+Comment=Show the menu bar over the windows, or let it hide under them
+Icon=window-pin
+Exec=/usr/libexec/telamon/menubar-toggle
+NoDisplay=true
+# No window ever opens: without this, Plasma shows a busy pointer and a
+# launching item in the dock until its startup times out.
+StartupNotify=false
+X-KDE-Shortcuts=Meta+M

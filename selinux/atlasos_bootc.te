@@ -7,8 +7,8 @@ policy_module(atlasos_bootc, 1.0.0)
 # and its files are labelled before its policy is loaded. Fedora's policy
 # gives that transition to init_t (a unit whose ExecStart is bootc itself) and
 # to unconfined_t (a root shell), but not to unconfined_service_t, where every
-# AtlasOS service whose ExecStart is a script or a helper runs: update-stage,
-# Atlas Updater's atlas-system-helper and atlas-record-boot, grub-greenboot,
+# Telamon OS service whose ExecStart is a script or a helper runs: update-stage,
+# Telamon Updater's telamon-system-helper and telamon-record-boot, grub-greenboot,
 # the greenboot checks. There bootc's install_t probe (chcon to a made-up
 # type) was denied and logged at every boot, and bootc went on without the
 # right to write those labels. unconfined_service_t is unconfined already;

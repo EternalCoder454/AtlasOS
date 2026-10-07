@@ -1,13 +1,15 @@
-# AtlasOS for NVIDIA graphics: the AtlasOS image plus NVIDIA's driver, with
+# Telamon OS for NVIDIA graphics: the Telamon OS image plus NVIDIA's driver, with
 # its open kernel modules (GeForce GTX 16 and RTX 20 series and newer).
-# Published as ghcr.io/eternalcoder454/atlasos-nvidia; built by
-# `just build-nvidia` on top of a finished AtlasOS image.
+# Published as ghcr.io/eternalcoder454/telamonos-nvidia, and under its name
+# before Telamon, atlasos-nvidia, which installed systems still follow (the
+# Updater's driver switch names it); built by
+# `just build-nvidia` on top of a finished Telamon OS image.
 
-# The AtlasOS image to add the driver to.
-ARG BASE_IMAGE=localhost/atlasos:latest
+# The Telamon OS image to add the driver to.
+ARG BASE_IMAGE=localhost/telamonos:latest
 
 # The kernel modules, built for exactly the kernel the image has and signed
-# with the AtlasOS module key (see build_files/nvidia/build-kmod.sh). The
+# with the Telamon OS module key (see build_files/nvidia/build-kmod.sh). The
 # compilers and kernel headers stay in the build stage.
 FROM ${BASE_IMAGE} AS base-kernel
 RUN find /usr/lib/modules -mindepth 1 -maxdepth 1 -printf '%f\n' >/kver && \
@@ -32,7 +34,7 @@ FROM registry.fedoraproject.org/fedora:44 AS nvidia-kmod
 COPY --from=base-kernel /kver /kver
 COPY --from=nvidia-kmod-build /out /unsigned
 COPY build_files/nvidia/sign-modules.sh build_files/nvidia/fetch-sign-file.sh /usr/local/bin/
-COPY system_files_nvidia/usr/share/atlasos/nvidia/atlasos-module-signing.der /signing.der
+COPY system_files_nvidia/usr/share/telamon/nvidia/telamon-module-signing.der /signing.der
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False install kmod cpio && \
     fetch-sign-file.sh

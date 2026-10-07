@@ -1,5 +1,5 @@
 [Unit]
-Description=Install AtlasOS's preinstalled Flatpak apps after boot
+Description=Install Telamon OS's preinstalled Flatpak apps after boot
 Documentation=https://github.com/EternalCoder454/AtlasOS
 
 [Timer]

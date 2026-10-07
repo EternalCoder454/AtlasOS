@@ -1,6 +1,0 @@
-# Settings shared by every Atlas app (Atlas Updater, Atlas Monitor, ...).
-# A user's ~/.config/atlasrc overrides these.
-[Appearance]
-# Windows-style blur behind Atlas app windows. Each app's Settings has the
-# "Transparency effects" switch; it applies to all Atlas apps.
-Transparency=true

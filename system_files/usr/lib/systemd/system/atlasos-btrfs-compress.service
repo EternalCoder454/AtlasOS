@@ -10,7 +10,7 @@ ConditionPathIsReadWrite=/var
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/libexec/atlasos/btrfs-compress
+ExecStart=/usr/libexec/telamon/btrfs-compress
 # Only what a remount needs. Nothing that gives the unit its own mount
 # namespace (ProtectSystem=, PrivateTmp=, ProtectKernel*=): the remount has to
 # act on the system's own mounts.

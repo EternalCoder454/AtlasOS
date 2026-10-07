@@ -1,4 +1,4 @@
-# A deliberately broken AtlasOS, for testing boot health checks and rollback.
+# A deliberately broken Telamon OS, for testing boot health checks and rollback.
 # It boots to a serial console, but the login greeter and plasmashell exit at
 # once, so there is neither a login screen nor, with autologin, a desktop, and
 # /usr/lib/greenboot's login check fails. Breaking only the greeter isn't
@@ -6,19 +6,19 @@
 # check rightly passes on a running plasmashell. Restarts don't help: a greeter
 # or plasmashell has to run for 10 s to count.
 #
-#   podman build --build-arg BASE=localhost/atlasos:latest \
-#       -f tests/update/broken/Containerfile -t localhost/atlasos:broken tests/update/broken
-ARG BASE=localhost/atlasos:update-a
+#   podman build --build-arg BASE=localhost/telamonos:latest \
+#       -f tests/update/broken/Containerfile -t localhost/telamonos:broken tests/update/broken
+ARG BASE=localhost/telamonos:update-a
 FROM ${BASE}
 
 LABEL org.opencontainers.image.version=44.20261099-broken
 
 RUN mv /usr/libexec/plasma-login-greeter /usr/libexec/plasma-login-greeter.real && \
-    printf '#!/bin/sh\necho "plasma-login-greeter: broken on purpose (AtlasOS test image)" >&2\nexit 1\n' \
+    printf '#!/bin/sh\necho "plasma-login-greeter: broken on purpose (Telamon OS test image)" >&2\nexit 1\n' \
         >/usr/libexec/plasma-login-greeter && \
     chmod 0755 /usr/libexec/plasma-login-greeter && \
     mv /usr/bin/plasmashell /usr/bin/plasmashell.real && \
-    printf '#!/bin/sh\necho "plasmashell: broken on purpose (AtlasOS test image)" >&2\nexit 1\n' \
+    printf '#!/bin/sh\necho "plasmashell: broken on purpose (Telamon OS test image)" >&2\nexit 1\n' \
         >/usr/bin/plasmashell && \
     chmod 0755 /usr/bin/plasmashell
 

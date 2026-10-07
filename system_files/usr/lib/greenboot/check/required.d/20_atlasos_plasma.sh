@@ -9,7 +9,7 @@
 # Waits until 240 s after boot at most; limit 300 s.
 export hc_name=plasma
 # shellcheck source=/dev/null
-. /usr/libexec/atlasos/health-lib
+. /usr/libexec/telamon/health-lib
 hc_guard 300
 hc_skip_unless_plasmalogin
 hc_set_deadline 240
