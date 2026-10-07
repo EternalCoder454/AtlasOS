@@ -5,7 +5,9 @@
 set -euxo pipefail
 : >/tmp/atlasos-step-start # (see cleanup.sh, "Times")
 
-dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
+# SOURCE_DATE_EPOCH: the RPM database's install times stay the same from build
+# to build (see packages.sh).
+dnf=(env SOURCE_DATE_EPOCH=1 dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 
 ### Telamon apps
 
