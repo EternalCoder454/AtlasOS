@@ -35,3 +35,6 @@ __pycache__/
 # Private keys (the NVIDIA module signing key). Kept outside /build/ so
 # `just clean` never deletes them.
 /secrets/
+
+# Benchmark log (local)
+/benchmarks.md
