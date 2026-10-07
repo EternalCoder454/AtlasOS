@@ -1,7 +1,7 @@
 # ISO downloads on the VPS
 
 The live installer ISOs are served from `eterneon-vps` at
-https://atlasos.eterneon.net/. [iso.yml](../../.github/workflows/iso.yml)
+https://telamon.eterneon.net/. [iso.yml](../../.github/workflows/iso.yml)
 builds them on GitHub's runners after each weekly stable release
 (`promote-stable.yml`) and uploads them here.
 
@@ -31,9 +31,9 @@ always a whole version to download.
   rsync filters touch different files.
 - **Caddy serves it.** The `matrix` stack's Caddy (`/srv/matrix`) mounts the
   folder read-only at `/srv/atlasos-downloads` (`compose.yaml`), and the
-  `atlasos.eterneon.net` block in `caddy/Caddyfile` serves it under `/dl/`.
+  `telamon.eterneon.net` block in `caddy/Caddyfile` serves it under `/dl/`.
   Versioned files are cached for a year, the `.json` files for a minute.
-- **DNS.** An `A` record for `atlasos.eterneon.net` in Cloudflare, DNS only
+- **DNS.** An `A` record for `telamon.eterneon.net` in Cloudflare, DNS only
   (not proxied): Cloudflare's free plan doesn't cache files this large, and
   its terms don't allow serving them through the proxy.
 
@@ -42,7 +42,7 @@ always a whole version to download.
 | Secret | What |
 |---|---|
 | `ISO_UPLOAD_KEY` | The private half of `atlas-iso`'s SSH key (ed25519, no passphrase) |
-| `ISO_UPLOAD_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 atlasos.eterneon.net`, checked against `/etc/ssh/ssh_host_ed25519_key.pub` on the VPS |
+| `ISO_UPLOAD_KNOWN_HOSTS` | `ssh-keyscan -t ed25519 telamon.eterneon.net`, checked against `/etc/ssh/ssh_host_ed25519_key.pub` on the VPS |
 
 To replace the key, make a new one, put its public half in
 `/var/lib/atlas-iso/.ssh/authorized_keys` with the same options, and set

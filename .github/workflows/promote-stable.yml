@@ -399,7 +399,7 @@ jobs:
             { echo "::error::${repo}:stable (${got}) does not verify against cosign.pub. The next promotion of a signed testing build fixes this."; exit 1; }
 
   # The live installer ISOs of what just became stable (iso.yml), uploaded
-  # to atlasos.eterneon.net. Each skips itself when its version is already up.
+  # to telamon.eterneon.net. Each skips itself when its version is already up.
   iso:
     name: ISO
     needs: promote

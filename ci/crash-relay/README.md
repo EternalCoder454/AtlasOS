@@ -1,7 +1,7 @@
 # Crash relay on the VPS
 
 `atlas-crash-relay` takes crash reports from Atlas Updater at
-https://atlasos.eterneon.net/crash/ and files them as GitHub issues in
+https://telamon.eterneon.net/crash/ and files them as GitHub issues in
 `EternalCoder454/AtlasOS`, labelled `crash`. The clients hold no GitHub token;
 the relay holds one fine-grained token. It speaks the Sentry store API that
 `crates/atlas-core/src/crash.rs` in Atlas Updater posts to
@@ -130,7 +130,7 @@ To renew, run the `install` again, then `docker compose up -d --force-recreate`.
 
 ## Caddy
 
-Add inside the `atlasos.eterneon.net { ... }` block of the matrix stack's
+Add inside the `telamon.eterneon.net { ... }` block of the matrix stack's
 `caddy/Caddyfile`, before the catch-all `handle`:
 
 ```
@@ -181,8 +181,8 @@ of memory, 64 processes, half a CPU, 3 x 10 MB of logs and a healthcheck
 ## Smoke test
 
 ```sh
-curl -s https://atlasos.eterneon.net/crash/healthz
-curl -s -X POST https://atlasos.eterneon.net/crash/api/1/store/ \
+curl -s https://telamon.eterneon.net/crash/healthz
+curl -s -X POST https://telamon.eterneon.net/crash/api/1/store/ \
   -H 'Content-Type: application/json' \
   -H 'X-Sentry-Auth: Sentry sentry_version=7, sentry_key=atlasos' \
   -d '{"event_id":"0123456789abcdef0123456789abcdef","message":"smoke test","tags":{"app":"smoke-test","app_version":"0.0","report_type":"panic"}}'

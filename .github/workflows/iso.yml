@@ -1,7 +1,7 @@
 name: Live ISO
 
 # The live installer ISO of a published stable image, made with AtlasOS
-# Installer's iso/make-iso.sh, and uploaded to https://atlasos.eterneon.net/
+# Installer's iso/make-iso.sh, and uploaded to https://telamon.eterneon.net/
 # (the VPS, ci/iso-hosting). promote-stable.yml calls it for each image whose
 # stable tags it moved; run it by hand to rebuild one.
 #
@@ -59,7 +59,7 @@ concurrency:
 
 env:
   IMAGE_REGISTRY: ghcr.io/eternalcoder454
-  DOWNLOAD_HOST: atlasos.eterneon.net
+  DOWNLOAD_HOST: telamon.eterneon.net
   UPLOAD_USER: atlas-iso
 
 jobs:
