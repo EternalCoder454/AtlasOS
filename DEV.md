@@ -637,8 +637,19 @@ password always keeps working.
   own password), acts only for PKEXEC_UID and reads the PIN from stdin.
   It refuses PINs that are not 4 to 8 digits, one repeated digit, or a straight
   run (1234, 4321). `pin-admin status` needs no pkexec. The user-facing pieces
-  are `pin-setup` (kdialog; the "Set Up PIN" launcher entry), and
-  `telamon pin set|remove|status`.
+  are `pin-setup` (the "Set Up PIN" launcher entry), `pin-prompt` (the
+  window where the PIN is typed twice, fields labelled PIN; GTK 4 through
+  PyGObject, which `build.sh` checks is there; kdialog's `--password` is only
+  the fallback when no window can be shown, because its field says "Password"),
+  and `telamon pin set|remove|status`. The polkit prompt that follows asks for
+  the account password on purpose: it confirms the user, it is not the PIN.
+- **What the screens say.** The PAM prompt (pam_unix's "Password: ") is shown
+  by neither greeter: both draw a fixed placeholder in QML and answer PAM's
+  conversation with the text typed. So no PAM module or option can relabel the
+  field. The lock screen's placeholder is patched in `build.sh` to "Password or
+  PIN" (MainBlock.qml; the build fails if the line moves). The login screen's is
+  in `plasma-login-greeter`'s compiled QML (`Login.qml`, "Password") and stays
+  until that package is rebuilt with a patch or upstream makes it configurable.
 - **First login.** `/etc/xdg/autostart/atlasos-pin-setup.desktop` runs
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes

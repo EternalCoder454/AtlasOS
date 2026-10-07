@@ -9,6 +9,7 @@ set -u
 state="${XDG_STATE_HOME:-$HOME/.local/state}/atlasos"
 done_file="$state/pin-setup-done"
 admin=/usr/libexec/telamon/pin-admin
+prompt=/usr/libexec/telamon/pin-prompt
 title="PIN"
 
 mark_done() {
@@ -102,16 +103,27 @@ elif [ "$current" != none ]; then
 fi
 
 while :; do
-	pin=$(kdialog --title "$title" --password "Choose a PIN of 4 to 8 digits.\n\nIt works at the login screen and the lock screen only.\n\nA PIN is easier to guess than a password if someone gets at the disk: don't reuse a bank-card PIN, and a longer PIN is safer.") || exit 0
-	again=$(kdialog --title "$title" --password "Type the PIN again.") || exit 0
-	if [ "$pin" != "$again" ]; then
-		kdialog --title "$title" --sorry "The two PINs weren't the same. Try again."
-		continue
-	fi
+	# pin-prompt shows one window with fields labelled PIN. kdialog's password
+	# dialog labels its field "Password", so it is only the fallback, for a
+	# window that can't be shown (exit 2).
+	pin=$("$prompt" 2>/dev/null)
+	rc=$?
+	case $rc in
+	0) ;;
+	2)
+		pin=$(kdialog --title "$title" --password "Choose a PIN of 4 to 8 digits, then type it again next.\n\nIt works at the login screen and the lock screen only: type it where you would type your password.\n\nA PIN is easier to guess than a password if someone gets at the disk: don't reuse a bank-card PIN, and a longer PIN is safer.") || exit 0
+		again=$(kdialog --title "$title" --password "Type the PIN again.") || exit 0
+		if [ "$pin" != "$again" ]; then
+			kdialog --title "$title" --sorry "The two PINs weren't the same. Try again."
+			continue
+		fi
+		;;
+	*) exit 0 ;;
+	esac
 	out=$(printf '%s\n' "$pin" | pkexec "$admin" set 2>&1)
 	rc=$?
 	if [ "$rc" -eq 0 ]; then
-		kdialog --title "$title" --msgbox "PIN set. Type it instead of your password at the login screen or the lock screen."
+		kdialog --title "$title" --msgbox "PIN set. Type it in the password box at the login screen or the lock screen, in place of your password."
 		exit 0
 	fi
 	# Exit 126/127 is pkexec itself: not authorised, or the prompt was closed.
