@@ -66,7 +66,7 @@ apps() {
 	app Files 'dolphin' dolphin
 	app Terminal 'ghostty' ghostty
 	app Notepad 'notepad' telamon-notepad
-	app Settings 'systemsettings' systemsettings
+	app Settings 'telamon.settings' telamon-settings
 	app Store 'discover' plasma-discover
 	app Brave 'brave' brave-origin-stable
 }

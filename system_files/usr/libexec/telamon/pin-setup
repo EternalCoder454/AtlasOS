@@ -41,7 +41,7 @@ if [ "${1:-}" = --first-login ]; then
 	fi
 	# Let the desktop finish appearing, and let the fingerprint question go
 	# first, however long it waits for an answer: never two questions at once.
-	# Then the enrolling it may have opened (System Settings, or a dialog),
+	# Then the enrolling it may have opened (Settings, or a dialog),
 	# for 10 minutes at most: Settings left open all day doesn't hold this.
 	sleep 8
 	while pgrep -u "$(id -u)" -f '/usr/libexec/telamon/fingerprint-setup' >/dev/null; do
@@ -49,7 +49,7 @@ if [ "${1:-}" = --first-login ]; then
 	done
 	for _ in $(seq 200); do
 		pgrep -u "$(id -u)" -x kdialog >/dev/null ||
-			pgrep -u "$(id -u)" -x systemsettings >/dev/null || break
+			pgrep -u "$(id -u)" -x 'systemsettings|telamon-setting|kcmshell6' >/dev/null || break
 		sleep 3
 	done
 	# A notification with buttons rather than a dialog: it doesn't take over

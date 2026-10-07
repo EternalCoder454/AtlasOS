@@ -643,7 +643,7 @@ password always keeps working.
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes
   `~/.local/state/atlasos/pin-setup-done`. It waits for the fingerprint
-  question, any other kdialog and System Settings first, so two dialogs never
+  question, any other kdialog and Settings first, so two dialogs never
   show at once.
 - **KWallet.** After a PIN login the keyring modules are skipped (above), so
   KWallet asks for the password once, itself: the wallet opens with the real

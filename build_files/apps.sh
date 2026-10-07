@@ -58,6 +58,37 @@ done
 [ -f /usr/share/applications/net.eterneon.telamon.monitor.desktop ]
 [ -f /usr/share/applications/net.eterneon.telamon.settings.desktop ]
 [ -x /usr/bin/telamon-settings ]
+# Telamon Settings has replaced KDE's System Settings: its
+# telamon-settings-systemsettings subpackage (installed by the glob above, with
+# the app) obsoletes plasma-systemsettings, provides its name so plasma-desktop
+# and the KCM packages that require it keep theirs, and owns /usr/bin/systemsettings
+# (a shim: Settings for a KCM it has a page for, kcmshell6 for the rest) and the
+# hidden systemsettings.desktop that Plasma's KCMLauncher and old pins look up.
+# Settings itself is in the menu and the Launcher, which finds its pages in
+# search-index.json.
+rpm -q telamon-settings-systemsettings
+if rpm -q --quiet plasma-systemsettings; then
+	echo "apps.sh: plasma-systemsettings is still installed beside telamon-settings-systemsettings" >&2
+	exit 1
+fi
+[ "$(rpm -q --whatprovides plasma-systemsettings)" = "$(rpm -q telamon-settings-systemsettings)" ]
+[ "$(rpm -qf /usr/bin/systemsettings)" = "$(rpm -q telamon-settings-systemsettings)" ]
+# What required plasma-systemsettings is still here (the transaction would have
+# removed it otherwise), and kcmshell6 for the KCMs Settings has no page for.
+rpm -q plasma-desktop colord-kde kcm-plasmalogin
+[ -x /usr/bin/kcmshell6 ]
+for f in systemsettings kdesystemsettings; do
+	grep -qx 'NoDisplay=true' "/usr/share/applications/$f.desktop"
+	grep -qx 'Exec=telamon-settings' "/usr/share/applications/$f.desktop"
+done
+if grep -q '^NoDisplay=true' /usr/share/applications/net.eterneon.telamon.settings.desktop; then
+	echo "apps.sh: the Settings desktop file is still hidden" >&2
+	exit 1
+fi
+[ -f /usr/share/dbus-1/services/net.eterneon.telamon.settings.service ]
+grep -q '"link":"displays/night-light"' /usr/share/telamon-settings/search-index.json
+/usr/bin/systemsettings --version | grep -q '^systemsettings '
+[ ! -e /usr/share/applications/org.kde.systemsettings.desktop ]
 # Telamon Store sits beside Discover (the default for Flatpak links and RPM files).
 [ -f /usr/share/applications/net.eterneon.telamon.store.desktop ]
 [ -x /usr/bin/telamon-store ]

@@ -87,8 +87,8 @@ RUN --mount=type=cache,target=/var/cache/telamon-notepad-cargo,sharing=locked \
     CARGO_HOME=/var/cache/telamon-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # Telamon Settings, built the same way from the build context named
-# "telamon-settings". It sits beside systemsettings and every KDE KCM and
-# replaces none of them.
+# "telamon-settings". Its telamon-settings-systemsettings subpackage replaces
+# plasma-systemsettings (apps.sh); every KDE KCM stays, for kcmshell6.
 FROM registry.fedoraproject.org/fedora:44 AS settings-app
 COPY --from=telamon-settings --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
