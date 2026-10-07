@@ -79,8 +79,9 @@ label is the Telamon OS commit the image was built from,
   shows. Each testing build gets a pre-release tagged with its version.
   `build.yml` writes it after the push (`scripts/build-notes.py`): the app
   pins that moved, each with the pull requests and commits it brings, this
-  repository's own changes since the previous release, and the day's Fedora
-  updates. Notes written by hand before the build finishes are kept. Promoting it to stable moves the tag to the commit
+  repository's own changes since the previous release, the day's Fedora
+  updates, and the "Download size" line (`scripts/update-size.py`, see
+  [Update size](#update-size)). Notes written by hand before the build finishes are kept. Promoting it to stable moves the tag to the commit
   the image came from and makes it the latest release, notes kept. A stable
   build with no pre-release gets the commits since the previous stable
   release, grouped by what they touch (`scripts/release-notes.sh`; the first
@@ -98,6 +99,50 @@ label is the Telamon OS commit the image was built from,
   `rpm-ostree override remove`; that is the limit on an open system. The
   tray autostart can be turned off in System Settings; background staging is
   a system timer and keeps working.
+
+## Update size
+
+What an update downloads is the compressed size of the layers a machine does
+not have yet (bootc keeps every layer it imported and skips one whose digest
+it has). `scripts/update-size.py` computes that from manifests and image
+configs only, nothing is pulled:
+
+    scripts/update-size.py ghcr.io/eternalcoder454/telamonos:testing-44.20261007-6 \
+        --history ghcr.io/eternalcoder454/telamonos --history ghcr.io/eternalcoder454/atlasos
+    scripts/update-size.py --series OLDEST ... NEWEST     # consecutive builds, oldest first
+
+Images can be registry references or anything skopeo reads (`oci:DIR:TAG`
+for a `just rechunk` result). `build.yml` runs it after every push: the job
+summary has the table (from the previous build, a week and four weeks
+earlier, with the biggest new layers), and the testing build's changelog gets
+"Download size: X MB from the previous build" (`scripts/build-notes.py`).
+
+What keeps an update small, all in `just rechunk`:
+
+- **255 layers**, split by package (chunkah). Measured by replaying the
+  published builds 44.20261007-3 to -6 (3 updates): mean 361 MB per update
+  with 127 layers and no hints, 357 MB with hints and 127 layers, 241 MB
+  with hints and 255 (median 215, 366 and 114 MB).
+- **Hints** (`build_files/layer-hints.sh`, run in a throwaway copy of the
+  image): every file and directory time is 0 (a directory with a time from
+  the build, such as `/etc`, made every layer under it new: about 115 MB of
+  every update), the locale archive (233 MB, the same for every glibc) is a
+  layer of its own, and Telamon's own packages and `system_files` are
+  components with an update interval, so chunkah packs what changes daily
+  with what changes daily. chunkah does not promise a layer per component:
+  the version stamp (`os-release`, `telamon-release`) ends up beside others
+  in one layer (8.8 MB).
+- **A reproducible RPM database.** `packages.sh` and `apps.sh` run dnf with
+  `SOURCE_DATE_EPOCH=1`, which rpm 6 writes as every package's install time,
+  so `rpmdb.sqlite` (100 MB, 36 MB compressed) is the same in builds of the
+  same packages. dnf5's transaction history (a record with the build's
+  times, nothing on an image-based system reads it) is removed by
+  `cleanup.sh`. Install times of packages added by the build are therefore
+  1970; Fedora's own packages keep theirs.
+
+Measured on two local builds one version apart (nothing else changed): 207 MB
+before, 8.8 MB now (the version stamp's layer). A real day brings real package
+updates on top of that.
 
 ## Flatpaks and Flathub
 
@@ -981,7 +1026,8 @@ commits pinned in `telamon-apps.lock` (see [App pins](#app-pins)), after
   `promote-stable.yml` promotes `atlasos-nvidia:testing` the same way.
 - dnf's downloads are cached between runs, keyed by ISO week (on the VPS,
   kept on its disk with Podman's layer cache and the Rust build cache).
-- Images are rechunked before pushing, so updates download only what changed.
+- Images are rechunked before pushing, so updates download only what changed
+  (see [Update size](#update-size)).
   Their layers are zstd (level 7, from a pinned skopeo; see `just rechunk`),
   12% smaller than gzip and quicker to unpack. bootc and rpm-ostree read
   plain zstd layers (VM-checked 2026-10-03: `bootc switch`, `bootc upgrade`
