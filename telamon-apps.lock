@@ -10,10 +10,10 @@ updater      EternalCoder454/atlasos-updater   4741ce0821e6c28a7061bae63aa46bc93
 monitor      EternalCoder454/atlasos-monitor   958d0d63599e93c3d4c4d4139a48fc26a9ce6340
 notepad      EternalCoder454/atlasos-notepad   abbd4f6bba0fc5dfef919eea15cc16b27f800c93
 settings     EternalCoder454/atlasos-settings  344723d97ab9716e9da4124bccc388e455fa23a1  v0.3.0
-wizard       EternalCoder454/atlasos-wizard    aaebcdab4246575fb8804ca661b199d999417777  v0.2.0
+wizard       EternalCoder454/atlasos-wizard    be7ddef59c83b9d18098fc55a454f90f0701eba3  v0.2.1
 store        EternalCoder454/atlasos-store     6f687e1c048070526e917a307bff979d550824f5
 explorer     EternalCoder454/atlasos-explorer  55af409284e673e55d16cc28f1215f3031518d83
 archive      EternalCoder454/atlasos-archive   a46b07500d6ad617daf116dd56fc2a338edce607
 launcher     EternalCoder454/atlasos-launcher  69ae0584bee10d43c94349f595e6b48ddbd33d2f  v0.3.0
 screenshot   EternalCoder454/atlasos-screenshot  85c355966d983633b3bef57805e27f0bb9ca38ea
-installer    EternalCoder454/atlasos-installer  a579409534c3897b00f9d1edd40f9c0583d077d3
+installer    EternalCoder454/atlasos-installer  529a1baf7fa1dca005d1dec9b3ae1b9381c797f9
