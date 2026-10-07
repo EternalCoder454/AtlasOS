@@ -83,8 +83,8 @@ systemctl enable nvidia-suspend.service nvidia-resume.service nvidia-hibernate.s
 # What the image is, for `cat /etc/os-release` and bug reports.
 sed -i -e 's/^VARIANT=.*/VARIANT="Desktop (NVIDIA)"/' \
 	-e 's/^VARIANT_ID=.*/VARIANT_ID=desktop-nvidia/' \
-	-e 's/^IMAGE_ID=.*/IMAGE_ID=atlasos-nvidia/' /usr/lib/os-release
-grep -qx 'IMAGE_ID=atlasos-nvidia' /usr/lib/os-release
+	-e 's/^IMAGE_ID=.*/IMAGE_ID=telamonos-nvidia/' /usr/lib/os-release
+grep -qx 'IMAGE_ID=telamonos-nvidia' /usr/lib/os-release
 
 for f in /usr/libexec/telamon/nvidia-*; do [ -x "$f" ] && bash -n "$f"; done
 # The Secure Boot key dialog (DEV.md, "NVIDIA").

@@ -597,7 +597,8 @@ done
 # rename: software that matches it keeps matching) and fedora. Nothing of ours
 # reads ID (checked in every app and script), so the only thing keyed on it is
 # bootc-image-builder's package list, which scripts/bib.sh lends under the new
-# name. IMAGE_ID is the image's own name; the NVIDIA image's is telamonos-nvidia. The image's version (VERSION and IMAGE_VERSION) is "dev" here;
+# name. IMAGE_ID is the image's own name; the NVIDIA image's is telamonos-nvidia.
+# The image's version (VERSION and IMAGE_VERSION) is "dev" here;
 # version.sh puts the real one in, in the Containerfile's last step, so the
 # initramfs's copy (initrd-release) keeps "dev".
 # shellcheck source=/dev/null
