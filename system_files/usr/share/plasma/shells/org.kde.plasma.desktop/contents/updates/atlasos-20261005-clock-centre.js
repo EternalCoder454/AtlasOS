@@ -1,11 +1,11 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
     The middle island's clock sat a few pixels left of the island's centre:
     a panel puts a gap between its last widget and an empty filler after
     it. A 1 px spacer before the clock gets the same gap on the left. Only
-    an island AtlasOS made is changed: a top, centred "fit" panel holding
+    an island Telamon OS made is changed: a top, centred "fit" panel holding
     just a clock. Plasma runs each script here once per user
     (plasmashellrc, [Updates]); never rename this file.
 

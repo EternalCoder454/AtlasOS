@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Usage: pick-fast-promotion.sh <repo>   e.g. ghcr.io/eternalcoder454/atlasos
+# Usage: pick-fast-promotion.sh <repo>   e.g. ghcr.io/eternalcoder454/telamonos
 #
 # For promote-stable.yml's days between the weekly promotions: picks the
 # newest per-build testing image (tag testing-44.YYYYMMDD-N) that
 #   - has been in testing for at least MIN_AGE_HOURS (default 24), by its
-#     org.atlasos.built label (the image's Created time is the commit's, not
+#     org.telamon.built label (org.atlasos.built on images built before the
+#     rename; the image's Created time is the commit's, not
 #     the build's), so every stable build soaked in testing a day; an image
 #     without that label counts as too young;
 #   - carries a newer kernel (label ostree.linux) than :stable, not an older
@@ -111,7 +112,8 @@ for v in $versions; do
     echo "testing-${v} has another version label; skipped." >&2
     continue
   fi
-  built=$(label org.atlasos.built "$json")
+  built=$(label org.telamon.built "$json")
+  [ -n "$built" ] || built=$(label org.atlasos.built "$json")
   if ! [[ "$built" =~ ^[0-9]{10}$ ]] || [ $((now - built)) -lt $((min_age * 3600)) ]; then
     young=$((young + 1))
     continue

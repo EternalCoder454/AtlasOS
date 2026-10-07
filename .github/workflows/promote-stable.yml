@@ -25,7 +25,12 @@ concurrency:
 
 env:
   IMAGE_REGISTRY: ghcr.io/eternalcoder454
-  IMAGE_NAME: atlasos
+  IMAGE_NAME: telamonos
+  # The name before Telamon. Every build is published under both, and every
+  # promotion is copied to both, because installed systems follow
+  # atlasos:<channel> until the Updater moves them to telamonos (CI.md,
+  # "The image's two names"). Remove it with the last install that needs it.
+  LEGACY_IMAGE_NAME: atlasos
 
 jobs:
   promote:
@@ -42,8 +47,8 @@ jobs:
       revision: ${{ steps.pick.outputs.revision || steps.choose.outputs.cu_revision }}
       updater: ${{ steps.pick.outputs.updater }}
       base: ${{ steps.pick.outputs.base }}
-      # NVIDIA behind atlasos's stable (see Choose): only promote-nvidia runs,
-      # for the version and commit atlasos's stable already is.
+      # NVIDIA behind telamonos's stable (see Choose): only promote-nvidia runs,
+      # for the version and commit telamonos's stable already is.
       nvidia_catchup: ${{ steps.choose.outputs.nvidia_catchup }}
     steps:
       # main with its full history: for cosign.pub, which every promoted image
@@ -118,10 +123,10 @@ jobs:
           fi
           [[ "$go" =~ ^(true|false)$ ]] || { echo "::error::pick script gave '$go'"; exit 1; }
 
-          # Nothing new for atlasos on a fast day, but NVIDIA's :stable is
-          # behind atlasos's (its half failed on an earlier run, and a re-run
-          # finds atlasos already promoted): promote-nvidia alone brings it up
-          # to atlasos's current stable, from testing-<version>, with its usual
+          # Nothing new for telamonos on a fast day, but NVIDIA's :stable is
+          # behind telamonos's (its half failed on an earlier run, and a re-run
+          # finds telamonos already promoted): promote-nvidia alone brings it up
+          # to telamonos's current stable, from testing-<version>, with its usual
           # checks. The release and ISO jobs stay out of it.
           catchup=false
           cu_version=""
@@ -141,7 +146,7 @@ jobs:
                 cu_version=$a_ver
                 cu_revision=$a_rev
                 echo "::notice::${IMAGE_NAME}-nvidia:stable is ${n_ver}, behind ${IMAGE_NAME}:stable ${a_ver}; promoting NVIDIA only."
-                echo "NVIDIA's stable (${n_ver}) was behind atlasos's (${a_ver}); catching it up." >>"$GITHUB_STEP_SUMMARY"
+                echo "NVIDIA's stable (${n_ver}) was behind telamonos's (${a_ver}); catching it up." >>"$GITHUB_STEP_SUMMARY"
               fi
             elif ! absent "$RUNNER_TEMP/nstable.err"; then
               cat "$RUNNER_TEMP/nstable.err" >&2
@@ -174,8 +179,8 @@ jobs:
           json=$(skopeo inspect "docker://${repo}@${digest}")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
-          updater=$(jq -r '.Labels["net.eterneon.atlas.updater.revision"] // ""' <<<"$json")
-          base=$(jq -r '.Labels["org.atlasos.base-image"] // ""' <<<"$json")
+          updater=$(jq -r '.Labels["net.eterneon.telamon.updater.revision"] // .Labels["net.eterneon.atlas.updater.revision"] // ""' <<<"$json")
+          base=$(jq -r '.Labels["org.telamon.base-image"] // .Labels["org.atlasos.base-image"] // ""' <<<"$json")
           [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
           [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::testing has no usable revision label: '$revision'"; exit 1; }
           # Written to $GITHUB_OUTPUT below: one line, nothing else. The build
@@ -242,6 +247,20 @@ jobs:
             echo "base=$base"
           } >>"$GITHUB_OUTPUT"
 
+      # Before anything moves: the old name's copy of this digest must verify
+      # too, so telamonos and atlasos are promoted together or neither is
+      # (a failure after the first copy is not retried on a fast day, which
+      # only looks for a newer image than telamonos's).
+      - name: Check the old name's signature
+        if: steps.choose.outputs.go == 'true'
+        env:
+          DIGEST: ${{ steps.pick.outputs.digest }}
+        run: |
+          set -euo pipefail
+          legacy="${IMAGE_REGISTRY}/${LEGACY_IMAGE_NAME}"
+          scripts/verify-image.sh "$legacy" "$DIGEST" >/dev/null ||
+            { echo "::error::${legacy}@${DIGEST} does not verify against cosign.pub for this repository (the build signs both names); not promoting."; exit 1; }
+
       - name: Copy by digest
         if: steps.pick.outputs.copy == 'true'
         env:
@@ -260,6 +279,39 @@ jobs:
             [ "$got" = "$DIGEST" ] || { echo "::error::${t} is ${got}"; exit 1; }
           done
 
+      # The same digest under the old image name, which installs made before
+      # the rename follow. The build pushed and signed it there too (a
+      # signature belongs to a repository and a digest, so it is checked for
+      # that repository, never assumed from the new name's).
+      - name: Mirror to the old name
+        if: steps.choose.outputs.go == 'true'
+        env:
+          DIGEST: ${{ steps.pick.outputs.digest }}
+          VERSION: ${{ steps.pick.outputs.version }}
+        run: |
+          set -euo pipefail
+          legacy="${IMAGE_REGISTRY}/${LEGACY_IMAGE_NAME}"
+          scripts/verify-image.sh "$legacy" "$DIGEST" >/dev/null ||
+            { echo "::error::${legacy}@${DIGEST} (testing ${VERSION}) does not verify against cosign.pub for this repository; not promoting it under the old name. The next promotion of a signed testing build fixes this."; exit 1; }
+          copy=false
+          for t in stable latest 44 "$VERSION"; do
+            current=$(skopeo inspect --format '{{.Digest}}' "docker://${legacy}:${t}" 2>/dev/null || true)
+            [ "$current" = "$DIGEST" ] || copy=true
+          done
+          if [ "$copy" = true ]; then
+            for t in stable latest 44 "$VERSION"; do
+              skopeo copy --all --preserve-digests \
+                "docker://${legacy}@${DIGEST}" "docker://${legacy}:${t}"
+            done
+          fi
+          for t in stable latest 44 "$VERSION"; do
+            got=$(skopeo inspect --format '{{.Digest}}' "docker://${legacy}:${t}")
+            [ "$got" = "$DIGEST" ] || { echo "::error::${legacy}:${t} is ${got}"; exit 1; }
+          done
+          got=$(skopeo inspect --format '{{.Digest}}' "docker://${legacy}:stable")
+          scripts/verify-image.sh "$legacy" "$got" >/dev/null ||
+            { echo "::error::${legacy}:stable (${got}) does not verify against cosign.pub, so installs cannot update to it."; exit 1; }
+
       # Whether or not anything was copied: what installs track must verify.
       - name: Verify stable
         if: steps.choose.outputs.go == 'true'
@@ -273,8 +325,9 @@ jobs:
           scripts/verify-image.sh "$repo" "$got" >/dev/null ||
             { echo "::error::${repo}:stable (${got}) does not verify against cosign.pub, so installs cannot update to it. The next promotion of a signed testing build fixes this."; exit 1; }
 
-  # The same for atlasos-nvidia, whose testing image the build workflow makes
-  # from each atlasos testing image. Its signature, like atlasos's, was made
+  # The same for telamonos-nvidia (and atlasos-nvidia, its old name), whose
+  # testing image the build workflow makes from each telamonos testing image.
+  # Its signature, like telamonos's, was made
   # when testing was pushed; it is only verified here.
   promote-nvidia:
     name: Copy testing to stable (NVIDIA)
@@ -285,7 +338,8 @@ jobs:
       contents: read
       packages: write
     env:
-      NVIDIA_IMAGE: atlasos-nvidia
+      NVIDIA_IMAGE: telamonos-nvidia
+      LEGACY_NVIDIA_IMAGE: atlasos-nvidia
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -344,7 +398,7 @@ jobs:
             # with an NVIDIA :stable out there, a missing build is an error.
             if [ "$MODE" = fast ]; then
               if skopeo inspect --retry-times 3 --format '{{.Digest}}' "docker://${repo}:stable" >/dev/null 2>"$RUNNER_TEMP/nstable.err"; then
-                echo "::error::No ${NVIDIA_IMAGE}:${src}, so NVIDIA's stable now lags atlasos's. The next daily run (or a re-run) catches NVIDIA up once that build exists."
+                echo "::error::No ${NVIDIA_IMAGE}:${src}, so NVIDIA's stable now lags telamonos's. The next daily run (or a re-run) catches NVIDIA up once that build exists."
                 exit 1
               elif ! absent stable "$RUNNER_TEMP/nstable.err"; then
                 cat "$RUNNER_TEMP/nstable.err" >&2
@@ -360,16 +414,16 @@ jobs:
           json=$(skopeo inspect "docker://${repo}@${digest}")
           version=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
           [[ "$version" =~ ^44\.[0-9]{8}(-[0-9]+)?$ ]] || { echo "::error::testing has no usable version label: '$version'"; exit 1; }
-          # Only the NVIDIA build of the atlasos image just promoted: an older
+          # Only the NVIDIA build of the telamonos image just promoted: an older
           # one (its build failed since) would ship a stable without the
           # release's changes.
           revision=$(jq -r '.Labels["org.opencontainers.image.revision"] // ""' <<<"$json")
           if [ "$version" != "$PROMOTED_VERSION" ] || [ "$revision" != "$PROMOTED_REVISION" ]; then
-            echo "::error::${NVIDIA_IMAGE}:testing is ${version} (${revision}), atlasos stable is ${PROMOTED_VERSION} (${PROMOTED_REVISION}); not promoted."
+            echo "::error::${NVIDIA_IMAGE}:testing is ${version} (${revision}), telamonos stable is ${PROMOTED_VERSION} (${PROMOTED_REVISION}); not promoted."
             exit 1
           fi
           # Built from a commit on main and signed by the build workflow, as
-          # for atlasos; promoting never signs.
+          # for telamonos; promoting never signs.
           git merge-base --is-ancestor "$revision" origin/main ||
             { echo "::error::testing was built from ${revision}, which is not on main; not promoting."; exit 1; }
           scripts/verify-image.sh "$repo" "$digest" >/dev/null ||
@@ -397,9 +451,27 @@ jobs:
           [ "$got" = "$digest" ] || { echo "::error::stable is ${got}, not the verified ${digest}"; exit 1; }
           scripts/verify-image.sh "$repo" "$got" >/dev/null ||
             { echo "::error::${repo}:stable (${got}) does not verify against cosign.pub. The next promotion of a signed testing build fixes this."; exit 1; }
+          # The same digest under the old name, which installs made before the
+          # rename follow (signed there by the build, checked here).
+          legacy="${IMAGE_REGISTRY}/${LEGACY_NVIDIA_IMAGE}"
+          scripts/verify-image.sh "$legacy" "$digest" >/dev/null ||
+            { echo "::error::${legacy}@${digest} does not verify against cosign.pub for this repository; not promoting it under the old name."; exit 1; }
+          for t in stable latest 44 "$version"; do
+            skopeo copy --all --preserve-digests \
+              "docker://${legacy}@${digest}" "docker://${legacy}:${t}"
+          done
+          for t in stable latest 44 "$version"; do
+            got=$(skopeo inspect --format '{{.Digest}}' "docker://${legacy}:${t}")
+            [ "$got" = "$digest" ] || { echo "::error::${legacy}:${t} is ${got}"; exit 1; }
+          done
+          scripts/verify-image.sh "$legacy" "$digest" >/dev/null ||
+            { echo "::error::${legacy}:stable (${digest}) does not verify against cosign.pub."; exit 1; }
 
   # The live installer ISOs of what just became stable (iso.yml), uploaded
   # to telamon.eterneon.net. Each skips itself when its version is already up.
+  # They are still named for the old image names (atlasos, atlasos-nvidia) and
+  # read the stable images under them, which the promotion above mirrors: the
+  # website downloads those file names (the rename of the ISOs is a later step).
   iso:
     name: ISO
     needs: promote
@@ -510,4 +582,4 @@ jobs:
 
           # --target makes the tag on the commit the image was built from.
           gh release create "$VERSION" --target "$REVISION" \
-            --title "AtlasOS ${VERSION}" --notes-file notes.md --latest
+            --title "Telamon OS ${VERSION}" --notes-file notes.md --latest

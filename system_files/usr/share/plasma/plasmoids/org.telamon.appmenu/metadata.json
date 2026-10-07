@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Telamon OS"
+            }
+        ],
+        "Category": "Windows and Tasks",
+        "Description": "The menus of an app that has none of its own, and of the desktop, like macOS's menu bar",
+        "Icon": "application-menu",
+        "Id": "org.telamon.appmenu",
+        "License": "Apache-2.0",
+        "Name": "Telamon OS App Menu"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

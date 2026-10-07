@@ -1,5 +1,5 @@
-# Homebrew (https://brew.sh), once `atlas brew` installed it: its commands come
-# after the system's in PATH, so a formula never replaces a command AtlasOS
+# Homebrew (https://brew.sh), once `telamon brew` installed it: its commands come
+# after the system's in PATH, so a formula never replaces a command Telamon OS
 # itself uses (Homebrew's own `brew shellenv` would put them first).
 if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
 	export HOMEBREW_PREFIX=/home/linuxbrew/.linuxbrew

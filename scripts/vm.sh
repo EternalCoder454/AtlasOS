@@ -7,13 +7,13 @@
 #   vm.sh stop <name>              stop the VM and delete its overlay
 #   vm.sh update <name> [tag] [settle]
 #                                  build/vm/updated/<name>.qcow2: build/atlasos.qcow2
-#                                  switched to localhost/atlasos:<tag>
+#                                  switched to localhost/telamonos:<tag>
 #   vm.sh install-stock            install stock Kinoite 44 from the ISO in ~/VMs
-#   vm.sh mem [disk]               stock Kinoite vs AtlasOS memory (`just mem-stock`)
+#   vm.sh mem [disk]               stock Kinoite vs Telamon OS memory (`just mem-stock`)
 #   vm.sh bench <boot|mem|check|all> <disk> <runs> <out dir>
 #                                  measure or check boots (`just boot`, `mem`, `check`)
 #   vm.sh publish <tag> <stable|testing> [notes.md]
-#                                  put localhost/atlasos:<tag> in the stand-in registry
+#                                  put localhost/telamonos:<tag> in the stand-in registry
 #   vm.sh updtest                  build/vm/updated/atlasos-updtest.qcow2: a VM that
 #                                  tracks the stand-in registry's stable tag, left running
 #
@@ -155,7 +155,7 @@ stop() {
 run() {
 	local name=$1 base=$2
 	[ -f "$base" ] || {
-		echo "No $base. For AtlasOS, run 'just build' and 'just qcow2' first." >&2
+		echo "No $base. For Telamon OS, run 'just build' and 'just qcow2' first." >&2
 		exit 1
 	}
 	# Overlays live apart from the base disks, so removing one can never
@@ -197,8 +197,8 @@ update() {
 	mkdir -p "$update_dir"
 	rm -rf "$share" "$disk.partial"
 	mkdir -p "$share"
-	echo ">> Exporting localhost/atlasos:$tag"
-	podman save --quiet --format oci-dir -o "$share/image" "localhost/atlasos:$tag"
+	echo ">> Exporting localhost/telamonos:$tag"
+	podman save --quiet --format oci-dir -o "$share/image" "localhost/telamonos:$tag"
 	chmod -R a+rX "$share"
 	reachable "$share/image"
 	qemu-img create -q -f qcow2 -F qcow2 -b "$(realpath build/atlasos.qcow2)" "$disk.partial"
@@ -220,7 +220,7 @@ update() {
 	rm -rf "$share"
 	[ "$ok" -eq 0 ] || exit 1
 	mv "$disk.partial" "$disk"
-	echo ">> $disk runs localhost/atlasos:$tag"
+	echo ">> $disk runs localhost/telamonos:$tag"
 }
 
 install_stock() {
@@ -265,7 +265,7 @@ install_stock() {
 
 # Update tests. build/vm/updtest stands in for the registry: an OCI layout
 # (registry/) with stable and testing tags, and the GitHub-release JSON that
-# Atlas Updater shows as release notes (notes/<version>.json). The guest
+# Telamon Updater shows as release notes (notes/<version>.json). The guest
 # can't reach the host's ports (libvirt's firewall zone), so the VM gets it
 # read-only over virtiofs at /var/mnt/atlasreg and tracks
 # oci:/var/mnt/atlasreg/registry:stable the way an install tracks ghcr.io.
@@ -280,13 +280,13 @@ publish() {
 		exit 1
 		;;
 	esac
-	version=$(podman image inspect --format '{{index .Labels "org.opencontainers.image.version"}}' "localhost/atlasos:$tag")
+	version=$(podman image inspect --format '{{index .Labels "org.opencontainers.image.version"}}' "localhost/telamonos:$tag")
 	mkdir -p "$updtest_dir/registry" "$updtest_dir/notes"
-	echo ">> localhost/atlasos:$tag ($version) -> $channel"
-	skopeo copy --quiet "containers-storage:localhost/atlasos:$tag" "oci:$updtest_dir/registry:$channel"
+	echo ">> localhost/telamonos:$tag ($version) -> $channel"
+	skopeo copy --quiet "containers-storage:localhost/telamonos:$tag" "oci:$updtest_dir/registry:$channel"
 	if [ -n "$notes" ]; then
 		jq -n --arg v "$version" --rawfile body "$notes" \
-			'{tag_name: $v, name: ("AtlasOS " + $v), body: $body}' >"$updtest_dir/notes/$version.json"
+			'{tag_name: $v, name: ("Telamon OS " + $v), body: $body}' >"$updtest_dir/notes/$version.json"
 	fi
 	chmod -R a+rX "$updtest_dir"
 }

@@ -1,0 +1,7 @@
+[Default Applications]
+inode/directory=net.eterneon.atlas.explorer.desktop;
+text/plain=net.eterneon.atlas.notepad.desktop;
+x-scheme-handler/https=com.brave.Browser.desktop;
+
+[Added Associations]
+application/zip=net.eterneon.atlas.archive.desktop;

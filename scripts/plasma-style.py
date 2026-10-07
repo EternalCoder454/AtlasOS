@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Writes the AtlasOS Plasma style's SVGs into
-system_files/usr/share/plasma/desktoptheme/atlasos/: the dock's task frames,
+"""Writes the Telamon OS Plasma style's SVGs into
+system_files/usr/share/plasma/desktoptheme/telamon/: the dock's task frames,
 the panel background of the dock and menu bar, popups (dialogs/background),
 tooltips, desktop widget backgrounds, and the controls Plasma's own
 components draw from the theme (buttons, tool buttons, text fields, sliders,
 switches, check and radio marks, scrollbars, tabs, list and view items,
 frames, progress bars, headings), so every shell surface looks like the
-Atlas apps (Atlas.Ui) instead of Breeze. Each element keeps the ids of
+Telamon apps (Telamon.Ui) instead of Breeze. Each element keeps the ids of
 Breeze's counterpart (Plasma looks them up by name); only the drawing is ours.
 
     scripts/plasma-style.py
@@ -15,13 +15,13 @@ Every element is a nine-part frame Plasma stretches to size. Each frame is
 drawn at the size the dock actually uses (DOCK_HEIGHT in the layout script),
 so at the default size nothing is stretched and the underline is exactly
 UNDERLINE_W wide; it grows with a taller dock. Colours come from the colour
-scheme (AtlasOS Light or Dark) through Plasma's ColorScheme-* classes.
+scheme (Telamon Light or Dark) through Plasma's ColorScheme-* classes.
 """
 
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT / "system_files/usr/share/plasma/desktoptheme/atlasos"
+OUT = ROOT / "system_files/usr/share/plasma/desktoptheme/telamon"
 
 # The dock: 60 px tall (the layout script's dock.height). Plasma gives the
 # task manager the panel's whole height, and makes each icon-only task as
@@ -42,7 +42,7 @@ TILE_INSET = 2
 TILE_RADIUS = 10
 # Popups (the app launcher's too): a DIALOG_R card, Breeze's 4 px margins
 # (the launcher's layout counts on them) and a soft shadow SHADOW px wide.
-# The sizes below match scripts/gen-kvantum-themes.py and Atlas.Ui.
+# The sizes below match scripts/gen-kvantum-themes.py and Telamon.Ui.
 DIALOG_R = 8  # radiusLarge
 DIALOG_MARGIN = 4
 SHADOW = 10
@@ -263,7 +263,7 @@ def tasks():
     body = []
     for prefix, shapes in states.items():
         body += frame(prefix, (w, h), borders, shapes, hints)
-    return HEADER.format(what="AtlasOS's task frames for the dock (Plasma's widgets/tasks).",
+    return HEADER.format(what="Telamon OS's task frames for the dock (Plasma's widgets/tasks).",
                          w=w, h=h) + "\n".join(body) + "\n</svg>\n"
 
 
@@ -445,7 +445,7 @@ def checkmarks():
 
 def button():
     """Buttons: Plasma draws "normal", then the pointer-over, keyboard-focus
-    and pressed frames on top. Raised buttons are Atlas.Ui's: the control
+    and pressed frames on top. Raised buttons are Telamon.Ui's: the control
     fill, a hairline border and a grey hover and press overlay; flat (tool) buttons only show a rounded tile on hover or press."""
     hl, text = "ColorScheme-Highlight", "ColorScheme-Text"
     m = margins(5, left=12)
@@ -557,7 +557,7 @@ def main():
     files = {
         "widgets/tasks.svg": tasks(),
         # Plasma picks the folder by the panel's opacity setting: translucent
-        # (AtlasOS's dock and menu bar), adaptive (opaque only while a window
+        # (Telamon OS's dock and menu bar), adaptive (opaque only while a window
         # is maximized), opaque, and solid without compositing.
         "translucent/widgets/panel-background.svg": panel(0.55, "Panel background, translucent."),
         "widgets/panel-background.svg": panel(0.55, "Panel background, adaptive (see-through until a window is maximized)."),

@@ -1,6 +1,6 @@
 #!/bin/sh
-# Moves existing users from the Dracula icons, which AtlasOS no longer has, to
-# Papirus: Papirus-Dark with AtlasOS Dark (or any dark colour scheme), Papirus
+# Moves existing users from the Dracula icons, which Telamon OS no longer has, to
+# Papirus: Papirus-Dark with Telamon Dark (or any dark colour scheme), Papirus
 # otherwise. Only Dracula is replaced; any other icon theme the user chose is
 # left alone, and so is a user with no icon theme set (the global theme
 # supplies Papirus).
@@ -24,7 +24,7 @@ scheme=$(user_value General ColorScheme)
 [ "$scheme" != "$unset_marker" ] ||
 	scheme=$(kreadconfig6 --file "$cfg/kdedefaults/kdeglobals" --group General --key ColorScheme)
 case $pkg:$scheme in
-org.atlasos.dark.desktop:* | *:*Dark*) icons=Papirus-Dark ;;
+org.telamon.dark.desktop:* | *:*Dark*) icons=Papirus-Dark ;;
 *) icons=Papirus ;;
 esac
 kwriteconfig6 --file "$cfg/kdeglobals" --group Icons --key Theme "$icons"

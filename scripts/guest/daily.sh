@@ -1,5 +1,5 @@
 #!/bin/sh
-# Day-to-day use of an AtlasOS test VM, timed. Run inside the Plasma session
+# Day-to-day use of a Telamon OS test VM, timed. Run inside the Plasma session
 # (scripts/vmlive.py's environment) after scripts/guest/trace.js is loaded
 # into KWin, which logs windows opening and panels resizing to the journal.
 #
@@ -65,7 +65,7 @@ app() { # name, class pattern, command...
 apps() {
 	app Files 'dolphin' dolphin
 	app Terminal 'ghostty' ghostty
-	app Notepad 'notepad' atlas-notepad
+	app Notepad 'notepad' telamon-notepad
 	app Settings 'systemsettings' systemsettings
 	app Store 'discover' plasma-discover
 	app Brave 'brave' brave-origin-stable
@@ -101,7 +101,7 @@ launcher() {
 }
 
 theme() {
-	for t in org.atlasos.dark.desktop org.atlasos.desktop; do
+	for t in org.telamon.dark.desktop org.telamon.desktop; do
 		start=$(now)
 		plasma-apply-lookandfeel -a "$t" >/dev/null 2>&1
 		echo "apply $t: $(($(now) - start)) ms, then over 8 s:"

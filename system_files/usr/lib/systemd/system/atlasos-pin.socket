@@ -1,5 +1,5 @@
 [Unit]
-Description=AtlasOS PIN verifier socket
+Description=Telamon OS PIN verifier socket
 Documentation=https://github.com/EternalCoder454/AtlasOS
 
 # Nothing runs until the login screen or the lock screen asks: each question

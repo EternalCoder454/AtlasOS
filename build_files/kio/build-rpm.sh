@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rebuilds Fedora's kf6-kio, the exact version in the base image, with
-# AtlasOS's fix for a crash KDE hasn't fixed yet, and puts the RPMs in $1.
+# Telamon OS's fix for a crash KDE hasn't fixed yet, and puts the RPMs in $1.
 # Runs in the Containerfile's kio stage; /kio-nvr holds the base image's
 # kf6-kio-core version-release.
 #

@@ -1,9 +1,9 @@
-# AtlasOS settings updates for existing users. Plasma's kded6 runs kconf_update
+# Telamon OS settings updates for existing users. Plasma's kded6 runs kconf_update
 # at the start of every session (and when a .upd file changes), and each Id
 # runs once per user: kconf_update records it in ~/.config/kconf_updaterc.
 #
 # To add one:
-#   1. Put a script beside this file, named atlasos-YYYYMMDD-<name>.sh, with
+#   1. Put a script beside this file, named telamon-YYYYMMDD-<name>.sh (atlasos-... before the rename), with
 #      the date it was added. It runs as the user, with HOME set, and must be
 #      safe to run twice and must not overwrite what the user chose.
 #   2. Add an Id= and Script= pair below, with an Id nobody has used (the same
@@ -12,6 +12,12 @@
 #   3. The script has to be executable (chmod 755).
 # See README.md ("Settings updates for existing users").
 Version=6
+
+# The rename to Telamon OS comes first: the scripts after it (for users who
+# skipped images, and for the new names to be what they see) read the settings
+# with the new names already in them.
+Id=telamon-20261007-rename
+Script=telamon-20261007-rename.sh,sh
 
 Id=atlasos-20261001-look-and-feel
 Script=atlasos-20261001-look-and-feel.sh,sh

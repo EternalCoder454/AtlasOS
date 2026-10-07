@@ -1,4 +1,4 @@
-name: Build AtlasOS
+name: Build Telamon OS
 
 on:
   push:
@@ -30,8 +30,14 @@ concurrency:
 env:
   # Registry paths must be lowercase.
   IMAGE_REGISTRY: ghcr.io/eternalcoder454
-  IMAGE_NAME: atlasos
-  NVIDIA_IMAGE: atlasos-nvidia
+  IMAGE_NAME: telamonos
+  NVIDIA_IMAGE: telamonos-nvidia
+  # The names before Telamon. Every build is pushed (and signed) under both:
+  # installs made before the rename follow atlasos:<channel> and
+  # atlasos-nvidia:<channel> until the Updater moves them (CI.md, "The image's
+  # two names"). The ISOs, and the GitHub repository's name, are not renamed yet.
+  LEGACY_IMAGE_NAME: atlasos
+  LEGACY_NVIDIA_IMAGE: atlasos-nvidia
   BASE_IMAGE: quay.io/fedora/fedora-kinoite:44
 
 jobs:
@@ -89,7 +95,8 @@ jobs:
     needs: runner
     runs-on: ${{ fromJSON(needs.runner.outputs.labels) }}
     permissions:
-      contents: read
+      # write: the testing build's changelog is a GitHub pre-release.
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -97,142 +104,142 @@ jobs:
         with:
           persist-credentials: false
 
-      # The Atlas apps and atlas-framework go in at the commits pinned in
-      # atlas-apps.lock (`just pins`), never at whatever their main branch
+      # The Telamon apps and telamon-framework go in at the commits pinned in
+      # telamon-apps.lock (`just pins`), never at whatever their main branch
       # holds when a build starts: an app's new version reaches the image
       # only through a commit here that moves its pin. Each pin must be on
       # its repository's main branch (a commit that only exists in a fork
       # can still be fetched through the parent by its hash) and match its
       # release tag where it has one.
-      - name: Read the Atlas app pins
+      - name: Read the Telamon app pins
         id: pins
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          scripts/atlas-pins.py verify
+          scripts/telamon-pins.py verify
           for n in framework updater monitor notepad settings wizard store explorer archive launcher screenshot installer; do
-            sha=$(scripts/atlas-pins.py get "$n")
+            sha=$(scripts/telamon-pins.py get "$n")
             echo "$n=$sha" >>"$GITHUB_OUTPUT"
           done
 
-      # atlas-framework's source (pinned), the atlas-framework build context:
-      # the Containerfile builds Atlas.Ui's RPMs from it, and the apps
+      # telamon-framework's source (pinned), the telamon-framework build context:
+      # the Containerfile builds Telamon.Ui's RPMs from it, and the apps
       # against them. If the repository is private, store a token that can
       # read it in the ATLAS_FRAMEWORK_TOKEN secret.
-      - name: Checkout atlas-framework
+      - name: Checkout telamon-framework
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlas-framework
           ref: ${{ steps.pins.outputs.framework }}
-          path: atlas-framework
+          path: telamon-framework
           token: ${{ secrets.ATLAS_FRAMEWORK_TOKEN || github.token }}
           # Only the checkout needs the token: don't leave it in .git/config
           # on the self-hosted runner.
           persist-credentials: false
 
-      # The Atlas apps' source (Atlas Updater and atlas-system-helper, pinned): the
+      # The Telamon apps' source (Telamon Updater and telamon-system-helper, pinned): the
       # Containerfile builds their RPMs from it. If the repository is private,
       # store a token that can read it in the ATLAS_UPDATER_TOKEN secret.
-      - name: Checkout Atlas Updater
+      - name: Checkout Telamon Updater
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-updater
           ref: ${{ steps.pins.outputs.updater }}
-          path: atlas-updater
+          path: telamon-updater
           token: ${{ secrets.ATLAS_UPDATER_TOKEN || github.token }}
           persist-credentials: false
 
-      # Atlas Monitor's source (pinned), the atlas-monitor build context. The
+      # Telamon Monitor's source (pinned), the telamon-monitor build context. The
       # repository is public.
-      - name: Checkout Atlas Monitor
+      - name: Checkout Telamon Monitor
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-monitor
           ref: ${{ steps.pins.outputs.monitor }}
-          path: atlas-monitor
+          path: telamon-monitor
           persist-credentials: false
 
-      # Atlas Notepad's source (pinned), the atlas-notepad build context. The
+      # Telamon Notepad's source (pinned), the telamon-notepad build context. The
       # repository is public.
-      - name: Checkout Atlas Notepad
+      - name: Checkout Telamon Notepad
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-notepad
           ref: ${{ steps.pins.outputs.notepad }}
-          path: atlas-notepad
+          path: telamon-notepad
           persist-credentials: false
 
-      # Atlas Settings' source (pinned), the atlas-settings build context.
-      - name: Checkout Atlas Settings
+      # Telamon Settings' source (pinned), the telamon-settings build context.
+      - name: Checkout Telamon Settings
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-settings
           ref: ${{ steps.pins.outputs.settings }}
-          path: atlas-settings
+          path: telamon-settings
           persist-credentials: false
 
-      # Atlas Wizard's source (pinned), the atlas-wizard build context.
-      - name: Checkout Atlas Wizard
+      # Telamon Wizard's source (pinned), the telamon-wizard build context.
+      - name: Checkout Telamon Wizard
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-wizard
           ref: ${{ steps.pins.outputs.wizard }}
-          path: atlas-wizard
+          path: telamon-wizard
           persist-credentials: false
 
-      # Atlas Store's source (pinned), the atlas-store build context.
-      - name: Checkout Atlas Store
+      # Telamon Store's source (pinned), the telamon-store build context.
+      - name: Checkout Telamon Store
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-store
           ref: ${{ steps.pins.outputs.store }}
-          path: atlas-store
+          path: telamon-store
           persist-credentials: false
 
-      # Atlas Explorer's source (pinned), the atlas-explorer build context.
-      - name: Checkout Atlas Explorer
+      # Telamon Explorer's source (pinned), the telamon-explorer build context.
+      - name: Checkout Telamon Explorer
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-explorer
           ref: ${{ steps.pins.outputs.explorer }}
-          path: atlas-explorer
+          path: telamon-explorer
           persist-credentials: false
 
-      # Atlas Archive's source (pinned), the atlas-archive build context.
-      - name: Checkout Atlas Archive
+      # Telamon Archive's source (pinned), the telamon-archive build context.
+      - name: Checkout Telamon Archive
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-archive
           ref: ${{ steps.pins.outputs.archive }}
-          path: atlas-archive
+          path: telamon-archive
           persist-credentials: false
 
-      # Atlas Launcher's source (pinned), the atlas-launcher build context.
-      - name: Checkout Atlas Launcher
+      # Telamon Launcher's source (pinned), the telamon-launcher build context.
+      - name: Checkout Telamon Launcher
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-launcher
           ref: ${{ steps.pins.outputs.launcher }}
-          path: atlas-launcher
+          path: telamon-launcher
           persist-credentials: false
 
-      # AtlasOS Screenshot's source (pinned), the atlas-screenshot build context.
-      - name: Checkout AtlasOS Screenshot
+      # Telamon Screenshot's source (pinned), the telamon-screenshot build context.
+      - name: Checkout Telamon Screenshot
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-screenshot
           ref: ${{ steps.pins.outputs.screenshot }}
-          path: atlas-screenshot
+          path: telamon-screenshot
           persist-credentials: false
 
-      # Atlas Installer's source (pinned): its firstboot/ files, the
-      # atlas-installer build context (no RPM).
-      - name: Checkout Atlas Installer
+      # Telamon Installer's source (pinned): its firstboot/ files, the
+      # telamon-installer build context (no RPM).
+      - name: Checkout Telamon Installer
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: EternalCoder454/atlasos-installer
           ref: ${{ steps.pins.outputs.installer }}
-          path: atlas-installer
+          path: telamon-installer
           persist-credentials: false
 
       # main publishes :testing, beta publishes :beta. (:stable and :latest
@@ -274,22 +281,22 @@ jobs:
           # already published for this branch was built from this commit on
           # this same Kinoite. That saves a whole build most days.
           skip=false
-          framework=$(git -C atlas-framework rev-parse HEAD)
-          updater=$(git -C atlas-updater rev-parse HEAD)
-          monitor=$(git -C atlas-monitor rev-parse HEAD)
-          notepad=$(git -C atlas-notepad rev-parse HEAD)
-          settings=$(git -C atlas-settings rev-parse HEAD)
-          wizard=$(git -C atlas-wizard rev-parse HEAD)
-          store=$(git -C atlas-store rev-parse HEAD)
-          explorer=$(git -C atlas-explorer rev-parse HEAD)
-          archive=$(git -C atlas-archive rev-parse HEAD)
-          launcher=$(git -C atlas-launcher rev-parse HEAD)
-          screenshot=$(git -C atlas-screenshot rev-parse HEAD)
-          installer=$(git -C atlas-installer rev-parse HEAD)
-          # What was checked out is what atlas-apps.lock pins, or nothing runs.
+          framework=$(git -C telamon-framework rev-parse HEAD)
+          updater=$(git -C telamon-updater rev-parse HEAD)
+          monitor=$(git -C telamon-monitor rev-parse HEAD)
+          notepad=$(git -C telamon-notepad rev-parse HEAD)
+          settings=$(git -C telamon-settings rev-parse HEAD)
+          wizard=$(git -C telamon-wizard rev-parse HEAD)
+          store=$(git -C telamon-store rev-parse HEAD)
+          explorer=$(git -C telamon-explorer rev-parse HEAD)
+          archive=$(git -C telamon-archive rev-parse HEAD)
+          launcher=$(git -C telamon-launcher rev-parse HEAD)
+          screenshot=$(git -C telamon-screenshot rev-parse HEAD)
+          installer=$(git -C telamon-installer rev-parse HEAD)
+          # What was checked out is what telamon-apps.lock pins, or nothing runs.
           for n in framework updater monitor notepad settings wizard store explorer archive launcher screenshot installer; do
-            [ "$(git -C "atlas-$n" rev-parse HEAD)" = "$(scripts/atlas-pins.py get "$n")" ] ||
-              { echo "::error::atlas-$n isn't at its pinned commit"; exit 1; }
+            [ "$(git -C "telamon-$n" rev-parse HEAD)" = "$(scripts/telamon-pins.py get "$n")" ] ||
+              { echo "::error::telamon-$n isn't at its pinned commit"; exit 1; }
           done
 
           if [ "${GITHUB_EVENT_NAME}" = schedule ]; then
@@ -299,37 +306,54 @@ jobs:
               "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${tag}" 2>/dev/null); then
               labels=$(jq -c '.Labels // {}' <<<"$json")
             fi
-            if [ "$(jq -r '."org.atlasos.base-image" // ""' <<<"$labels")" = "$base" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.framework.revision" // ""' <<<"$labels")" = "$framework" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.notepad.revision" // ""' <<<"$labels")" = "$notepad" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.settings.revision" // ""' <<<"$labels")" = "$settings" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.wizard.revision" // ""' <<<"$labels")" = "$wizard" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.store.revision" // ""' <<<"$labels")" = "$store" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.explorer.revision" // ""' <<<"$labels")" = "$explorer" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.archive.revision" // ""' <<<"$labels")" = "$archive" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.launcher.revision" // ""' <<<"$labels")" = "$launcher" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.screenshot.revision" // ""' <<<"$labels")" = "$screenshot" ] &&
-               [ "$(jq -r '."net.eterneon.atlas.installer.revision" // ""' <<<"$labels")" = "$installer" ] &&
+            if [ "$(jq -r '."org.telamon.base-image" // ""' <<<"$labels")" = "$base" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.framework.revision" // ""' <<<"$labels")" = "$framework" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.updater.revision" // ""' <<<"$labels")" = "$updater" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.monitor.revision" // ""' <<<"$labels")" = "$monitor" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.notepad.revision" // ""' <<<"$labels")" = "$notepad" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.settings.revision" // ""' <<<"$labels")" = "$settings" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.wizard.revision" // ""' <<<"$labels")" = "$wizard" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.store.revision" // ""' <<<"$labels")" = "$store" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.explorer.revision" // ""' <<<"$labels")" = "$explorer" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.archive.revision" // ""' <<<"$labels")" = "$archive" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.launcher.revision" // ""' <<<"$labels")" = "$launcher" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.screenshot.revision" // ""' <<<"$labels")" = "$screenshot" ] &&
+               [ "$(jq -r '."net.eterneon.telamon.installer.revision" // ""' <<<"$labels")" = "$installer" ] &&
                [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$labels")" = "${GITHUB_SHA}" ]; then
               skip=true
             fi
-            # atlasos-nvidia only builds on a pushed atlasos, so a failed
+            # telamonos-nvidia only builds on a pushed telamonos, so a failed
             # NVIDIA build would otherwise stay stale until the next commit.
-            # Its labels come from the atlasos image it was built on.
+            # Its labels come from the telamonos image it was built on.
             if [ "$skip" = true ] && [ "$NVIDIA_KEY_SET" = true ]; then
               nv='{}'
               if json=$(skopeo inspect --authfile "$auth" \
-                "docker://${IMAGE_REGISTRY}/atlasos-nvidia:${tag}" 2>/dev/null); then
+                "docker://${IMAGE_REGISTRY}/${NVIDIA_IMAGE}:${tag}" 2>/dev/null); then
                 nv=$(jq -c '.Labels // {}' <<<"$json")
               fi
               if [ "$(jq -r '."org.opencontainers.image.version" // ""' <<<"$nv")" != \
                  "$(jq -r '."org.opencontainers.image.version" // ""' <<<"$labels")" ] ||
                  [ "$(jq -r '."org.opencontainers.image.revision" // ""' <<<"$nv")" != "${GITHUB_SHA}" ]; then
                 skip=false
-                echo "::notice::atlasos-nvidia:${tag} is behind atlasos; building both."
+                echo "::notice::${NVIDIA_IMAGE}:${tag} is behind ${IMAGE_NAME}; building both."
               fi
+            fi
+            # The old names get every build too: one that is behind (its push
+            # failed after the new name's succeeded) builds again.
+            if [ "$skip" = true ]; then
+              want=$(jq -r '."org.opencontainers.image.version" // ""' <<<"$labels")
+              legacy_names="$LEGACY_IMAGE_NAME"
+              [ "$NVIDIA_KEY_SET" != true ] || legacy_names="$legacy_names $LEGACY_NVIDIA_IMAGE"
+              for r in $legacy_names; do
+                have=""
+                if json=$(skopeo inspect --authfile "$auth" "docker://${IMAGE_REGISTRY}/${r}:${tag}" 2>/dev/null); then
+                  have=$(jq -r '.Labels["org.opencontainers.image.version"] // ""' <<<"$json")
+                fi
+                if [ "$have" != "$want" ]; then
+                  skip=false
+                  echo "::notice::${r}:${tag} is ${have:-missing}, not ${want}; building."
+                fi
+              done
             fi
             [ "$skip" = false ] || echo "::notice::Nothing new since the last ${tag} build; skipping."
           fi
@@ -342,16 +366,21 @@ jobs:
           date=$(date -u +%Y%m%d)
           version=""
           if [ "$skip" != true ]; then
+            # Both names are read: the old one holds every version published
+            # before the rename, and gets every build since, so the number is
+            # one past the highest of either.
             tags=""
-            if out=$(skopeo list-tags --authfile "$auth" \
-              "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" 2>"$RUNNER_TEMP/list-tags.err"); then
-              tags=$(jq -r '.Tags[]?' <<<"$out")
-            # A repository with no image yet has no tags; anything else is an
-            # error when this build publishes.
-            elif [ "$push" = true ] && ! grep -qiE 'name unknown|not found' "$RUNNER_TEMP/list-tags.err"; then
-              echo "::error::Can't list ${IMAGE_NAME}'s tags to number this build: $(cat "$RUNNER_TEMP/list-tags.err")"
-              exit 1
-            fi
+            for r in "$IMAGE_NAME" "$LEGACY_IMAGE_NAME"; do
+              if out=$(skopeo list-tags --authfile "$auth" \
+                "docker://${IMAGE_REGISTRY}/${r}" 2>"$RUNNER_TEMP/list-tags.err"); then
+                tags="$tags"$'\n'"$(jq -r '.Tags[]?' <<<"$out")"
+              # A repository with no image yet has no tags; anything else is an
+              # error when this build publishes.
+              elif [ "$push" = true ] && ! grep -qiE 'name unknown|not found' "$RUNNER_TEMP/list-tags.err"; then
+                echo "::error::Can't list ${r}'s tags to number this build: $(cat "$RUNNER_TEMP/list-tags.err")"
+                exit 1
+              fi
+            done
             n=$(grep -oE "44\.${date}-[0-9]+$" <<<"$tags" | sed 's/.*-//' | sort -n | tail -n 1 || true)
             version="44.${date}-$(( ${n:-0} + 1 ))"
           fi
@@ -411,51 +440,51 @@ jobs:
         if: steps.decide.outputs.skip != 'true'
         env:
           IMAGE_VERSION: ${{ steps.decide.outputs.version }}
-          # `just build` passes this as the atlas-framework build context,
-          ATLAS_FRAMEWORK_SRC: ${{ github.workspace }}/atlas-framework
-          # this as the atlas-updater one,
-          ATLAS_UPDATER_SRC: ${{ github.workspace }}/atlas-updater
-          # this as the atlas-monitor one,
-          ATLAS_MONITOR_SRC: ${{ github.workspace }}/atlas-monitor
-          # this as the atlas-notepad one,
-          ATLAS_NOTEPAD_SRC: ${{ github.workspace }}/atlas-notepad
-          # this as the atlas-settings one,
-          ATLAS_SETTINGS_SRC: ${{ github.workspace }}/atlas-settings
-          # this as the atlas-wizard one,
-          ATLAS_WIZARD_SRC: ${{ github.workspace }}/atlas-wizard
-          # this as the atlas-store one,
-          ATLAS_STORE_SRC: ${{ github.workspace }}/atlas-store
-          # this as the atlas-explorer one,
-          ATLAS_EXPLORER_SRC: ${{ github.workspace }}/atlas-explorer
-          # the atlas-archive one,
-          ATLAS_ARCHIVE_SRC: ${{ github.workspace }}/atlas-archive
-          # the atlas-launcher one,
-          ATLAS_LAUNCHER_SRC: ${{ github.workspace }}/atlas-launcher
-          # the atlas-screenshot one,
-          ATLAS_SCREENSHOT_SRC: ${{ github.workspace }}/atlas-screenshot
-          # and this as the atlas-installer one.
-          ATLAS_INSTALLER_SRC: ${{ github.workspace }}/atlas-installer
+          # `just build` passes this as the telamon-framework build context,
+          TELAMON_FRAMEWORK_SRC: ${{ github.workspace }}/telamon-framework
+          # this as the telamon-updater one,
+          TELAMON_UPDATER_SRC: ${{ github.workspace }}/telamon-updater
+          # this as the telamon-monitor one,
+          TELAMON_MONITOR_SRC: ${{ github.workspace }}/telamon-monitor
+          # this as the telamon-notepad one,
+          TELAMON_NOTEPAD_SRC: ${{ github.workspace }}/telamon-notepad
+          # this as the telamon-settings one,
+          TELAMON_SETTINGS_SRC: ${{ github.workspace }}/telamon-settings
+          # this as the telamon-wizard one,
+          TELAMON_WIZARD_SRC: ${{ github.workspace }}/telamon-wizard
+          # this as the telamon-store one,
+          TELAMON_STORE_SRC: ${{ github.workspace }}/telamon-store
+          # this as the telamon-explorer one,
+          TELAMON_EXPLORER_SRC: ${{ github.workspace }}/telamon-explorer
+          # the telamon-archive one,
+          TELAMON_ARCHIVE_SRC: ${{ github.workspace }}/telamon-archive
+          # the telamon-launcher one,
+          TELAMON_LAUNCHER_SRC: ${{ github.workspace }}/telamon-launcher
+          # the telamon-screenshot one,
+          TELAMON_SCREENSHOT_SRC: ${{ github.workspace }}/telamon-screenshot
+          # and this as the telamon-installer one.
+          TELAMON_INSTALLER_SRC: ${{ github.workspace }}/telamon-installer
         run: |
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
-            --label net.eterneon.atlas.framework.revision="${{ steps.decide.outputs.framework }}" \
-            --label net.eterneon.atlas.updater.revision="${{ steps.decide.outputs.updater }}" \
-            --label net.eterneon.atlas.monitor.revision="${{ steps.decide.outputs.monitor }}" \
-            --label net.eterneon.atlas.notepad.revision="${{ steps.decide.outputs.notepad }}" \
-            --label net.eterneon.atlas.settings.revision="${{ steps.decide.outputs.settings }}" \
-            --label net.eterneon.atlas.wizard.revision="${{ steps.decide.outputs.wizard }}" \
-            --label net.eterneon.atlas.store.revision="${{ steps.decide.outputs.store }}" \
-            --label net.eterneon.atlas.explorer.revision="${{ steps.decide.outputs.explorer }}" \
-            --label net.eterneon.atlas.archive.revision="${{ steps.decide.outputs.archive }}" \
-            --label net.eterneon.atlas.launcher.revision="${{ steps.decide.outputs.launcher }}" \
-            --label net.eterneon.atlas.screenshot.revision="${{ steps.decide.outputs.screenshot }}" \
-            --label net.eterneon.atlas.installer.revision="${{ steps.decide.outputs.installer }}" \
+            --label net.eterneon.telamon.framework.revision="${{ steps.decide.outputs.framework }}" \
+            --label net.eterneon.telamon.updater.revision="${{ steps.decide.outputs.updater }}" \
+            --label net.eterneon.telamon.monitor.revision="${{ steps.decide.outputs.monitor }}" \
+            --label net.eterneon.telamon.notepad.revision="${{ steps.decide.outputs.notepad }}" \
+            --label net.eterneon.telamon.settings.revision="${{ steps.decide.outputs.settings }}" \
+            --label net.eterneon.telamon.wizard.revision="${{ steps.decide.outputs.wizard }}" \
+            --label net.eterneon.telamon.store.revision="${{ steps.decide.outputs.store }}" \
+            --label net.eterneon.telamon.explorer.revision="${{ steps.decide.outputs.explorer }}" \
+            --label net.eterneon.telamon.archive.revision="${{ steps.decide.outputs.archive }}" \
+            --label net.eterneon.telamon.launcher.revision="${{ steps.decide.outputs.launcher }}" \
+            --label net.eterneon.telamon.screenshot.revision="${{ steps.decide.outputs.screenshot }}" \
+            --label net.eterneon.telamon.installer.revision="${{ steps.decide.outputs.installer }}" \
             --label org.opencontainers.image.source="https://github.com/${GITHUB_REPOSITORY}" \
             --label org.opencontainers.image.url="https://github.com/${GITHUB_REPOSITORY}"
           # Each week's cache starts from the last one, so drop packages
           # nothing has downloaded for a month before it is saved.
-          find "${ATLAS_DNF_CACHE:-build/cache/dnf}" -name '*.rpm' -mtime +30 -delete
+          find "${TELAMON_DNF_CACHE:-${ATLAS_DNF_CACHE:-build/cache/dnf}}" -name '*.rpm' -mtime +30 -delete
 
       # The build time as a label, set on the built image: only its metadata
       # changes (no layer).
@@ -466,15 +495,16 @@ jobs:
           ref="localhost/${IMAGE_NAME}:${{ steps.decide.outputs.tag }}"
           ctx=$(mktemp -d)
           printf 'FROM %s\n' "$ref" >"$ctx/Containerfile"
-          # org.atlasos.built: when this build ran (epoch seconds). The image's
+          # org.telamon.built: when this build ran (epoch seconds). The image's
           # Created time is the commit's (SOURCE_DATE_EPOCH in rechunk), so the
           # fast promotion's 24-hour soak goes by this instead. Signed with
-          # the rest of the config.
+          # the rest of the config. (org.atlasos.built, its name before
+          # Telamon, is set too: scripts/pick-fast-promotion.sh reads either.)
           built=$(date -u +%s)
-          podman build --pull=never --label "org.atlasos.built=${built}" \
+          podman build --pull=never --label "org.telamon.built=${built}" --label "org.atlasos.built=${built}" \
             --file "$ctx/Containerfile" --tag "$ref" "$ctx"
           rm -rf "$ctx"
-          [ "$(podman image inspect --format '{{index .Labels "org.atlasos.built"}}' "$ref")" = "$built" ]
+          [ "$(podman image inspect --format '{{index .Labels "org.telamon.built"}}' "$ref")" = "$built" ]
 
       # Smaller updates for users. Only for images that get pushed. Into an
       # OCI directory in the job's temporary directory, which the runner
@@ -496,7 +526,7 @@ jobs:
       # The vulnerability database is downloaded each time (3 tries); if it
       # can't be, the build fails rather than push unchecked. Exit code 2 is
       # grype's "a finding crossed the threshold", which is not retried.
-      - name: Scan atlasos
+      - name: Scan telamonos
         id: sbom
         if: steps.decide.outputs.skip != 'true'
         timeout-minutes: 45
@@ -510,7 +540,7 @@ jobs:
             sleep $((try * 30))
           done
           {
-            echo "### Vulnerabilities in atlasos:${{ steps.decide.outputs.tag }}"
+            echo "### Vulnerabilities in telamonos:${{ steps.decide.outputs.tag }}"
             echo
             jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("- \(.[0]): \(length)") | .[]' \
               "$out/vulnerabilities.json"
@@ -554,7 +584,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
           cat "$out/gate.txt"
           if [ "$rc" -eq 2 ]; then
-            echo "::error::atlasos has a Critical vulnerability with a fix available (table above); not pushing."
+            echo "::error::telamonos has a Critical vulnerability with a fix available (table above); not pushing."
             exit 1
           elif [ "$rc" -ne 0 ]; then
             echo "::error::The vulnerability gate failed to run (grype exit $rc); not pushing."
@@ -647,19 +677,26 @@ jobs:
           # A build on another channel (main and beta run side by side) may
           # have taken this number since Decide: two images must never share a
           # version, so this one stops and the next run takes a new number.
-          existing=$(skopeo list-tags "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" | jq -r '.Tags[]?')
+          existing=$({ skopeo list-tags "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}" | jq -r '.Tags[]?'
+            skopeo list-tags "docker://${IMAGE_REGISTRY}/${LEGACY_IMAGE_NAME}" | jq -r '.Tags[]?'; } || true)
           if grep -qE "(^|-)${version//./\\.}$" <<<"$existing"; then
             echo "::error::Version ${version} was taken while this build ran; run it again."
             exit 1
           fi
           # The layers go up as `just rechunk` compressed them (zstd), and the registry
           # already has every one that didn't change.
+          # Under both names: telamonos, and atlasos for the installs made
+          # before the rename. The same manifest, so the same digest.
           tags=("$tag" "$tag-$version")
-          for t in "${tags[@]}"; do
-            skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest" \
-              "$src" "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:${t}"
+          for name in "$IMAGE_NAME" "$LEGACY_IMAGE_NAME"; do
+            for t in "${tags[@]}"; do
+              skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest-$name" \
+                "$src" "docker://${IMAGE_REGISTRY}/${name}:${t}"
+            done
           done
-          echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
+          [ "$(cat "$RUNNER_TEMP/digest-$IMAGE_NAME")" = "$(cat "$RUNNER_TEMP/digest-$LEGACY_IMAGE_NAME")" ] ||
+            { echo "::error::${IMAGE_NAME} and ${LEGACY_IMAGE_NAME} got different digests."; exit 1; }
+          echo "digest=$(cat "$RUNNER_TEMP/digest-$IMAGE_NAME")" >>"$GITHUB_OUTPUT"
 
       - name: Sign
         if: steps.push.outcome == 'success' && steps.signing.outputs.enabled == 'true'
@@ -670,14 +707,39 @@ jobs:
         run: |
           # The old bundle format is what rpm-ostree and containers/image can
           # verify (containers/container-libs#388, coreos/rpm-ostree#5509).
-          cosign sign -y --new-bundle-format=false --use-signing-config=false \
-            --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"
-          # The key in the secret has to be the one the image checks with.
-          scripts/verify-image.sh "${IMAGE_REGISTRY}/${IMAGE_NAME}" "${{ steps.push.outputs.digest }}" >/dev/null
+          # A signature names its repository, so each name is signed on its own.
+          for name in "$IMAGE_NAME" "$LEGACY_IMAGE_NAME"; do
+            cosign sign -y --new-bundle-format=false --use-signing-config=false \
+              --key env://COSIGN_PRIVATE_KEY \
+              "${IMAGE_REGISTRY}/${name}@${{ steps.push.outputs.digest }}"
+            # The key in the secret has to be the one the image checks with.
+            scripts/verify-image.sh "${IMAGE_REGISTRY}/${name}" "${{ steps.push.outputs.digest }}" >/dev/null
+          done
 
       # The SBOM, signed with the same key, beside the image on the registry
       # (`cosign download attestation`), then checked against cosign.pub.
+      # Every testing build gets its changelog, the GitHub pre-release named
+      # after its version that Telamon Updater shows as "What's New": the app
+      # pins that moved (with what each brings) and this repository's own
+      # changes since the previous release (scripts/build-notes.py). Notes
+      # written by hand first are kept; promote-stable.yml later turns the
+      # pre-release into the stable release.
+      - name: Changelog
+        if: steps.push.outcome == 'success' && steps.decide.outputs.tag == 'testing'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "The ${VERSION} release exists already; its notes are kept."
+            exit 0
+          fi
+          git fetch --quiet --unshallow --tags origin || git fetch --quiet --tags origin
+          scripts/build-notes.py "$VERSION" "$GITHUB_SHA" >"$RUNNER_TEMP/notes.md"
+          gh release create "$VERSION" --target "$GITHUB_SHA" --prerelease \
+            --title "Telamon OS ${VERSION}" --notes-file "$RUNNER_TEMP/notes.md"
+
       - name: Attest the SBOM
         if: steps.push.outcome == 'success' && steps.signing.outputs.enabled == 'true'
         env:
@@ -686,43 +748,47 @@ jobs:
         timeout-minutes: 25
         run: |
           set -euo pipefail
-          ref="${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push.outputs.digest }}"
-          # 20 MB, too big for the public transparency log, so it stays out
-          # of it (as the signature does).
-          # 3 tries (a 20 MB upload): the image is already pushed and signed,
-          # and a rerun of the same commit skips the build, so this is the one
-          # chance to attest this digest.
-          for try in 1 2 3; do
-            timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
-              --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
-              --predicate "$RUNNER_TEMP/sbom/sbom.spdx.json" "$ref" && break
-            [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
-            sleep $((try * 30))
+          for name in "$IMAGE_NAME" "$LEGACY_IMAGE_NAME"; do
+            ref="${IMAGE_REGISTRY}/${name}@${{ steps.push.outputs.digest }}"
+            # 20 MB, too big for the public transparency log, so it stays out
+            # of it (as the signature does).
+            # 3 tries (a 20 MB upload): the image is already pushed and signed,
+            # and a rerun of the same commit skips the build, so this is the one
+            # chance to attest this digest.
+            for try in 1 2 3; do
+              timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
+                --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
+                --predicate "$RUNNER_TEMP/sbom/sbom.spdx.json" "$ref" && break
+              [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
+              sleep $((try * 30))
+            done
+            # Both images share the key, so check that what verifies names this
+            # image's digest (as scripts/verify-image.sh does for signatures).
+            trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
+            for try in 1 2 3; do
+              timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
+                --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
+              [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
+              sleep $((try * 30))
+            done
+            jq -e -s --arg d "${ref##*@sha256:}" \
+              'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
+              "$RUNNER_TEMP/attestation.json" >/dev/null ||
+              { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }
           done
-          # Both images share the key, so check that what verifies names this
-          # image's digest (as scripts/verify-image.sh does for signatures).
-          trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
-          for try in 1 2 3; do
-            timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
-              --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
-            [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
-            sleep $((try * 30))
-          done
-          jq -e -s --arg d "${ref##*@sha256:}" \
-            'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
-            "$RUNNER_TEMP/attestation.json" >/dev/null ||
-            { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }
 
-      # atlasos-nvidia: this image plus NVIDIA's driver (Containerfile.nvidia),
+      # telamonos-nvidia (and atlasos-nvidia, under its old name): this image plus
+      # NVIDIA's driver (Containerfile.nvidia),
       # with the same tags. It builds on the image `just build` left in
       # Podman's storage, with the same files and labels as the one just
       # pushed and every layer already there: the pushed (rechunked) image
       # shares none, so it would be another 9 GB download, more than the VPS
       # runner's disk has room for beside its cache. Its kernel modules are
-      # signed with the AtlasOS module key, which CI reads from the
+      # signed with the module key (still named "AtlasOS module signing" in its
+      # certificate), which CI reads from the
       # NVIDIA_SIGNING_KEY secret (see DEV.md); without it this only leaves a
       # notice. Pull requests don't build it, and neither does a run whose
-      # atlasos steps failed after the push (signing): the next run does.
+      # telamonos steps failed after the push (signing): the next run does.
       - name: Check for the module signing key
         id: nvidia
         if: steps.push.outcome == 'success'
@@ -730,7 +796,7 @@ jobs:
           KEY: ${{ secrets.NVIDIA_SIGNING_KEY }}
         run: |
           if [ -z "$KEY" ]; then
-            echo "::notice::No NVIDIA_SIGNING_KEY secret; atlasos-nvidia not built."
+            echo "::notice::No NVIDIA_SIGNING_KEY secret; telamonos-nvidia not built."
             echo "enabled=false" >>"$GITHUB_OUTPUT"
           else
             echo "enabled=true" >>"$GITHUB_OUTPUT"
@@ -745,7 +811,7 @@ jobs:
           key="${RUNNER_TEMP}/nvidia-signing.key"
           trap 'rm -f "$key"' EXIT
           (umask 077 && printf '%s\n' "$KEY" >"$key")
-          # atlasos's rechunked copy is pushed: its 2.7 GB go before this build
+          # telamonos's rechunked copy is pushed: its 2.7 GB go before this build
           # needs the space. On a GitHub-hosted runner, so do the build's
           # intermediate images, which no later run reuses.
           rm -rf "${RUNNER_TEMP:?}/rechunked"
@@ -754,7 +820,7 @@ jobs:
           fi
           NVIDIA_SIGNING_KEY="$key" just build-nvidia "${{ steps.decide.outputs.tag }}"
 
-      # Into the same directory, which `just rechunk` empties: atlasos is
+      # Into the same directory, which `just rechunk` empties: telamonos is
       # pushed by now.
       - name: Rechunk NVIDIA
         if: steps.nvidia.outputs.enabled == 'true'
@@ -773,7 +839,7 @@ jobs:
       # The vulnerability database is downloaded each time (3 tries); if it
       # can't be, the build fails rather than push unchecked. Exit code 2 is
       # grype's "a finding crossed the threshold", which is not retried.
-      - name: Scan atlasos-nvidia
+      - name: Scan telamonos-nvidia
         id: sbom-nvidia
         if: steps.nvidia.outputs.enabled == 'true'
         timeout-minutes: 45
@@ -782,12 +848,12 @@ jobs:
           out="$RUNNER_TEMP/sbom-nvidia"
           mkdir -p "$out"
           for try in 1 2 3; do
-            just sbom "${{ steps.decide.outputs.tag }}" "$out" atlasos-nvidia && break
+            just sbom "${{ steps.decide.outputs.tag }}" "$out" "${NVIDIA_IMAGE}" && break
             [ "$try" -lt 3 ] || { echo "::error::The SBOM and vulnerability scan failed 3 times."; exit 1; }
             sleep $((try * 30))
           done
           {
-            echo "### Vulnerabilities in atlasos-nvidia:${{ steps.decide.outputs.tag }}"
+            echo "### Vulnerabilities in telamonos-nvidia:${{ steps.decide.outputs.tag }}"
             echo
             jq -r '[.matches[].vulnerability.severity] | group_by(.) | map("- \(.[0]): \(length)") | .[]' \
               "$out/vulnerabilities.json"
@@ -831,7 +897,7 @@ jobs:
           } >>"$GITHUB_STEP_SUMMARY"
           cat "$out/gate.txt"
           if [ "$rc" -eq 2 ]; then
-            echo "::error::atlasos-nvidia has a Critical vulnerability with a fix available (table above); not pushing."
+            echo "::error::telamonos-nvidia has a Critical vulnerability with a fix available (table above); not pushing."
             exit 1
           elif [ "$rc" -ne 0 ]; then
             echo "::error::The vulnerability gate failed to run (grype exit $rc); not pushing."
@@ -858,11 +924,15 @@ jobs:
           have=$(skopeo inspect --config "$src" |
             jq -r '.config.Labels["org.opencontainers.image.version"]')
           [ "$have" = "$version" ] || { echo "label says $have, tag says $version" >&2; exit 1; }
-          for t in "$tag" "$tag-$version"; do
-            skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest" \
-              "$src" "docker://${IMAGE_REGISTRY}/${NVIDIA_IMAGE}:${t}"
+          for name in "$NVIDIA_IMAGE" "$LEGACY_NVIDIA_IMAGE"; do
+            for t in "$tag" "$tag-$version"; do
+              skopeo copy --preserve-digests --retry-times 3 --digestfile "$RUNNER_TEMP/digest-$name" \
+                "$src" "docker://${IMAGE_REGISTRY}/${name}:${t}"
+            done
           done
-          echo "digest=$(cat "$RUNNER_TEMP/digest")" >>"$GITHUB_OUTPUT"
+          [ "$(cat "$RUNNER_TEMP/digest-$NVIDIA_IMAGE")" = "$(cat "$RUNNER_TEMP/digest-$LEGACY_NVIDIA_IMAGE")" ] ||
+            { echo "::error::${NVIDIA_IMAGE} and ${LEGACY_NVIDIA_IMAGE} got different digests."; exit 1; }
+          echo "digest=$(cat "$RUNNER_TEMP/digest-$NVIDIA_IMAGE")" >>"$GITHUB_OUTPUT"
 
       - name: Sign NVIDIA
         if: steps.push-nvidia.outcome == 'success' && steps.signing.outputs.enabled == 'true'
@@ -870,10 +940,12 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign -y --new-bundle-format=false --use-signing-config=false \
-            --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}@${{ steps.push-nvidia.outputs.digest }}"
-          scripts/verify-image.sh "${IMAGE_REGISTRY}/${NVIDIA_IMAGE}" "${{ steps.push-nvidia.outputs.digest }}" >/dev/null
+          for name in "$NVIDIA_IMAGE" "$LEGACY_NVIDIA_IMAGE"; do
+            cosign sign -y --new-bundle-format=false --use-signing-config=false \
+              --key env://COSIGN_PRIVATE_KEY \
+              "${IMAGE_REGISTRY}/${name}@${{ steps.push-nvidia.outputs.digest }}"
+            scripts/verify-image.sh "${IMAGE_REGISTRY}/${name}" "${{ steps.push-nvidia.outputs.digest }}" >/dev/null
+          done
 
       - name: Attest the NVIDIA SBOM
         if: steps.push-nvidia.outcome == 'success' && steps.signing.outputs.enabled == 'true'
@@ -883,27 +955,29 @@ jobs:
         timeout-minutes: 25
         run: |
           set -euo pipefail
-          ref="${IMAGE_REGISTRY}/${NVIDIA_IMAGE}@${{ steps.push-nvidia.outputs.digest }}"
-          # 3 tries (a 20 MB upload): the image is already pushed and signed,
-          # and a rerun of the same commit skips the build, so this is the one
-          # chance to attest this digest.
-          for try in 1 2 3; do
-            timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
-              --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
-              --predicate "$RUNNER_TEMP/sbom-nvidia/sbom.spdx.json" "$ref" && break
-            [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
-            sleep $((try * 30))
+          for name in "$NVIDIA_IMAGE" "$LEGACY_NVIDIA_IMAGE"; do
+            ref="${IMAGE_REGISTRY}/${name}@${{ steps.push-nvidia.outputs.digest }}"
+            # 3 tries (a 20 MB upload): the image is already pushed and signed,
+            # and a rerun of the same commit skips the build, so this is the one
+            # chance to attest this digest.
+            for try in 1 2 3; do
+              timeout 180 cosign attest -y --new-bundle-format=false --use-signing-config=false \
+                --key env://COSIGN_PRIVATE_KEY --type spdxjson --tlog-upload=false \
+                --predicate "$RUNNER_TEMP/sbom-nvidia/sbom.spdx.json" "$ref" && break
+              [ "$try" -lt 3 ] || { echo "::error::Couldn't attest the SBOM to $ref (3 tries)."; exit 1; }
+              sleep $((try * 30))
+            done
+            # Both images share the key, so check that what verifies names this
+            # image's digest (as scripts/verify-image.sh does for signatures).
+            trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
+            for try in 1 2 3; do
+              timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
+                --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
+              [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
+              sleep $((try * 30))
+            done
+            jq -e -s --arg d "${ref##*@sha256:}" \
+              'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
+              "$RUNNER_TEMP/attestation.json" >/dev/null ||
+              { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }
           done
-          # Both images share the key, so check that what verifies names this
-          # image's digest (as scripts/verify-image.sh does for signatures).
-          trap 'rm -f "$RUNNER_TEMP/attestation.json"' EXIT
-          for try in 1 2 3; do
-            timeout 180 cosign verify-attestation --type spdxjson --insecure-ignore-tlog=true \
-              --key cosign.pub "$ref" >"$RUNNER_TEMP/attestation.json" && break
-            [ "$try" -lt 3 ] || { echo "::error::The SBOM attestation on $ref doesn't verify (3 tries)."; exit 1; }
-            sleep $((try * 30))
-          done
-          jq -e -s --arg d "${ref##*@sha256:}" \
-            'length > 0 and all(.[]; .payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
-            "$RUNNER_TEMP/attestation.json" >/dev/null ||
-            { echo "::error::The SBOM attestation doesn't name $ref (or couldn't be read)."; exit 1; }

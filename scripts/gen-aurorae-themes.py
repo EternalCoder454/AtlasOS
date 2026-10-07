@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes the AtlasOS-Light and AtlasOS-Dark Aurorae window decoration themes
+"""Writes the Telamon-Light and Telamon-Dark Aurorae window decoration themes
 to system_files/usr/share/aurorae/themes/. The output is committed; run this
 after changing the numbers or colours below, then rebuild the image.
 
@@ -8,7 +8,7 @@ after changing the numbers or colours below, then rebuild the image.
 Rounded-square caption buttons (Klassy style): a 26 px square, 7 px corners, in a 32 px square cell,
 4 px between cells, a 9 px glyph with a 1.6 px round stroke. The square is a
 faint tint of the glyph colour at rest, accent on hover, solid red for close. Title bar colours are the [Colors:Header]
-colours of system_files/usr/share/color-schemes/AtlasOS{Light,Dark}.colors.
+colours of system_files/usr/share/color-schemes/Telamon{Light,Dark}.colors.
 """
 import os
 
@@ -25,13 +25,13 @@ RADIUS = 8                 # top corners
 PAD_SIDE, PAD_TOP, PAD_BOTTOM = 16, 16, 24   # transparent room for the shadow
 
 THEMES = {
-    "AtlasOS-Light": dict(
+    "Telamon-Light": dict(
         bar="#E2DFF4", bar_inactive="#F3F2FA",
         text="#1B1748", text_inactive="#6B658C",
         glyph="#1B1748", glyph_inactive_opacity=0.7,
         accent="#6858E2",
         shadow=0.30, shadow_inactive=0.16),
-    "AtlasOS-Dark": dict(
+    "Telamon-Dark": dict(
         bar="#2B2748", bar_inactive="#211E38",
         text="#EEECFA", text_inactive="#A59FC4",
         glyph="#EEECFA", glyph_inactive_opacity=0.7,
@@ -287,7 +287,7 @@ def metadata(name, t):
 Name={name.replace('-', ' ')}
 Comment=Title bar with rounded-square caption buttons
 X-KDE-PluginInfo-Name={name}
-X-KDE-PluginInfo-Author=AtlasOS
+X-KDE-PluginInfo-Author=Telamon OS
 X-KDE-PluginInfo-License=GPL
 """
 

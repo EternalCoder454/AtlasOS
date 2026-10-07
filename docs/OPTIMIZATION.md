@@ -1,6 +1,6 @@
 # Optimization pass
 
-What AtlasOS 44 dropped or tuned after Phase 1, and what each change was
+What Telamon OS 44 dropped or tuned after Phase 1, and what each change was
 worth. Every number comes from the same 8 GB test VM (UEFI, virtio 3D, SPICE
 OpenGL), measured with `just bench` (`just boot` and `just mem` from the same
 boots): three boots from a fresh overlay each, medians reported, memory read
@@ -28,7 +28,7 @@ dock separator cost about 7 MiB in plasmashell, and the patched KIO and
 first-run wizard nothing at idle.
 
 For reference, stock Kinoite 44 in the same VM used 2,075 MiB (`just
-mem-stock`), and AtlasOS's Phase 1 baseline 1,043 MiB.
+mem-stock`), and Telamon OS's Phase 1 baseline 1,043 MiB.
 
 ## Per change
 
@@ -46,7 +46,7 @@ Process sizes are `ps_mem` medians (private + shared), before → after.
 | Swap tuning for zram: `vm.swappiness=180`, `vm.page-cluster=0`, `vm.watermark_boost_factor=0` | `sysctl.d/60-atlasos-zram.conf` | no idle cost; helps under memory pressure |
 | Removed what the Phase 1 removals left behind: Akonadi's MariaDB server and Qt driver, DrKonqi's helpers, KJournald's and Partition Manager's libraries, the Plasma handbook, Konqueror's bookmark editor, PySide6, sos | `packages.sh` | disk only (nothing ran) |
 | Package docs (READMEs, changelogs, KDE handbooks) deleted; licenses and man pages kept | `build.sh` | −140 MB of image |
-| Weak dependencies stay off for everything AtlasOS installs (`install_weak_deps=False`) | `packages.sh` | already the case; checked |
+| Weak dependencies stay off for everything Telamon OS installs (`install_weak_deps=False`) | `packages.sh` | already the case; checked |
 | Closing Dolphin no longer crashes its thumbnail workers: KIO's SIGTERM handler wrote to a destroyed worker ([KDE bug 518400](https://bugs.kde.org/show_bug.cgi?id=518400)); patched KIO until Fedora ships the fix | `build_files/kio/` | 0 coredumps (was 1 per Dolphin close); the stability gate no longer needs its exception |
 
 Desktop effects: nothing was turned off. Every effect that is on is one
@@ -77,7 +77,7 @@ userspace) was measured before greenboot was added.
 | xdg-desktop-portal-gtk | 13.7 MiB | GTK apps (Flatpaks, Brave's file dialogs) use it for settings and appearance. Removing it breaks their dark mode and fonts. |
 | ModemManager | 6.7 MiB | Mobile broadband on laptops with a WWAN modem. Could be socket-activated later. |
 | cupsd | 3.4 MiB | Printing, which `just check` tests. cups.service is enabled, so it runs from boot; leaving it to its socket (start on the first print) is a candidate for later. |
-| systemd-homed | 1.9 MiB | Fedora enables it. AtlasOS's users are classic ones, so it could go; left for now because it's small and the wizard and AccountsService work as they are. |
+| systemd-homed | 1.9 MiB | Fedora enables it. Telamon OS's users are classic ones, so it could go; left for now because it's small and the wizard and AccountsService work as they are. |
 | wpa_supplicant (not iwd) | — | iwd was on the roadmap as a lighter replacement. NetworkManager still treats wpa_supplicant as its main Wi-Fi backend and iwd as the alternative, and the test VM has no Wi-Fi to check a switch with, so it stays for the first release. |
 
 ## How to repeat it

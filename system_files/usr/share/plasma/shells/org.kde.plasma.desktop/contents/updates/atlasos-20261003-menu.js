@@ -1,12 +1,12 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
-    The AtlasOS menu at the left of the menu bar was Kicker, a second app
-    launcher beside the dock's. It becomes the AtlasOS Menu
-    (org.atlasos.menu: About, settings, Force Quit and power), in the same
-    place. Only the menu bar AtlasOS made is changed: a Kicker on a top panel
-    with the AtlasOS icon. Plasma runs each script here once per user
+    The Telamon OS menu at the left of the menu bar was Kicker, a second app
+    launcher beside the dock's. It becomes the Telamon OS Menu
+    (org.telamon.menu: About, settings, Force Quit and power), in the same
+    place. Only the menu bar Telamon OS made is changed: a Kicker on a top panel
+    with the Telamon OS icon. Plasma runs each script here once per user
     (plasmashellrc, [Updates]); never rename this file.
 
     The panel lays its widgets out from its AppletOrder setting (ids, left
@@ -27,7 +27,7 @@ panels().forEach(function (panel) {
         panel.currentConfigGroup = ["General"];
         var order = String(panel.readConfig("AppletOrder", ""));
         var ids = order ? order.split(";") : panel.widgetIds.map(String);
-        var menu = panel.addWidget("org.atlasos.menu");
+        var menu = panel.addWidget("org.telamon.menu");
         var at = ids.indexOf(String(kicker.id));
         if (at < 0) {
             ids.unshift(String(menu.id));

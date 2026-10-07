@@ -1,13 +1,13 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
     The menu bar was one bar across the top. It becomes three floating
-    islands, as in new desktops' layout: the AtlasOS menu and the app's menus
+    islands, as in new desktops' layout: the Telamon OS menu and the app's menus
     on the left, the time over the date in the middle, the tray on the right.
     They hide while a window covers them; Meta+M shows them over it
-    (/usr/libexec/atlasos/menubar-toggle). Only the menu bar AtlasOS made is
-    changed: a full-width top panel with the AtlasOS Menu (the first one, if
+    (/usr/libexec/telamon/menubar-toggle). Only the menu bar Telamon OS made is
+    changed: a full-width top panel with the Telamon OS Menu (the first one, if
     there are several; a bar the user made "fit" is left alone). Plasma runs
     each script here once per user (plasmashellrc, [Updates]); never rename
     this file.
@@ -50,7 +50,7 @@ function list(value) {
 
 var bar = panels().filter(function (panel) {
     return panel.location === "top" && panel.lengthMode !== "fit"
-        && panel.widgets("org.atlasos.menu").length > 0;
+        && panel.widgets("org.telamon.menu").length > 0;
 })[0];
 
 if (bar) {
@@ -69,18 +69,18 @@ if (bar) {
     // What the islands make again, one of each, so a second clock or tray
     // the user added comes back too; spacers are dropped
     var remade = {
-        "org.atlasos.menu": 1,
+        "org.telamon.menu": 1,
         "org.kde.plasma.appmenu": 1,
-        "org.atlasos.appmenu": 1,
+        "org.telamon.appmenu": 1,
         "org.kde.plasma.systemtray": 1,
         "org.kde.plasma.digitalclock": 1,
         "org.kde.plasma.panelspacer": Infinity,
     };
 
     var menus = island("left", screen);
-    menus.addWidget("org.atlasos.menu");
+    menus.addWidget("org.telamon.menu");
     menus.addWidget("org.kde.plasma.appmenu");
-    menus.addWidget("org.atlasos.appmenu");
+    menus.addWidget("org.telamon.appmenu");
 
     var middle = island("center", screen);
     // A 1 px spacer before the clock centres it (see the look-and-feel

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Turns stock Fedora Kinoite into AtlasOS, part 3 of 4: services, settings and
+# Turns stock Fedora Kinoite into Telamon OS, part 3 of 4: services, settings and
 # branding, after packages.sh and apps.sh. Runs in the Containerfile's third
 # RUN step, with the repo's build context at /ctx and the rendered branding at
 # /branding. The image's version goes into os-release last, in a step of its
@@ -38,7 +38,7 @@ unreadable=$(find /ctx/system_files ! -type l ! -perm -o=r)
 }
 cp -a /ctx/system_files/. /
 
-# Atlas Updater is the only update notifier and the only OS updater.
+# Telamon Updater is the only update notifier and the only OS updater.
 # Discover's notifier and OS backend (removed by packages.sh) and every other
 # background updater stay out, and Discover never updates on its own.
 [ ! -e /usr/libexec/DiscoverNotifier ]
@@ -51,38 +51,44 @@ for p in plasma-discover-notifier plasma-discover-rpm-ostree PackageKit; do
 done
 grep -qx 'UseUnattendedUpdates=false' /etc/xdg/PlasmaDiscoverUpdates
 
-# Image signatures. CI signs every AtlasOS image with cosign (the key pair's
+# Image signatures. CI signs every Telamon OS image with cosign (the key pair's
 # public half is cosign.pub in the repo); bootc, rpm-ostree and Podman accept
-# ghcr.io/eternalcoder454/atlasos and atlasos-nvidia only with a signature
-# from it, found as a sigstore attachment beside the image
-# (/etc/containers/registries.d/atlasos.yaml). That holds for every pull,
+# ghcr.io/eternalcoder454/telamonos and telamonos-nvidia (and atlasos and
+# atlasos-nvidia, the names the same builds are still published under for the
+# installs made before the rename) only with a signature from it, found as a sigstore attachment beside the image
+# (/etc/containers/registries.d/telamon.yaml). That holds for every pull,
 # whatever an install's origin says; the update stager also records it in
-# the origin (libexec/atlasos/update-stage). Every other image is accepted as
+# the origin (libexec/telamon/update-stage). Every other image is accepted as
 # before:
 # bootc --enforce-container-sigpolicy wants a default that rejects, so each
 # transport accepts anything instead. Built on Fedora's policy, whose own
 # entries stay. keyPaths takes a list: a new key goes in beside the old one
 # (DEV.md) before images are signed with it.
-install -Dpm0644 /ctx/cosign.pub /etc/pki/containers/atlasos.pub
+install -Dpm0644 /ctx/cosign.pub /etc/pki/containers/telamon.pub
 policy=/etc/containers/policy.json
-jq --arg key /etc/pki/containers/atlasos.pub '
+jq --arg key /etc/pki/containers/telamon.pub '
 	{type: "sigstoreSigned", keyPaths: [$key], signedIdentity: {type: "matchRepository"}} as $signed
 	| .default = [{type: "reject"}]
 	| reduce ("docker", "docker-archive", "docker-daemon", "oci", "oci-archive",
 		"dir", "containers-storage", "sif", "tarball") as $t
 		(.; .transports[$t][""] //= [{type: "insecureAcceptAnything"}])
+	| .transports.docker["ghcr.io/eternalcoder454/telamonos"] = [$signed]
+	| .transports.docker["ghcr.io/eternalcoder454/telamonos-nvidia"] = [$signed]
 	| .transports.docker["ghcr.io/eternalcoder454/atlasos"] = [$signed]
 	| .transports.docker["ghcr.io/eternalcoder454/atlasos-nvidia"] = [$signed]
 ' "$policy" >"$policy.new"
 mv "$policy.new" "$policy"
 chmod 0644 "$policy"
 jq -e '.transports.docker[""][0].type == "insecureAcceptAnything"
-	and .transports.docker["ghcr.io/eternalcoder454/atlasos"][0].type == "sigstoreSigned"' "$policy" >/dev/null
-grep -q 'use-sigstore-attachments: true' /etc/containers/registries.d/atlasos.yaml
+	and ([.transports.docker["ghcr.io/eternalcoder454/" + ("telamonos", "telamonos-nvidia", "atlasos", "atlasos-nvidia")][0].type]
+		| length == 4 and all(. == "sigstoreSigned"))' "$policy" >/dev/null
+grep -q 'use-sigstore-attachments: true' /etc/containers/registries.d/telamon.yaml
 
 # `atlas`, the command menu: the file it runs has to parse.
-just --justfile /usr/share/atlasos/atlas.just --list >/dev/null
-[ -x /usr/bin/atlas ]
+just --justfile /usr/share/telamon/telamon.just --list >/dev/null
+[ -x /usr/bin/telamon ]
+# `atlas`, the name before Telamon, stays a link to it.
+[ "$(readlink /usr/bin/atlas)" = telamon ]
 [ -x /usr/lib/systemd/user-environment-generators/20-atlasos-hybrid-gpu ]
 
 # The kernel sizes the inotify watch limit by RAM; this raises it to 524288
@@ -95,9 +101,9 @@ systemctl enable atlasos-update-stage.timer
 # when it differs from the image's (ldconfig.service.d).
 systemctl disable fedora-atomic-desktop-mandb-update.service
 systemctl enable atlasos-mandb.timer
-[ -x /usr/libexec/atlasos/ldconfig-needed ]
-[ -x /usr/libexec/atlasos/mandb-needed ]
-# systemd-homed manages portable home folders, which AtlasOS doesn't use
+[ -x /usr/libexec/telamon/ldconfig-needed ]
+[ -x /usr/libexec/telamon/mandb-needed ]
+# systemd-homed manages portable home folders, which Telamon OS doesn't use
 # (accounts are ordinary ones in /etc/passwd), so it doesn't run all the time.
 systemctl disable systemd-homed.service systemd-homed-activate.service
 for u in fedora-atomic-desktop-mandb-update.service systemd-homed.service; do
@@ -112,16 +118,16 @@ systemctl enable atlasos-btrfs-compress.service
 [ "$(systemctl is-enabled atlasos-btrfs-compress.service)" = enabled ]
 # Records each newly booted image in /var/lib/atlas-core/history.jsonl. The
 # system helper is D-Bus activated and must stay that way: nothing runs at idle.
-systemctl enable atlas-record-boot.service
-[ "$(systemctl is-enabled atlas-record-boot.service)" = enabled ]
-[ "$(systemctl is-enabled atlas-system-helper.service 2>&1 || true)" != enabled ]
-[ -f /usr/share/dbus-1/system-services/net.eterneon.atlas.SystemHelper.service ]
-# Hardware drivers (Atlas Updater 0.2.0): the timer checks the machine's
+systemctl enable telamon-record-boot.service
+[ "$(systemctl is-enabled telamon-record-boot.service)" = enabled ]
+[ "$(systemctl is-enabled telamon-system-helper.service 2>&1 || true)" != enabled ]
+[ -f /usr/share/dbus-1/system-services/net.eterneon.telamon.SystemHelper.service ]
+# Hardware drivers (Telamon Updater 0.2.0): the timer checks the machine's
 # hardware and moves it to the image its GPU needs (atlasos-nvidia). That is
 # never left to the user, so it is on here and not only by the RPM's preset.
-systemctl enable atlas-drivers.timer
-[ "$(systemctl is-enabled atlas-drivers.timer)" = enabled ]
-# Firmware: fwupd's metadata refresh feeds Atlas Updater's firmware page.
+systemctl enable telamon-drivers.timer
+[ "$(systemctl is-enabled telamon-drivers.timer)" = enabled ]
+# Firmware: fwupd's metadata refresh feeds Telamon Updater's firmware page.
 # Discover's fwupd backend (a plugin in plasma-discover-libs, not a package of
 # its own) would offer the same updates a second time, so it goes.
 systemctl enable fwupd-refresh.timer
@@ -144,7 +150,7 @@ grep -qx 'GREENBOOT_MAX_BOOT_ATTEMPTS=3' /etc/greenboot/greenboot.conf
 snippet=/usr/lib/bootupd/grub2-static/configs.d/08_greenboot.cfg
 [ -f "$snippet" ]
 [ -z "$(tail -c1 "$snippet")" ]
-# The AtlasOS checks are image-owned, in /usr/lib/greenboot (greenboot reads it
+# The Telamon OS checks are image-owned, in /usr/lib/greenboot (greenboot reads it
 # before /etc/greenboot); each must run, and each helper script must parse.
 for f in /usr/lib/greenboot/check/required.d/*.sh /usr/lib/greenboot/red.d/*.sh /usr/lib/greenboot/green.d/*.sh; do
 	[ -x "$f" ] && bash -n "$f"
@@ -154,7 +160,7 @@ done
 # Flathub as a system remote (system_files/usr/share/flatpak/remotes.d), and
 # the Flatpaks in preinstall.d installed in the background after boot.
 systemctl enable atlasos-flatpak-preinstall.timer
-# kconf_update runs AtlasOS's settings updates at each Plasma login (kded6's
+# kconf_update runs Telamon OS's settings updates at each Plasma login (kded6's
 # own run skips them: ostree's mtime 0 looks unchanged).
 systemctl --global enable atlasos-kconf-update.service
 [ -x /usr/libexec/kf6/kconf_update ] || {
@@ -162,7 +168,7 @@ systemctl --global enable atlasos-kconf-update.service
 	exit 1
 }
 # kconf_update scripts and helpers must keep their execute bit.
-for f in /usr/share/kconf_update/atlasos-*.sh /usr/libexec/atlasos/*; do
+for f in /usr/share/kconf_update/atlasos-*.sh /usr/share/kconf_update/telamon-*.sh /usr/libexec/telamon/*; do
 	# Python modules the helpers import (pinlib.py) aren't run themselves
 	case $f in *.py) continue ;; esac
 	[ -x "$f" ] || {
@@ -170,26 +176,26 @@ for f in /usr/share/kconf_update/atlasos-*.sh /usr/libexec/atlasos/*; do
 		exit 1
 	}
 done
-# Application style: Kvantum (installed by packages.sh) with the AtlasOS
-# themes; kvantum-sync picks one at login and when kdeglobals or atlasrc change.
+# Application style: Kvantum (installed by packages.sh) with the Telamon OS
+# themes; kvantum-sync picks one at login and when kdeglobals or telamonrc change.
 [ -f /usr/lib64/qt6/plugins/styles/libkvantum.so ] || {
 	echo "build.sh: the Kvantum Qt6 style plugin is missing" >&2
 	exit 1
 }
-for t in AtlasOS AtlasOSDark AtlasOSSolid AtlasOSDarkSolid; do
+for t in Telamon TelamonDark TelamonSolid TelamonDarkSolid; do
 	[ -f "/usr/share/Kvantum/$t/$t.kvconfig" ]
 	[ -f "/usr/share/Kvantum/$t/$t.svg" ]
 done
 # The service runs once at login, the path unit on every change after that.
 systemctl --global enable atlasos-kvantum-sync.service atlasos-kvantum-sync.path
-[ -x /usr/libexec/atlasos/kvantum-sync ]
+[ -x /usr/libexec/telamon/kvantum-sync ]
 # Meta+M: menubar-toggle talks to Plasma through qdbus-qt6, and kglobalaccel
 # reads the shortcut from the link to its desktop file.
 command -v qdbus-qt6 >/dev/null || {
 	echo "build.sh: qdbus-qt6 (used by menubar-toggle) is missing" >&2
 	exit 1
 }
-[ -f /usr/share/kglobalaccel/org.atlasos.menubar-toggle.desktop ]
+[ -f /usr/share/kglobalaccel/org.telamon.menubar-toggle.desktop ]
 # Notifications drop down at the top centre of the screen, just under the
 # clock island; KWin's built-in Sliding Notifications effect slides them down
 # from the top edge. Left "near the notification icon" (Plasma's default),
@@ -202,15 +208,15 @@ if grep -q '^\[Notifications\]' /etc/xdg/plasmanotifyrc; then
 	echo "build.sh: plasmanotifyrc now has a [Notifications] group; set PopupPosition in it" >&2
 	exit 1
 fi
-printf '\n# AtlasOS (build.sh): see there.\n[Notifications]\nPopupPosition=TopCenter\n' >>/etc/xdg/plasmanotifyrc
+printf '\n# Telamon OS (build.sh): see there.\n[Notifications]\nPopupPosition=TopCenter\n' >>/etc/xdg/plasmanotifyrc
 
-# Atlas Launcher's user unit (installed by apps.sh) runs it at every login, so
+# Telamon Launcher's user unit (installed by apps.sh) runs it at every login, so
 # its search and Meta key answer at once.
-systemctl --global enable atlas-launcher.service
-[ "$(systemctl --global is-enabled atlas-launcher.service)" = enabled ]
+systemctl --global enable telamon-launcher.service
+[ "$(systemctl --global is-enabled telamon-launcher.service)" = enabled ]
 
 # KRunner, Plasma's separate search bar (Alt+Space), is retired: the
-# launcher's search is the one search. Atlas Launcher runs KRunner's plugins in its
+# launcher's search is the one search. Telamon Launcher runs KRunner's plugins in its
 # own process through the KRunner library, which stays, with the plugins.
 # Without its global-shortcuts file kglobalaccel gives KRunner no keys
 # (Alt+Space, Alt+F2, Search, Alt+Shift+F2); without the program, its D-Bus
@@ -244,7 +250,7 @@ for t in bootc-fetch-apply-updates.timer rpm-ostreed-automatic.timer; do
 	}
 done
 [ "$(systemctl is-enabled atlasos-update-stage.timer)" = enabled ]
-grep -qx 'ExecStart=/usr/libexec/atlasos/update-stage' /usr/lib/systemd/system/atlasos-update-stage.service
+grep -qx 'ExecStart=/usr/libexec/telamon/update-stage' /usr/lib/systemd/system/atlasos-update-stage.service
 # rpm-ostree upgrades (and the stager checks) a system with local rpm-ostree changes
 rpm -q rpm-ostree skopeo >/dev/null
 
@@ -268,17 +274,20 @@ if grep -q 'pam_fprintd.so' /etc/pam.d/password-auth; then
 	exit 1
 fi
 rpm -q fprintd fprintd-pam >/dev/null
-# Firewall: the AtlasOS zone (system_files/usr/lib/firewalld/zones) is the
+# Firewall: the Telamon OS zone (system_files/usr/lib/firewalld/zones) is the
 # default in place of Fedora Workstation's, which accepts anything on ports
 # 1025-65535. firewalld.conf is a link to the workstation file; an install
 # that never changed it gets this on its next update.
 conf=$(readlink -f /etc/firewalld/firewalld.conf)
-sed -i 's/^DefaultZone=.*/DefaultZone=AtlasOS/' "$conf"
-grep -qx 'DefaultZone=AtlasOS' "$conf"
+sed -i 's/^DefaultZone=.*/DefaultZone=Telamon/' "$conf"
+grep -qx 'DefaultZone=Telamon' "$conf"
+# The zone before Telamon: the old name stays a zone (a firewalld.conf that names it,
+# or a rule someone added to it, still works); the default is Telamon.
+cp -p /usr/lib/firewalld/zones/Telamon.xml /usr/lib/firewalld/zones/AtlasOS.xml
 firewall-offline-cmd --check-config >/dev/null
-[ "$(firewall-offline-cmd --get-default-zone)" = AtlasOS ]
-firewall-offline-cmd --zone=AtlasOS --list-ports | grep -q . && {
-	echo "build.sh: the AtlasOS firewall zone must open no port ranges" >&2
+[ "$(firewall-offline-cmd --get-default-zone)" = Telamon ]
+firewall-offline-cmd --zone=Telamon --list-ports | grep -q . && {
+	echo "build.sh: the Telamon OS firewall zone must open no port ranges" >&2
 	exit 1
 }
 # LLMNR off (system_files/usr/lib/systemd/resolved.conf.d)
@@ -286,7 +295,7 @@ grep -qx 'LLMNR=no' /usr/lib/systemd/resolved.conf.d/50-atlasos.conf
 
 # The rule update-stage and its condition use to refuse an older image
 # (a tag that went back): it has to load and answer right
-[ "$(jq -n "$(cat /usr/share/atlasos/image-age.jq)"'
+[ "$(jq -n "$(cat /usr/share/telamon/image-age.jq)"'
 	[older({version: "44.20261001"}; {version: "44.20261002-1"}),
 	 older({version: "44.20261003"}; {version: "44.20261002"})]' -c)" = '[true,false]' ]
 # Smart cards: readers work (pcscd starts on first use through its socket,
@@ -295,7 +304,7 @@ grep -qx 'LLMNR=no' /usr/lib/systemd/resolved.conf.d/50-atlasos.conf
 # lacks and a home PC has no use for, so smartcard-auth stays unavailable.
 rpm -q pcsc-lite pcsc-lite-ccid opensc >/dev/null
 [ "$(systemctl is-enabled pcscd.socket)" = enabled ]
-[ -x /usr/libexec/atlasos/fingerprint-setup ]
+[ -x /usr/libexec/telamon/fingerprint-setup ]
 [ -f /etc/xdg/autostart/atlasos-fingerprint-setup.desktop ]
 
 # Sign-in PIN (DEV.md, "PIN sign-in"): at the login screen and the lock screen
@@ -351,7 +360,7 @@ readme = open(profile + "/README").read()
 old = "with-silent-lastlog::\n"
 if readme.count(old) != 1:
     sys.exit("build.sh: with-silent-lastlog not found once in the local profile's README")
-readme = readme.replace(old, "with-pin::\n    Sign in and unlock the screen with a PIN (AtlasOS: login and lock screen only).\n\n" + old)
+readme = readme.replace(old, "with-pin::\n    Sign in and unlock the screen with a PIN (Telamon OS: login and lock screen only).\n\n" + old)
 open(profile + "/README", "w").write(readme)
 PYEOF
 # Apart from our lines, the profile's password-auth is local's, byte for byte
@@ -429,9 +438,9 @@ if grep -q 'pam_atlasos_pin\|pin-auth\|pin-session' /etc/pam.d/system-auth; then
 	exit 1
 fi
 for f in pin-admin pin-daemon pin-setup; do
-	[ -x "/usr/libexec/atlasos/$f" ]
+	[ -x "/usr/libexec/telamon/$f" ]
 done
-[ -f /usr/libexec/atlasos/pinlib.py ]
+[ -f /usr/libexec/telamon/pinlib.py ]
 [ -f /usr/lib/systemd/system/atlasos-pin@.service ]
 grep -qx 'ListenStream=/run/atlasos/pin.sock' /usr/lib/systemd/system/atlasos-pin.socket
 grep -qx 'd /var/lib/atlasos/pin 0700 root root -' /usr/lib/tmpfiles.d/atlasos-pin.conf
@@ -461,7 +470,7 @@ semodule -l | grep -qx atlasos_bootc
 fc=/etc/selinux/targeted/contexts/files/file_contexts
 test -s "$fc"
 if grep -E '_u:object_r:atlasos_' "$fc" | grep -vE '^/(run|var)/'; then
-	echo "build.sh: an image path above is labelled with a new AtlasOS SELinux type" >&2
+	echo "build.sh: an image path above is labelled with a new Telamon OS SELinux type" >&2
 	exit 1
 fi
 # pin-daemon is bin_t, so its unit alone puts it in its domain; without the
@@ -505,12 +514,12 @@ rm -r /usr/share/icons/breeze_cursors /usr/share/icons/Breeze_Light
 grep -qx 'Inherits=Adwaita' /usr/share/icons/default/index.theme
 sed -i 's/^Inherits=Adwaita$/Inherits=Bibata-Modern-Ice/' /usr/share/icons/default/index.theme
 # Nothing may still point at Breeze's cursors.
-if grep -rIl -e breeze_cursors -e Breeze_Light /etc/xdg /usr/share/plasma/look-and-feel/org.atlasos*; then
+if grep -rIl -e breeze_cursors -e Breeze_Light /etc/xdg /usr/share/plasma/look-and-feel/org.telamon*; then
 	echo "build.sh: settings above still name Breeze's cursors" >&2
 	exit 1
 fi
 # Icons: Papirus (Fedora's papirus-icon-theme and -dark, installed by
-# packages.sh) for AtlasOS Light and Papirus-Dark for AtlasOS Dark, picked by
+# packages.sh) for Telamon Light and Papirus-Dark for Telamon Dark, picked by
 # each global theme's defaults. Both follow the colour scheme in their panel
 # and symbolic icons, and fall back to Breeze (Papirus) and Breeze Dark.
 icon_themes=(/usr/share/icons/Papirus /usr/share/icons/Papirus-Dark)
@@ -535,7 +544,7 @@ if find "${icon_themes[@]}" -path '*/places/*' -type l \( -lname 'folder-blue[-.
 	echo "build.sh: the folder links above are still blue" >&2
 	exit 1
 fi
-# Apps AtlasOS ships whose own icons are in other styles (Ghostty's a
+# Apps Telamon OS ships whose own icons are in other styles (Ghostty's a
 # photo-like screen): Papirus's for them too,
 # in every size directory that has the icon and lacks one under that name.
 # shellcheck disable=SC2043 # a list of one: add the next app's alias here
@@ -556,7 +565,7 @@ fi
 # "Default" is the wallpaper anything without its own setting falls back to.
 # The first-run wizard loads two files from it by name; branding/render.sh
 # makes those too. It replaces Fedora's own "Default" link to F44.
-ln -sfn AtlasOS /usr/share/wallpapers/Default
+ln -sfn Telamon /usr/share/wallpapers/Default
 # What else the wallpaper picker lists: Fedora's F44 set (9 MiB), Breeze's
 # "Next" (plasma-breeze-common has to stay for its icons and styles),
 # kde-settings's "Fedora" link to "Default" and /usr/share/backgrounds. Only the
@@ -569,55 +578,60 @@ rm -rf /usr/share/wallpapers/F44 /usr/share/wallpapers/Next /usr/share/wallpaper
 	/usr/share/backgrounds
 ks=/usr/share/kde-settings/kde-profile/default/xdg/kscreenlockerrc
 grep -q 'wallpapers/Fedora/' "$ks"
-sed -i 's|wallpapers/Fedora/|wallpapers/AtlasOS-Login/|' "$ks"
-# The picker shows only AtlasOS's own: fail if a package brings another back.
+sed -i 's|wallpapers/Fedora/|wallpapers/Telamon-Login/|' "$ks"
+# The picker shows only Telamon OS's own: fail if a package brings another back.
 [ ! -e /usr/share/backgrounds ]
 for w in /usr/share/wallpapers/*; do
 	case "${w##*/}" in
-	AtlasOS | AtlasOS-Login | Default) ;;
+	Telamon | Telamon-Login | Default) ;;
 	*)
-		echo "build.sh: $w is in the wallpaper picker, and is not AtlasOS's" >&2
+		echo "build.sh: $w is in the wallpaper picker, and is not Telamon OS's" >&2
 		exit 1
 		;;
 	esac
 done
 
-# os-release: AtlasOS on top of Fedora 44. VERSION_ID stays Fedora's so
+# os-release: Telamon OS on top of Fedora 44. VERSION_ID stays Fedora's so
 # anything that keys on the release (dnf, toolbox, bootc-image-builder) still
-# sees 44. The image's version (VERSION and IMAGE_VERSION) is "dev" here;
+# sees 44. ID is telamonos; ID_LIKE names atlasos (what ID was before the
+# rename: software that matches it keeps matching) and fedora. Nothing of ours
+# reads ID (checked in every app and script), so the only thing keyed on it is
+# bootc-image-builder's package list, which scripts/bib.sh lends under the new
+# name. IMAGE_ID is the image's own name; the NVIDIA image's is telamonos-nvidia.
+# The image's version (VERSION and IMAGE_VERSION) is "dev" here;
 # version.sh puts the real one in, in the Containerfile's last step, so the
 # initramfs's copy (initrd-release) keeps "dev".
 # shellcheck source=/dev/null
 support_end=$(. /usr/lib/os-release && echo "${SUPPORT_END:-}")
 cat >/usr/lib/os-release <<EOF
-NAME="AtlasOS"
+NAME="Telamon OS"
 VERSION="44 (dev)"
-ID=atlasos
-ID_LIKE=fedora
+ID=telamonos
+ID_LIKE="atlasos fedora"
 VERSION_ID=44
 VERSION_CODENAME=""
 PLATFORM_ID="platform:f44"
-PRETTY_NAME="AtlasOS 44"
+PRETTY_NAME="Telamon OS 44"
 ANSI_COLOR="0;38;2;114;98;234"
-LOGO=atlasos
-DEFAULT_HOSTNAME="atlasos"
-HOME_URL="https://github.com/EternalCoder454/AtlasOS"
+LOGO=telamon
+DEFAULT_HOSTNAME="telamon"
+HOME_URL="https://telamon.eterneon.net"
 BUG_REPORT_URL="https://github.com/EternalCoder454/AtlasOS/issues"
 SUPPORT_END=${support_end}
 VARIANT="Desktop"
 VARIANT_ID=desktop
-IMAGE_ID=atlasos
+IMAGE_ID=telamonos
 IMAGE_VERSION="dev"
 EOF
 
 # system-release (what /etc/system-release and /etc/redhat-release read; the
 # RPM database's system-release is a package name and doesn't change): the
-# release line of AtlasOS in place of fedora-release's "Fedora release 44".
+# release line of Telamon OS in place of fedora-release's "Fedora release 44".
 # /etc/fedora-release stays Fedora's, for whatever checks it. version.sh puts
 # the image's version in place of "dev", as in os-release.
-echo "AtlasOS release 44 (dev)" >/usr/lib/atlasos-release
-ln -sfn ../usr/lib/atlasos-release /etc/system-release
-ln -sfn ../usr/lib/atlasos-release /etc/redhat-release
+echo "Telamon OS release 44 (dev)" >/usr/lib/telamon-release
+ln -sfn ../usr/lib/telamon-release /etc/system-release
+ln -sfn ../usr/lib/telamon-release /etc/redhat-release
 
 # Fail rather than ship half-branded when Fedora moves something these edits
 # rely on: each one checks the text it replaces is still there.
@@ -633,16 +647,16 @@ replace() { # file, old, new
 	sed -i "s|$old|$new|g" "$1"
 }
 
-# Two Global Themes, AtlasOS Light (org.atlasos.desktop, the default in
-# /etc/xdg/kdeglobals) and AtlasOS Dark (org.atlasos.dark.desktop). Each is
+# Two Global Themes, Telamon Light (org.telamon.desktop, the default in
+# /etc/xdg/kdeglobals) and Telamon Dark (org.telamon.dark.desktop). Each is
 # our metadata, defaults and layout (menu bar and dock) from system_files,
 # completed with Fedora's theme and then Breeze for every file we don't have.
 # Complete, because Plasma looks up missing files in Breeze's theme, which is
 # removed below.
 themes=/usr/share/plasma/look-and-feel
-cp -a "$themes/org.atlasos.desktop/contents/layouts" "$themes/org.atlasos.dark.desktop/contents/"
-for t in org.atlasos.desktop:org.fedoraproject.fedora.desktop:org.kde.breeze.desktop \
-	org.atlasos.dark.desktop:org.fedoraproject.fedoradark.desktop:org.kde.breezedark.desktop; do
+cp -a "$themes/org.telamon.desktop/contents/layouts" "$themes/org.telamon.dark.desktop/contents/"
+for t in org.telamon.desktop:org.fedoraproject.fedora.desktop:org.kde.breeze.desktop \
+	org.telamon.dark.desktop:org.fedoraproject.fedoradark.desktop:org.kde.breezedark.desktop; do
 	IFS=: read -r ours fedora breeze <<<"$t"
 	cp -a --update=none "$themes/$fedora/." "$themes/$ours/"
 	cp -a --update=none "$themes/$breeze/." "$themes/$ours/"
@@ -650,31 +664,31 @@ for t in org.atlasos.desktop:org.fedoraproject.fedora.desktop:org.kde.breeze.des
 	# App launcher icon for Kickoff, Kicker and Dashboard added later by hand
 	# (the taskbar's own start button gets it from the layout script)
 	for f in "$themes/$ours"/contents/plasmoidsetupscripts/org.kde.plasma.{kickoff,kicker,kickerdash}.js; do
-		replace "$f" '"icon", "start-here"' '"icon", "atlasos"'
+		replace "$f" '"icon", "start-here"' '"icon", "telamon"'
 	done
 
-	# Plasma splash: Fedora's splash, with the AtlasOS mark in place of
+	# Plasma splash: Fedora's splash, with the Telamon OS mark in place of
 	# Plasma's. The "Plasma made by KDE" credit in the corner stays.
-	cp /branding/splash/atlasos.svg "$themes/$ours/contents/splash/images/atlasos.svg"
+	cp /branding/splash/telamon.svg "$themes/$ours/contents/splash/images/telamon.svg"
 	replace "$themes/$ours/contents/splash/Splash.qml" \
-		'source: "images/plasma.svgz"' 'source: "images/atlasos.svg"'
+		'source: "images/plasma.svgz"' 'source: "images/telamon.svg"'
 done
 
-# The AtlasOS themes are the only ones: no other Global Themes, colour
+# The Telamon OS themes are the only ones: no other Global Themes, colour
 # schemes or Plasma Styles. ("default" is the Plasma Style that follows the
-# colour scheme, so it is AtlasOS Light or Dark.)
+# colour scheme, so it is Telamon Light or Dark.)
 for t in "$themes"/*; do
 	case ${t##*/} in
-	org.atlasos.desktop | org.atlasos.dark.desktop) ;;
+	org.telamon.desktop | org.telamon.dark.desktop) ;;
 	*) rm -r "$t" ;;
 	esac
 done
-find /usr/share/color-schemes -name '*.colors' ! -name 'AtlasOS*.colors' -delete
+find /usr/share/color-schemes -name '*.colors' ! -name 'Telamon*.colors' -delete
 rm -r /usr/share/plasma/desktoptheme/breeze-dark /usr/share/plasma/desktoptheme/breeze-light
-# The AtlasOS Plasma style (system_files) is Breeze with its own dock
+# The Telamon OS Plasma style (system_files) is Breeze with its own dock
 # indicators (widgets/tasks.svg); everything else falls back to "default".
 # Breeze's settings (blur behind panels and popups) come along.
-cp /usr/share/plasma/desktoptheme/default/plasmarc /usr/share/plasma/desktoptheme/atlasos/plasmarc
+cp /usr/share/plasma/desktoptheme/default/plasmarc /usr/share/plasma/desktoptheme/telamon/plasmarc
 # Copied symlinks that pointed into a removed theme would now break quietly.
 dangling=$(find "$themes" /usr/share/plasma/desktoptheme -xtype l)
 [ -z "$dangling" ] || {
@@ -683,18 +697,59 @@ dangling=$(find "$themes" /usr/share/plasma/desktoptheme -xtype l)
 	exit 1
 }
 
-# AtlasOS Light's colours for every KDE program that runs outside a Plasma
+# The names from before Telamon, kept for one release as copies of the new
+# ones (the per-user migration, system_files/usr/share/kconf_update/
+# telamon-20261007-rename.sh, moves every setting to the new names; these are
+# for what still names the old ones): Telamon Settings and Telamon Setup write
+# AtlasOSLight/AtlasOSDark, AtlasOS-Light/AtlasOS-Dark and org.atlasos.* into
+# users' settings until they move to the new names, a panel or a setting the
+# migration didn't reach, and the `atlasos` icon (the Launcher's button and
+# Setup's welcome page). Made here, after the themes above were pruned, so they
+# are exactly the new ones. Remove them with the migration's last release.
+for v in Light Dark; do
+	cp -p "/usr/share/color-schemes/Telamon$v.colors" "/usr/share/color-schemes/AtlasOS$v.colors"
+	sed -i 's/^Name=.*/& (old name)/' "/usr/share/color-schemes/AtlasOS$v.colors"
+	a=/usr/share/aurorae/themes/AtlasOS-$v
+	cp -a "/usr/share/aurorae/themes/Telamon-$v" "$a"
+	mv "$a/Telamon-${v}rc" "$a/AtlasOS-${v}rc"
+	sed -i 's/Telamon-/AtlasOS-/g' "$a/metadata.desktop" "$a/AtlasOS-${v}rc"
+	sed -i 's/^Name=.*/& (old name)/' "$a/metadata.desktop"
+	[ -f "$a/AtlasOS-${v}rc" ] && grep -qx "X-KDE-PluginInfo-Name=AtlasOS-$v" "$a/metadata.desktop"
+done
+cp -a "$themes/org.telamon.desktop" "$themes/org.atlasos.desktop"
+cp -a "$themes/org.telamon.dark.desktop" "$themes/org.atlasos.dark.desktop"
+for t in org.atlasos.desktop org.atlasos.dark.desktop; do
+	new=${t/atlasos/telamon}
+	jq --arg id "$t" '.KPlugin.Id = $id | .KPlugin.Name += " (old name)"' "$themes/$new/metadata.json" >"$themes/$t/metadata.json"
+done
+for m in menu appmenu dockseparator; do
+	a=/usr/share/plasma/plasmoids/org.atlasos.$m
+	cp -a "/usr/share/plasma/plasmoids/org.telamon.$m" "$a"
+	jq --arg id "org.atlasos.$m" '.KPlugin.Id = $id | .KPlugin.NoDisplay = true | .KPlugin.Hidden = true' \
+		"$a/metadata.json" >"$a/metadata.json.new"
+	mv "$a/metadata.json.new" "$a/metadata.json"
+done
+# Ghostty's themes under their old names (a user's config names them until the
+# migration's Ghostty line has changed it).
+for v in Light Dark; do
+	cp -p "/usr/share/ghostty/themes/Telamon $v" "/usr/share/ghostty/themes/AtlasOS $v"
+done
+# The icon (branding/render.sh makes the files); the Launcher's button and
+# Setup's welcome page still name it.
+[ -f /usr/share/icons/hicolor/scalable/apps/telamon.svg ] && [ -f /usr/share/icons/hicolor/scalable/apps/atlasos.svg ]
+
+# Telamon Light's colours for every KDE program that runs outside a Plasma
 # session too, the login screen above all. A user's own theme choice is
 # written to their kdeglobals and overrides these.
 awk '/^\[/ { keep = /^\[(Colors:|ColorEffects:|WM\])/ } keep' \
-	/usr/share/color-schemes/AtlasOSLight.colors >>/etc/xdg/kdeglobals
+	/usr/share/color-schemes/TelamonLight.colors >>/etc/xdg/kdeglobals
 
 # Login screen, macOS style: the blurred, tinted sakura picture with the clock
 # above the user's avatar and password field. (The lock screen uses the same
 # picture, set in /etc/xdg/kscreenlockerrc.) New users' desktop wallpaper is
 # in the themes' defaults.
 replace /usr/lib/plasmalogin/defaults.conf \
-	"file:///usr/share/wallpapers/Fedora/" "file:///usr/share/wallpapers/AtlasOS-Login/"
+	"file:///usr/share/wallpapers/Fedora/" "file:///usr/share/wallpapers/Telamon-Login/"
 grep -qx '\[Greeter\]' /usr/lib/plasmalogin/defaults.conf
 sed -i -e '/^ShowClock=/d' -e '/^\[Greeter\]$/a ShowClock=true' /usr/lib/plasmalogin/defaults.conf
 
@@ -715,9 +770,9 @@ qml = open(path).read()
 edits = [
     ("    id: lockScreenUi\n",
      "    id: lockScreenUi\n"
-     "    // AtlasOS: the user sent a password that the check hasn't answered yet\n"
+     "    // Telamon OS: the user sent a password that the check hasn't answered yet\n"
      "    property bool answered: false\n"
-     "    // AtlasOS: quiet restarts since the check last asked for a password\n"
+     "    // Telamon OS: quiet restarts since the check last asked for a password\n"
      "    property int quietRetries: 0\n"),
     ("                    authenticator.respond(password)\n",
      "                    lockScreenUi.answered = true;\n"
@@ -749,12 +804,12 @@ for old, new in edits:
 open(path, "w").write(qml)
 EOF
 
-# Boot splash: Fedora's spinner theme with the AtlasOS lockup as the watermark
-mkdir -p /usr/share/plymouth/themes/atlasos
-cp -a /usr/share/plymouth/themes/spinner/. /usr/share/plymouth/themes/atlasos/
-rm /usr/share/plymouth/themes/atlasos/spinner.plymouth
-cp /branding/plymouth/watermark.png /usr/share/plymouth/themes/atlasos/watermark.png
-plymouth-set-default-theme atlasos
+# Boot splash: Fedora's spinner theme with the Telamon OS lockup as the watermark
+mkdir -p /usr/share/plymouth/themes/telamon
+cp -a /usr/share/plymouth/themes/spinner/. /usr/share/plymouth/themes/telamon/
+rm /usr/share/plymouth/themes/telamon/spinner.plymouth
+cp /branding/plymouth/watermark.png /usr/share/plymouth/themes/telamon/watermark.png
+plymouth-set-default-theme telamon
 
 # Plymouth lives in the initramfs, so it has to be rebuilt to pick the theme up.
 kver=$(find /usr/lib/modules -mindepth 1 -maxdepth 1 -printf '%f\n')

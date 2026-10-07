@@ -1,5 +1,5 @@
 [Unit]
-Description=Download and stage the next AtlasOS update
+Description=Download and stage the next Telamon OS update
 Documentation=https://github.com/EternalCoder454/AtlasOS
 # Only on an image-based boot, only with a network, and not on metered ones
 # (the condition script). `bootc upgrade` (`rpm-ostree upgrade` on a system
@@ -18,8 +18,8 @@ StartLimitBurst=4
 
 [Service]
 Type=oneshot
-ExecCondition=/usr/libexec/atlasos/update-stage-condition
-ExecStart=/usr/libexec/atlasos/update-stage
+ExecCondition=/usr/libexec/telamon/update-stage-condition
+ExecStart=/usr/libexec/telamon/update-stage
 # Background work: out of the way of whatever the user is doing.
 Nice=19
 IOSchedulingClass=idle

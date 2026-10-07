@@ -1,0 +1,16 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Telamon OS"
+            }
+        ],
+        "Category": "",
+        "Description": "Dark colours from the Telamon OS logo, with a macOS-style menu bar and a dock",
+        "Id": "org.telamon.dark.desktop",
+        "License": "GPLv2+",
+        "Name": "Telamon Dark",
+        "Website": "https://github.com/EternalCoder454/AtlasOS"
+    }
+}

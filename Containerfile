@@ -1,7 +1,7 @@
-# AtlasOS: a minimal Fedora Kinoite 44 desktop, built as a bootc image.
+# Telamon OS: a minimal Fedora Kinoite 44 desktop, built as a bootc image.
 
 # The base. CI passes the digest it resolved, so the image records exactly
-# which Kinoite it was built on (the org.atlasos.base-image label below).
+# which Kinoite it was built on (the org.telamon.base-image label below).
 ARG BASE_IMAGE=quay.io/fedora/fedora-kinoite:44
 
 # Logos, icons and wallpapers, rendered from branding/. A separate
@@ -12,18 +12,18 @@ RUN apk add --no-cache rsvg-convert imagemagick imagemagick-jpeg imagemagick-jxl
 COPY branding /branding
 RUN sh /branding/render.sh /branding /out
 
-# atlas-framework, the shared base of the Atlas apps (Atlas.Ui, its Material
+# telamon-framework, the shared base of the Telamon apps (Telamon.Ui, its Material
 # Symbols fonts and the Atlas Symbols gallery), built into RPMs the same way
-# from the build context named "atlas-framework"
+# from the build context named "telamon-framework"
 # (EternalCoder454/atlas-framework). The apps below are built against these
-# RPMs (ATLAS_LOCAL_RPMS, see build-rpm.sh in each app), and apps.sh installs
+# RPMs (TELAMON_LOCAL_RPMS, see build-rpm.sh in each app), and apps.sh installs
 # them before the apps. The stage has its own name: a stage named like the
 # build context would hide it from COPY --from.
 FROM registry.fedoraproject.org/fedora:44 AS framework
-COPY --from=atlas-framework --exclude=.git --exclude=out --exclude=build / /src
+COPY --from=telamon-framework --exclude=.git --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-# atlas-framework 1.5.0's build-rpm.sh packages git's HEAD, and the context
+# atlas-framework 1.5.0's (and later) build-rpm.sh packages git's HEAD, and the context
 # is the pinned tree without .git: commit that tree into a throwaway
 # repository (fixed author and date, so this layer stays cacheable) whose HEAD
 # is exactly the pin. The image's label names the real commit.
@@ -31,158 +31,158 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf -y install git-core && \
     git -C /src init -q && git -C /src add -A -f && \
     GIT_AUTHOR_DATE='1970-01-01T00:00:01Z' GIT_COMMITTER_DATE='1970-01-01T00:00:01Z' git -C /src \
-        -c user.name=AtlasOS -c user.email=build@atlasos.invalid commit -qm pin
-RUN --mount=type=cache,target=/var/cache/atlas-framework-build,sharing=locked \
+        -c user.name=Telamon -c user.email=build@telamon.invalid commit -qm pin
+RUN --mount=type=cache,target=/var/cache/telamon-framework-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    ATLAS_BUILD_CACHE=/var/cache/atlas-framework-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    TELAMON_BUILD_CACHE=/var/cache/telamon-framework-build ATLAS_BUILD_CACHE=/var/cache/telamon-framework-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# The Atlas apps (Atlas Updater and atlas-system-helper), built into RPMs in a Fedora 44
+# The Telamon apps (Telamon Updater and telamon-system-helper), built into RPMs in a Fedora 44
 # container, the release the image is based on. The source is the build
-# context named "atlas-updater" (`podman build --build-context
-# atlas-updater=<path>`; `just build` and CI pass it). Cargo's downloads and
-# build output (ATLAS_BUILD_CACHE, see build-rpm.sh there) and dnf's downloads
+# context named "telamon-updater" (`podman build --build-context
+# telamon-updater=<path>`; `just build` and CI pass it). Cargo's downloads and
+# build output (TELAMON_BUILD_CACHE, see build-rpm.sh there) and dnf's downloads
 # are cache mounts, so they survive between builds without ending up in an
 # image layer. Only a machine that keeps its Podman storage benefits: the VPS
 # runner and local builds (see CI.md).
 # Without what build-rpm.sh leaves out of the source too: .git differs in every
 # checkout, so with it this step and the build after it never come from the
 # cache, and a local checkout's build output is gigabytes.
-FROM registry.fedoraproject.org/fedora:44 AS atlas-apps
-COPY --from=atlas-updater --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+FROM registry.fedoraproject.org/fedora:44 AS updater-app
+COPY --from=telamon-updater --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-build,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-updater-build,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    ATLAS_BUILD_CACHE=/var/cache/atlas-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    TELAMON_BUILD_CACHE=/var/cache/telamon-updater-build ATLAS_BUILD_CACHE=/var/cache/telamon-updater-build drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Monitor, built the same way from the build context named
-# "atlas-monitor" (EternalCoder454/atlasos-monitor). A stage of its own, so a
+# Telamon Monitor, built the same way from the build context named
+# "telamon-monitor" (EternalCoder454/atlasos-monitor). A stage of its own, so a
 # change to one app doesn't rebuild the other. Cargo's crate downloads are a
 # cache mount (CARGO_HOME, see the spec there). Its build fetches the
-# atlas-framework crates from GitHub at the commit its Cargo.toml pins, so it
-# needs the network. Like Atlas Updater, it is built against the framework
-# RPMs (ATLAS_LOCAL_RPMS).
+# telamon-framework crates from GitHub at the commit its Cargo.toml pins, so it
+# needs the network. Like Telamon Updater, it is built against the framework
+# RPMs (TELAMON_LOCAL_RPMS).
 FROM registry.fedoraproject.org/fedora:44 AS monitor-app
-COPY --from=atlas-monitor --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-monitor --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-monitor-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-monitor-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-monitor-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-monitor-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Notepad, built the same way as Atlas Monitor from the build context
-# named "atlas-notepad" (the AtlasOS Text Editor source).
+# Telamon Notepad, built the same way as Telamon Monitor from the build context
+# named "telamon-notepad" (the Telamon Notepad source).
 FROM registry.fedoraproject.org/fedora:44 AS notepad-app
-COPY --from=atlas-notepad --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-notepad --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-notepad-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-notepad-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Settings, built the same way from the build context named
-# "atlas-settings". It sits beside systemsettings and every KDE KCM and
+# Telamon Settings, built the same way from the build context named
+# "telamon-settings". It sits beside systemsettings and every KDE KCM and
 # replaces none of them.
 FROM registry.fedoraproject.org/fedora:44 AS settings-app
-COPY --from=atlas-settings --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-settings --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-settings-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-settings-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-settings-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-settings-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Wizard, the first-run setup (replaces plasma-setup), built the same
-# way from the build context named "atlas-wizard". Its build-rpm.sh wants a
+# Telamon Setup, the first-run setup (replaces plasma-setup), built the same
+# way from the build context named "telamon-wizard". Its build-rpm.sh wants a
 # git checkout for HEAD, which the copy leaves out, so it builds the tree it is
-# given (ATLAS_RPM_WORKTREE=1): the pinned commit, which CI and `just build`
-# check out or copy, labelled in the image's net.eterneon.atlas.wizard.revision.
+# given (TELAMON_RPM_WORKTREE=1 ATLAS_RPM_WORKTREE=1): the pinned commit, which CI and `just build`
+# check out or copy, labelled in the image's net.eterneon.telamon.wizard.revision.
 FROM registry.fedoraproject.org/fedora:44 AS wizard-app
-COPY --from=atlas-wizard --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-wizard --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-wizard-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-wizard-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms ATLAS_RPM_WORKTREE=1 \
-    CARGO_HOME=/var/cache/atlas-wizard-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms TELAMON_RPM_WORKTREE=1 ATLAS_RPM_WORKTREE=1 \
+    CARGO_HOME=/var/cache/telamon-wizard-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Store, the app store added beside Discover, built the same way from the
-# build context named "atlas-store". Its build-rpm.sh tars the tree it is
-# given (no git needed), so no ATLAS_RPM_WORKTREE; the pinned commit is labelled
-# in the image's net.eterneon.atlas.store.revision.
+# Telamon Store, the app store added beside Discover, built the same way from the
+# build context named "telamon-store". Its build-rpm.sh tars the tree it is
+# given (no git needed), so no TELAMON_RPM_WORKTREE; the pinned commit is labelled
+# in the image's net.eterneon.telamon.store.revision.
 FROM registry.fedoraproject.org/fedora:44 AS store-app
-COPY --from=atlas-store --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-store --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-store-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-store-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-store-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-store-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Archive, the archive manager (replaces Ark), built the same way from the
-# build context named "atlas-archive". Its build-rpm.sh tars the tree it is
-# given (no git needed), so no ATLAS_RPM_WORKTREE; the pinned commit is labelled
-# in net.eterneon.atlas.archive.revision.
+# Telamon Archive, the archive manager (replaces Ark), built the same way from the
+# build context named "telamon-archive". Its build-rpm.sh tars the tree it is
+# given (no git needed), so no TELAMON_RPM_WORKTREE; the pinned commit is labelled
+# in net.eterneon.telamon.archive.revision.
 FROM registry.fedoraproject.org/fedora:44 AS archive-app
-COPY --from=atlas-archive --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-archive --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-archive-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-archive-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-archive-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-archive-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Launcher, the app launcher (replaces Andromeda), built the same way from
-# the build context named "atlas-launcher". Its build-rpm.sh tars the tree it is
-# given (no git needed), so no ATLAS_RPM_WORKTREE; the pinned commit is labelled
-# in net.eterneon.atlas.launcher.revision.
+# Telamon Launcher, the app launcher (replaces Andromeda), built the same way from
+# the build context named "telamon-launcher". Its build-rpm.sh tars the tree it is
+# given (no git needed), so no TELAMON_RPM_WORKTREE; the pinned commit is labelled
+# in net.eterneon.telamon.launcher.revision.
 FROM registry.fedoraproject.org/fedora:44 AS launcher-app
-COPY --from=atlas-launcher --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-launcher --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-launcher-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-launcher-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms \
-    CARGO_HOME=/var/cache/atlas-launcher-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms \
+    CARGO_HOME=/var/cache/telamon-launcher-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# AtlasOS Screenshot (Meta+Shift+S: freeze, drag, copy; Ctrl for OCR text,
+# Telamon Screenshot (Meta+Shift+S: freeze, drag, copy; Ctrl for OCR text,
 # Alt for a redacted PNG), built from the build context named
-# "atlas-screenshot". No Qt, so no framework RPMs; its build-rpm.sh tars the
+# "telamon-screenshot". No Qt, so no framework RPMs; its build-rpm.sh tars the
 # tree it is given (no git needed). The pinned commit is labelled in
-# net.eterneon.atlas.screenshot.revision.
+# net.eterneon.telamon.screenshot.revision.
 FROM registry.fedoraproject.org/fedora:44 AS screenshot-app
-COPY --from=atlas-screenshot --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-screenshot --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-screenshot-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-screenshot-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    CARGO_HOME=/var/cache/atlas-screenshot-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    CARGO_HOME=/var/cache/telamon-screenshot-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# Atlas Explorer (Files), the file manager and its index service, built the same
-# way from the build context named "atlas-explorer"; the pinned commit is
-# labelled in net.eterneon.atlas.explorer.revision.
+# Telamon Explorer (Files), the file manager and its index service, built the same
+# way from the build context named "telamon-explorer"; the pinned commit is
+# labelled in net.eterneon.telamon.explorer.revision.
 FROM registry.fedoraproject.org/fedora:44 AS explorer-app
-COPY --from=atlas-explorer --exclude=.git --exclude=target --exclude=out --exclude=build / /src
+COPY --from=telamon-explorer --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
 RUN echo keepcache=True >>/etc/dnf/dnf.conf
-RUN --mount=type=cache,target=/var/cache/atlas-explorer-cargo,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/telamon-explorer-cargo,sharing=locked \
     --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    ATLAS_LOCAL_RPMS=/atlas-framework-rpms ATLAS_RPM_WORKTREE=1 \
-    CARGO_HOME=/var/cache/atlas-explorer-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    TELAMON_LOCAL_RPMS=/telamon-framework-rpms ATLAS_LOCAL_RPMS=/telamon-framework-rpms TELAMON_RPM_WORKTREE=1 ATLAS_RPM_WORKTREE=1 \
+    CARGO_HOME=/var/cache/telamon-explorer-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
-# KIO with AtlasOS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
+# KIO with Telamon OS's crash fix (see build_files/kio/build-rpm.sh): Fedora's
 # kf6-kio, rebuilt at the version the base image has.
 FROM ${BASE_IMAGE} AS base-kio
 RUN rpm -q kf6-kio-core --qf '%{VERSION}-%{RELEASE}' >/kio-nvr
@@ -253,18 +253,18 @@ RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     PACKAGES_DATE="${PACKAGES_DATE}" /ctx/packages.sh
 
 RUN --mount=type=bind,from=ctx-apps,source=/,target=/ctx \
-    --mount=type=bind,from=framework,source=/out,target=/atlas-framework-rpms \
-    --mount=type=bind,from=atlas-apps,source=/out,target=/atlas-rpms \
-    --mount=type=bind,from=monitor-app,source=/out,target=/atlas-monitor-rpms \
-    --mount=type=bind,from=notepad-app,source=/out,target=/atlas-notepad-rpms \
-    --mount=type=bind,from=settings-app,source=/out,target=/atlas-settings-rpms \
-    --mount=type=bind,from=wizard-app,source=/out,target=/atlas-wizard-rpms \
-    --mount=type=bind,from=store-app,source=/out,target=/atlas-store-rpms \
-    --mount=type=bind,from=explorer-app,source=/out,target=/atlas-explorer-rpms \
-    --mount=type=bind,from=archive-app,source=/out,target=/atlas-archive-rpms \
-    --mount=type=bind,from=launcher-app,source=/out,target=/atlas-launcher-rpms \
-    --mount=type=bind,from=screenshot-app,source=/out,target=/atlas-screenshot-rpms \
-    --mount=type=bind,from=atlas-installer,source=/firstboot,target=/atlas-firstboot \
+    --mount=type=bind,from=framework,source=/out,target=/telamon-framework-rpms \
+    --mount=type=bind,from=updater-app,source=/out,target=/telamon-updater-rpms \
+    --mount=type=bind,from=monitor-app,source=/out,target=/telamon-monitor-rpms \
+    --mount=type=bind,from=notepad-app,source=/out,target=/telamon-notepad-rpms \
+    --mount=type=bind,from=settings-app,source=/out,target=/telamon-settings-rpms \
+    --mount=type=bind,from=wizard-app,source=/out,target=/telamon-wizard-rpms \
+    --mount=type=bind,from=store-app,source=/out,target=/telamon-store-rpms \
+    --mount=type=bind,from=explorer-app,source=/out,target=/telamon-explorer-rpms \
+    --mount=type=bind,from=archive-app,source=/out,target=/telamon-archive-rpms \
+    --mount=type=bind,from=launcher-app,source=/out,target=/telamon-launcher-rpms \
+    --mount=type=bind,from=screenshot-app,source=/out,target=/telamon-screenshot-rpms \
+    --mount=type=bind,from=telamon-installer,source=/firstboot,target=/telamon-firstboot \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/apps.sh
 
@@ -286,4 +286,8 @@ RUN bootc container lint
 # Last, so only the finished image has it: the VPS runner's cleanup removes
 # the images with this label after every job (ci/vps-runner/cleanup.sh), and
 # the build steps above, which would otherwise inherit it, are its cache.
-LABEL org.atlasos.base-image="${BASE_IMAGE}"
+# (org.atlasos.base-image is the same label under its name before Telamon: the
+# VPS runner's own cleanup.sh, which is installed beside the runner and not
+# updated with this repository, still looks for it.)
+LABEL org.telamon.base-image="${BASE_IMAGE}" \
+      org.atlasos.base-image="${BASE_IMAGE}"

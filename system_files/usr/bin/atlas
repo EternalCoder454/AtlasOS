@@ -1,4 +1,1 @@
-#!/bin/sh
-# `atlas`: AtlasOS's command menu, for the things the apps don't do (see
-# /usr/share/atlasos/atlas.just, or run `atlas` for the list).
-exec just --justfile /usr/share/atlasos/atlas.just --working-directory "$HOME" "$@"
+telamon

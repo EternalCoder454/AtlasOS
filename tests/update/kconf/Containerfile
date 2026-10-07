@@ -3,9 +3,9 @@
 # (~/.config/atlasos-testrc), so the test can see that kconf_update ran it once
 # for a user set up on an older image (atlasos-kconf-update.service).
 #
-#   podman build --build-arg BASE=localhost/atlasos:update-o \
-#       -t localhost/atlasos:update-o-kconf tests/update/kconf
-ARG BASE=localhost/atlasos:latest
+#   podman build --build-arg BASE=localhost/telamonos:update-o \
+#       -t localhost/telamonos:update-o-kconf tests/update/kconf
+ARG BASE=localhost/telamonos:latest
 FROM ${BASE}
 
 RUN f=/usr/share/kconf_update/atlasos-20261099-test.sh && \

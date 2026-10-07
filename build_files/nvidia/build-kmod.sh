@@ -7,7 +7,7 @@
 # Runs in Containerfile.nvidia's nvidia-kmod-build stage, which never sees the
 # module signing key: this stage compiles NVIDIA's source, and sign-modules.sh
 # (a later stage) is the only place the key is mounted. The repo is the RPM
-# Fusion NVIDIA repo Fedora ships disabled, copied from the AtlasOS image.
+# Fusion NVIDIA repo Fedora ships disabled, copied from the Telamon OS image.
 set -euxo pipefail
 
 out=$1

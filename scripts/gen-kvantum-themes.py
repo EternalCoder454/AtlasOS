@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Generates AtlasOS's Kvantum themes: the application style for Qt/KDE apps
-(Dolphin, System Settings, Discover...), drawn to match the Atlas apps (Atlas
-Updater, Atlas Monitor) as of Atlas.Ui 1.4.0: small-radius (4 px) buttons,
+"""Generates Telamon OS's Kvantum themes: the application style for Qt/KDE apps
+(Dolphin, System Settings, Discover...), drawn to match the Telamon apps (Telamon
+Updater, Telamon Monitor) as of Atlas.Ui 1.4.0, now Telamon.Ui: small-radius (4 px) buttons,
 fields and selections, 6 px cards, menus and tooltips, a hairline border, grey
 hover and press, accent-filled selected tab, thin rounded scrollbars. No pills.
 
 Four themes come out, into system_files/usr/share/Kvantum/<name>/:
 
-    AtlasOS            light, translucent (blur behind windows)
-    AtlasOSDark        dark, translucent
-    AtlasOSSolid       light, opaque
-    AtlasOSDarkSolid   dark, opaque
+    Telamon            light, translucent (blur behind windows)
+    TelamonDark        dark, translucent
+    TelamonSolid       light, opaque
+    TelamonDarkSolid   dark, opaque
 
-Colours come from the AtlasOS colour schemes (system_files/usr/share/
+Colours come from the Telamon OS colour schemes (system_files/usr/share/
 color-schemes), sizes and the opaque-app list from the constants below. Edit
 those, run this script, commit the result:
 
@@ -33,7 +33,7 @@ SCHEMES = ROOT / "system_files/usr/share/color-schemes"
 OUT = ROOT / "system_files/usr/share/Kvantum"
 
 # --- Sizes, in logical pixels -------------------------------------------------
-# These follow AtlasStyle.qml (Atlas.Ui 1.4.0): radiusSmall 4 for controls,
+# These follow TelamonStyle.qml (Atlas.Ui 1.4.0, now Telamon.Ui): radiusSmall 4 for controls,
 # radius 6 for menus, cards and tooltips.
 RADIUS_SMALL = 4
 RADIUS = 6
@@ -63,9 +63,9 @@ SPLITTER_W = 2
 
 # Apps that break or look bad when translucent: they stay opaque in every theme.
 # Browsers, video players, image/video editors, office suites, games and
-# emulators, terminals, and the Atlas apps (they blur their own windows).
+# emulators, terminals, and the Telamon apps (they blur their own windows).
 OPAQUE = [
-    "atlas-updater", "atlas-monitor", "atlas-notes",
+    "telamon-updater", "telamon-monitor", "atlas-updater", "atlas-monitor", "atlas-notes",
     "brave", "brave-browser", "brave-origin", "firefox", "chromium", "chrome",
     "google-chrome", "librewolf", "falkon", "qutebrowser", "epiphany",
     "vlc", "mpv", "celluloid", "haruna", "smplayer", "dragon", "kaffeine",
@@ -128,7 +128,7 @@ class Theme:
         self.text = p["text"]
         self.accent = p["accent"]
         self.white = (255, 255, 255)
-        self.accent_text = (0x14, 0x12, 0x1F) if dark else self.white  # AtlasStyle.accentText
+        self.accent_text = (0x14, 0x12, 0x1F) if dark else self.white  # TelamonStyle.accentText
         # Card colour: Section.qml (lighter in light mode, a 6% white tint in dark).
         if dark:
             self.card = mix(self.white, p["window"], 0.06)
@@ -310,7 +310,7 @@ def draw_theme(t):
     def neutral(a):
         return (txt, a)
 
-    # Buttons follow AtlasButton.qml: the control fill with a controlBorder
+    # Buttons follow TelamonButton.qml: the control fill with a controlBorder
     # hairline, a grey hover and press overlay (hover 5.5/7%, press 10/12% of
     # the text colour in light/dark, over the 5.5/6.5% fill), radiusSmall
     # corners that grow to radius while pressed; checked is the selection fill
@@ -574,7 +574,7 @@ def kvconfig(t, name, comment):
     opaque = ",".join(OPAQUE)
     dark = t.dark
     return f"""[%General]
-author=AtlasOS
+author=Telamon OS
 comment={comment}
 x11drag=menubar_and_primary_toolbar
 alt_mnemonic=true
@@ -1003,10 +1003,10 @@ interior=false
 
 
 THEMES = [
-    ("AtlasOS", "AtlasOSLight", False, True, "AtlasOS light style, with blur behind windows"),
-    ("AtlasOSDark", "AtlasOSDark", True, True, "AtlasOS dark style, with blur behind windows"),
-    ("AtlasOSSolid", "AtlasOSLight", False, False, "AtlasOS light style, opaque windows"),
-    ("AtlasOSDarkSolid", "AtlasOSDark", True, False, "AtlasOS dark style, opaque windows"),
+    ("Telamon", "TelamonLight", False, True, "Telamon OS light style, with blur behind windows"),
+    ("TelamonDark", "TelamonDark", True, True, "Telamon OS dark style, with blur behind windows"),
+    ("TelamonSolid", "TelamonLight", False, False, "Telamon OS light style, opaque windows"),
+    ("TelamonDarkSolid", "TelamonDark", True, False, "Telamon OS dark style, opaque windows"),
 ]
 
 

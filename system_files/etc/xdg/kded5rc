@@ -1,4 +1,4 @@
-# kded6 still reads kded5rc. Modules that can't do anything on AtlasOS:
+# kded6 still reads kded5rc. Modules that can't do anything on Telamon OS:
 # Baloo's (no file indexer) and the reminder to install Plasma Browser
 # Integration.
 [Module-baloosearchmodule]

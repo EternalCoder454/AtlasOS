@@ -1,0 +1,7 @@
+# Telamon OS images carry their cosign signatures as sigstore attachments in the
+# same repository (the sha256-<digest>.sig tags). /etc/containers/policy.json
+# requires one for ghcr.io/eternalcoder454/telamonos and telamonos-nvidia, and
+# for atlasos and atlasos-nvidia, the old names of the same images.
+docker:
+  ghcr.io/eternalcoder454:
+    use-sigstore-attachments: true

@@ -1,4 +1,4 @@
-# Re-runs kvantum-sync when the colour scheme or the Atlas transparency switch
+# Re-runs kvantum-sync when the colour scheme or the Telamon transparency switch
 # changes. The service itself is enabled too, and runs once at login.
 # The folders are watched, not the files: KConfig saves by renaming a new file
 # over the old one, and a watch on the file itself misses some of those saves
@@ -6,10 +6,10 @@
 # kvantum-sync, which is cheap and writes nothing unless the theme changes.
 # kdedefaults is where applying a Global Theme writes the colour scheme.
 # Started from here (it sees TRIGGER_UNIT), kvantum-sync returns at once
-# unless one of its three files changed, then lets a burst of saves settle
+# unless one of the files it reads changed, then lets a burst of saves settle
 # and reads again if one landed while it ran (that starts nothing new).
 [Unit]
-Description=Watch the colour scheme and Atlas transparency setting
+Description=Watch the colour scheme and Telamon transparency setting
 
 [Path]
 PathChanged=%h/.config

@@ -1,11 +1,11 @@
 #!/bin/sh
-# Gives existing users the look-and-feel settings of the AtlasOS Global Theme
+# Gives existing users the look-and-feel settings of the Telamon OS Global Theme
 # they use, for the keys they have never set. A Global Theme's "defaults" file
 # is applied by Plasma only when a user is first set up, so users who were set
 # up on an older image never got settings added to it since.
 #
 # A key the user's own file already has is left alone, whatever its value.
-# Users on a theme that is not AtlasOS's are left alone entirely.
+# Users on a theme that is not Telamon OS's are left alone entirely.
 set -eu
 
 cfg=${XDG_CONFIG_HOME:-$HOME/.config}
@@ -18,9 +18,9 @@ user_value() { # file group key
 }
 
 pkg=$(user_value kdeglobals KDE LookAndFeelPackage)
-[ "$pkg" != "$unset_marker" ] || pkg=org.atlasos.desktop
+[ "$pkg" != "$unset_marker" ] || pkg=org.telamon.desktop
 case $pkg in
-org.atlasos.desktop | org.atlasos.dark.desktop) ;;
+org.telamon.desktop | org.telamon.dark.desktop) ;;
 *) exit 0 ;;
 esac
 

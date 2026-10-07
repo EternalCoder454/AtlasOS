@@ -1,4 +1,7 @@
-image_name := "atlasos"
+image_name := "telamonos"
+# What the live installer ISO is called, and the image it installs from: not
+# renamed yet (the website downloads build/atlasos.iso; see DEV.md, "Telamon").
+iso_name := "atlasos"
 image := "localhost/" + image_name
 # The rechunker (see `rechunk`).
 chunkah := "quay.io/coreos/chunkah@sha256:0da1fa543fafe92468ad667d00580aea544a384198f668f1499675c241642e11"
@@ -21,19 +24,19 @@ build tag="latest" *args:
     #!/usr/bin/env bash
     set -euo pipefail
     # dnf's downloads are kept here between builds (gitignored, never in the
-    # image). The VPS runner sets ATLAS_DNF_CACHE to a directory outside the
+    # image). The VPS runner sets ATLAS_DNF_CACHE (still read) to a directory outside the
     # checkout, which actions/checkout cleans.
-    dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
+    dnf_cache="${TELAMON_DNF_CACHE:-${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}}"
     mkdir -p "$dnf_cache"
     # CI passes IMAGE_VERSION (44.YYYYMMDD-N) so the image and its pushed tag
     # carry the same version; a local build is the plain 44.YYYYMMDD.
     version="${IMAGE_VERSION:-44.$(date -u +%Y%m%d)}"
-    # The Atlas apps' and atlas-framework's source, each a named build context
+    # The Telamon apps' and telamon-framework's source, each a named build context
     # the Containerfile builds RPMs from: the commits pinned in
-    # atlas-apps.lock, fetched into build/pinned/ (CI checks the same commits
+    # telamon-apps.lock, fetched into build/pinned/ (CI checks the same commits
     # out). To build a local checkout instead while working on an app, point
-    # ATLAS_FRAMEWORK_SRC, ATLAS_UPDATER_SRC, ATLAS_MONITOR_SRC,
-    # ATLAS_NOTEPAD_SRC, ATLAS_SETTINGS_SRC, ATLAS_WIZARD_SRC, ATLAS_STORE_SRC, ATLAS_EXPLORER_SRC, ATLAS_ARCHIVE_SRC, ATLAS_LAUNCHER_SRC, ATLAS_SCREENSHOT_SRC or ATLAS_INSTALLER_SRC at it; the image's label then names that checkout's
+    # TELAMON_FRAMEWORK_SRC, TELAMON_UPDATER_SRC, TELAMON_MONITOR_SRC,
+    # TELAMON_NOTEPAD_SRC, TELAMON_SETTINGS_SRC, TELAMON_WIZARD_SRC, TELAMON_STORE_SRC, TELAMON_EXPLORER_SRC, TELAMON_ARCHIVE_SRC, TELAMON_LAUNCHER_SRC, TELAMON_SCREENSHOT_SRC or TELAMON_INSTALLER_SRC at it; the image's label then names that checkout's
     # commit, so it can't pass for a pinned build.
     app_source() { # name, the variable's value (empty: the pin)
         if [ -n "$2" ]; then
@@ -41,22 +44,22 @@ build tag="latest" *args:
         else
             # `|| exit 1`: set -e doesn't reach inside $(...), and a failed
             # fetch would otherwise build whatever build/pinned/ held before.
-            scripts/atlas-pins.py fetch "$1" "build/pinned/$1" >&2 || exit 1
+            scripts/telamon-pins.py fetch "$1" "build/pinned/$1" >&2 || exit 1
             printf '%s\n' "build/pinned/$1"
         fi
     }
-    framework=$(app_source framework "${ATLAS_FRAMEWORK_SRC:-}")
-    updater=$(app_source updater "${ATLAS_UPDATER_SRC:-}")
-    monitor=$(app_source monitor "${ATLAS_MONITOR_SRC:-}")
-    notepad=$(app_source notepad "${ATLAS_NOTEPAD_SRC:-}")
-    settings=$(app_source settings "${ATLAS_SETTINGS_SRC:-}")
-    wizard=$(app_source wizard "${ATLAS_WIZARD_SRC:-}")
-    store=$(app_source store "${ATLAS_STORE_SRC:-}")
-    explorer=$(app_source explorer "${ATLAS_EXPLORER_SRC:-}")
-    archive=$(app_source archive "${ATLAS_ARCHIVE_SRC:-}")
-    launcher=$(app_source launcher "${ATLAS_LAUNCHER_SRC:-}")
-    screenshot=$(app_source screenshot "${ATLAS_SCREENSHOT_SRC:-}")
-    installer=$(app_source installer "${ATLAS_INSTALLER_SRC:-}")
+    framework=$(app_source framework "${TELAMON_FRAMEWORK_SRC:-}")
+    updater=$(app_source updater "${TELAMON_UPDATER_SRC:-}")
+    monitor=$(app_source monitor "${TELAMON_MONITOR_SRC:-}")
+    notepad=$(app_source notepad "${TELAMON_NOTEPAD_SRC:-}")
+    settings=$(app_source settings "${TELAMON_SETTINGS_SRC:-}")
+    wizard=$(app_source wizard "${TELAMON_WIZARD_SRC:-}")
+    store=$(app_source store "${TELAMON_STORE_SRC:-}")
+    explorer=$(app_source explorer "${TELAMON_EXPLORER_SRC:-}")
+    archive=$(app_source archive "${TELAMON_ARCHIVE_SRC:-}")
+    launcher=$(app_source launcher "${TELAMON_LAUNCHER_SRC:-}")
+    screenshot=$(app_source screenshot "${TELAMON_SCREENSHOT_SRC:-}")
+    installer=$(app_source installer "${TELAMON_INSTALLER_SRC:-}")
     for dir in "$framework" "$updater" "$monitor" "$notepad" "$settings" "$wizard" "$store" "$explorer" "$archive" "$launcher" "$screenshot"; do
         [ -d "$dir/packaging" ] || { echo "No app source (packaging/) at '$dir'" >&2; exit 1; }
     done
@@ -87,37 +90,37 @@ build tag="latest" *args:
     copy_source "$screenshot" build/screenshot-src
     copy_source "$installer" build/installer-src
     podman build --pull=newer \
-        --build-context atlas-framework=build/framework-src \
-        --build-context atlas-updater=build/updater-src \
-        --build-context atlas-monitor=build/monitor-src \
-        --build-context atlas-notepad=build/notepad-src \
-        --build-context atlas-settings=build/settings-src \
-        --build-context atlas-wizard=build/wizard-src \
-        --build-context atlas-store=build/store-src \
-        --build-context atlas-explorer=build/explorer-src \
-        --build-context atlas-archive=build/archive-src \
-        --build-context atlas-launcher=build/launcher-src \
-        --build-context atlas-screenshot=build/screenshot-src \
-        --build-context atlas-installer=build/installer-src \
+        --build-context telamon-framework=build/framework-src \
+        --build-context telamon-updater=build/updater-src \
+        --build-context telamon-monitor=build/monitor-src \
+        --build-context telamon-notepad=build/notepad-src \
+        --build-context telamon-settings=build/settings-src \
+        --build-context telamon-wizard=build/wizard-src \
+        --build-context telamon-store=build/store-src \
+        --build-context telamon-explorer=build/explorer-src \
+        --build-context telamon-archive=build/archive-src \
+        --build-context telamon-launcher=build/launcher-src \
+        --build-context telamon-screenshot=build/screenshot-src \
+        --build-context telamon-installer=build/installer-src \
         --security-opt label=disable \
         --volume "$dnf_cache:/var/cache/libdnf5" \
         --build-arg IMAGE_VERSION="$version" \
         --build-arg PACKAGES_DATE="$(date -u +%F)" \
         --label org.opencontainers.image.version="$version" \
         --label org.opencontainers.image.revision="$(git rev-parse HEAD)" \
-        --label net.eterneon.atlas.framework.revision="$(git -C "$framework" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.notepad.revision="$(git -C "$notepad" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.settings.revision="$(git -C "$settings" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.wizard.revision="$(git -C "$wizard" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.store.revision="$(git -C "$store" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.explorer.revision="$(git -C "$explorer" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.archive.revision="$(git -C "$archive" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.launcher.revision="$(git -C "$launcher" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.screenshot.revision="$(git -C "$screenshot" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label net.eterneon.atlas.installer.revision="$(git -C "$installer" rev-parse HEAD 2>/dev/null || echo unknown)" \
-        --label org.opencontainers.image.title=AtlasOS \
+        --label net.eterneon.telamon.framework.revision="$(git -C "$framework" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.updater.revision="$(git -C "$updater" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.monitor.revision="$(git -C "$monitor" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.notepad.revision="$(git -C "$notepad" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.settings.revision="$(git -C "$settings" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.wizard.revision="$(git -C "$wizard" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.store.revision="$(git -C "$store" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.explorer.revision="$(git -C "$explorer" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.archive.revision="$(git -C "$archive" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.launcher.revision="$(git -C "$launcher" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.screenshot.revision="$(git -C "$screenshot" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label net.eterneon.telamon.installer.revision="$(git -C "$installer" rev-parse HEAD 2>/dev/null || echo unknown)" \
+        --label "org.opencontainers.image.title=Telamon OS" \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop" \
         --label org.opencontainers.image.licenses=Apache-2.0 \
         --label containers.bootc=1 \
@@ -126,16 +129,16 @@ build tag="latest" *args:
 
 # Each pin must be on its repository's main branch, and match its release tag
 # where it has one.
-# Show and check the Atlas app pins (atlas-apps.lock)
+# Show and check the Telamon app pins (telamon-apps.lock)
 [group('Build')]
 pins:
-    @scripts/atlas-pins.py list
-    @scripts/atlas-pins.py verify
+    @scripts/telamon-pins.py list
+    @scripts/telamon-pins.py verify
 
 # Each moves to its newest release, or its main branch's head for an app with
 # no releases yet, and the commits it brings are listed. A pin never moves
-# back. Then build, test and commit atlas-apps.lock.
-# Move the Atlas app pins forward (all, or the one named)
+# back. Then build, test and commit telamon-apps.lock.
+# Move the Telamon app pins forward (all, or the one named)
 [group('Build')]
 pins-update name="":
     #!/usr/bin/env bash
@@ -143,18 +146,18 @@ pins-update name="":
     names={{ quote(name) }}
     [ -n "$names" ] || names="framework updater monitor notepad settings wizard store explorer archive launcher screenshot installer"
     for n in $names; do
-        newest=$(scripts/atlas-pins.py latest "$n")
+        newest=$(scripts/telamon-pins.py latest "$n")
         read -r sha tag <<<"$newest"
-        if [ "$sha" = "$(scripts/atlas-pins.py get "$n")" ]; then
+        if [ "$sha" = "$(scripts/telamon-pins.py get "$n")" ]; then
             echo "$n: up to date"
             continue
         fi
         echo "$n: what the new pin brings"
-        scripts/atlas-pins.py log "$n" "$sha" | sed 's/^/  /'
-        scripts/atlas-pins.py set "$n" "$sha" "$tag"
+        scripts/telamon-pins.py log "$n" "$sha" | sed 's/^/  /'
+        scripts/telamon-pins.py set "$n" "$sha" "$tag"
     done
 
-# Build the NVIDIA image (localhost/atlasos-nvidia) on top of a built AtlasOS
+# Build the NVIDIA image (localhost/telamonos-nvidia) on top of a built Telamon OS
 # image with the same tag. Needs the module signing key: secrets/nvidia-signing.key
 # here, or the file named in NVIDIA_SIGNING_KEY (CI). Extra arguments go to
 # `podman build`.
@@ -164,14 +167,14 @@ build-nvidia tag="latest" *args:
     set -euo pipefail
     key="${NVIDIA_SIGNING_KEY:-secrets/nvidia-signing.key}"
     [ -s "$key" ] || { echo "No module signing key at $key (see DEV.md, NVIDIA)" >&2; exit 1; }
-    dnf_cache="${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}"
+    dnf_cache="${TELAMON_DNF_CACHE:-${ATLAS_DNF_CACHE:-$PWD/build/cache/dnf}}"
     mkdir -p "$dnf_cache"
     podman build \
         --security-opt label=disable \
         --volume "$dnf_cache:/var/cache/libdnf5" \
         --secret id=nvidia-signing-key,src="$key" \
         --build-arg BASE_IMAGE="{{ image }}:{{ tag }}" \
-        --label org.opencontainers.image.title="AtlasOS (NVIDIA)" \
+        --label org.opencontainers.image.title="Telamon OS (NVIDIA)" \
         --label org.opencontainers.image.description="Minimal Fedora Kinoite 44 desktop with NVIDIA's driver" \
         {{ args }} \
         --file Containerfile.nvidia \
@@ -268,7 +271,7 @@ sbom tag="latest" out="build/sbom" name=image_name:
     # grype's vulnerability database (about 1 GB unpacked) is downloaded each
     # time into a directory beside the output, which goes afterwards (not
     # /tmp, which can be a small tmpfs). Matched as Fedora 44, which syft
-    # can't tell from os-release (ID=atlasos).
+    # can't tell from os-release (ID=telamonos).
     db=$(mktemp -d "$(dirname "$out")/grype-db.XXXXXX")
     trap 'rm -rf "$db"' EXIT
     podman run --rm --pull=missing --security-opt label=disable --user 0 \
@@ -285,19 +288,23 @@ sbom tag="latest" out="build/sbom" name=image_name:
 qcow2 tag="latest":
     scripts/bib.sh qcow2 "{{ image }}:{{ tag }}"
 
-# The live installer ISO, made with AtlasOS Installer (../AtlasOS Installer,
-# or the folder in ATLAS_INSTALLER_SRC). No root.
+# The live installer ISO, made with Telamon Installer (../AtlasOS Installer,
+# or the folder in TELAMON_INSTALLER_SRC). No root. Its image names are still
+# the ones before Telamon (atlasos, atlasos-nvidia): the same builds are
+# published under both, and the ISO's file name is what the website downloads.
 # Live installer ISO build/<name>.iso of ghcr.io/eternalcoder454/<name>:<tag>
 [group('Disk images')]
-iso tag="stable" name=image_name:
-    "${ATLAS_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" -o "build/{{ name }}.iso" {{ name }} {{ tag }}
+iso tag="stable" name=iso_name:
+    "${TELAMON_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" -o "build/{{ name }}.iso" {{ name }} {{ tag }}
 
 # The same, to try a build before it's published. Its first update downloads
-# the whole image, since its layers match nothing on ghcr.io.
+# the whole image, since its layers match nothing on ghcr.io. The installer
+# looks for localhost/<name>, so the build gets that name too (the same image).
 # Live installer ISO build/<name>.iso of the local build localhost/<name>:<tag>
 [group('Disk images')]
-iso-local tag="latest" name=image_name:
-    "${ATLAS_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" --local -o "build/{{ name }}.iso" {{ name }} {{ tag }}
+iso-local tag="latest" name=iso_name:
+    podman tag "localhost/{{ replace(name, 'atlasos', 'telamonos') }}:{{ tag }}" "localhost/{{ name }}:{{ tag }}"
+    "${TELAMON_INSTALLER_SRC:-../AtlasOS Installer}/iso/make-iso.sh" --local -o "build/{{ name }}.iso" {{ name }} {{ tag }}
 
 # Kept until the live installer passes its test matrix.
 # Anaconda installer ISO build/atlasos.iso (bootc-image-builder). Needs sudo.
@@ -327,7 +334,7 @@ vm-update tag="latest":
 vm-stop name="atlasos":
     scripts/vm.sh stop {{ name }}
 
-# Boot stock Kinoite 44 (installed from the ISO in ~/VMs) and AtlasOS one after
+# Boot stock Kinoite 44 (installed from the ISO in ~/VMs) and Telamon OS one after
 # the other with 8 GB of RAM, and record memory and services 2 minutes after login.
 [group('VMs')]
 mem-stock disk="build/atlasos.qcow2":
@@ -369,7 +376,7 @@ publish tag channel="stable" notes="":
     scripts/vm.sh publish {{ tag }} {{ channel }} {{ notes }}
 
 # Boot a VM that tracks the update test registry's stable channel over
-# virtiofs, for testing Atlas Updater end to end.
+# virtiofs, for testing Telamon Updater end to end.
 updtest:
     scripts/vm.sh updtest
 
@@ -377,14 +384,15 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh build_files/kio/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/atlasos/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/atlasos/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
-    shellcheck -s sh branding/render.sh system_files/usr/bin/atlas system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
-    just --unstable --fmt --check --justfile system_files/usr/share/atlasos/atlas.just
-    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/atlasos/pinlib.py
-    python3 -m py_compile system_files/usr/libexec/atlasos/pin-admin system_files/usr/libexec/atlasos/pin-daemon
-    python3 -m py_compile scripts/atlas-pins.py
-    scripts/atlas-pins.py list >/dev/null
-    rm -rf system_files/usr/libexec/atlasos/__pycache__ scripts/__pycache__
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/telamon/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/telamon/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
+    shellcheck -s sh branding/render.sh system_files/usr/bin/telamon system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
+    shellcheck -s sh system_files/usr/share/kconf_update/*.sh
+    just --unstable --fmt --check --justfile system_files/usr/share/telamon/telamon.just
+    python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/telamon/pinlib.py
+    python3 -m py_compile system_files/usr/libexec/telamon/pin-admin system_files/usr/libexec/telamon/pin-daemon
+    python3 -m py_compile scripts/telamon-pins.py
+    scripts/telamon-pins.py list >/dev/null
+    rm -rf system_files/usr/libexec/telamon/__pycache__ scripts/__pycache__
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory

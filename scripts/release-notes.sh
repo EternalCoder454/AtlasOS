@@ -45,12 +45,12 @@ while read -r sha subject; do
 	body[$g]+="- ${subject} (\`${sha:0:7}\`)"$'\n'
 done < <(git log --no-merges --format='%H %s' "$range")
 
-echo "# AtlasOS ${version}"
+echo "# Telamon OS ${version}"
 echo
 echo "$intro"
 echo
 if [ "$total" -eq 0 ]; then
-	echo "No changes to the AtlasOS repository; this build picked up Fedora's updates."
+	echo "No changes to the Telamon OS repository; this build picked up Fedora's updates."
 	echo
 fi
 for g in "Desktop and settings" "Packages and services" "Build, CI and docs"; do
@@ -63,6 +63,6 @@ done
 
 echo "## Built from"
 echo
-echo "- AtlasOS \`${revision:0:7}\`"
-[ -z "$updater" ] || echo "- Atlas Updater \`${updater:0:7}\`"
+echo "- Telamon OS \`${revision:0:7}\`"
+[ -z "$updater" ] || echo "- Telamon Updater \`${updater:0:7}\`"
 [ -z "$base" ] || echo "- Base image \`${base}\`"

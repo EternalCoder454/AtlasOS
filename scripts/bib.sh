@@ -37,15 +37,15 @@ iso)
 	cp disk_config/iso.toml build/bib/config.toml
 	output=bootiso/install.iso
 	# The installer's package list is looked up by os-release ID-VERSION_ID,
-	# and bootc-image-builder has none for "atlasos" (it ignores ID_LIKE).
-	# Lend it the newest Fedora list it ships, under AtlasOS's name.
+	# and bootc-image-builder has none for "telamonos" (it ignores ID_LIKE).
+	# Lend it the newest Fedora list it ships, under Telamon OS's name.
 	version=$(podman run --rm --entrypoint cat "$image" /usr/lib/os-release |
 		sed -n 's/^VERSION_ID=//p')
 	podman pull -q "$bib_image" >/dev/null
 	podman run --rm --entrypoint sh "$bib_image" -c \
 		'cat "$(ls /usr/share/bootc-image-builder/defs/fedora-*.yaml | sort -V | tail -1)"' \
 		>build/bib/def.yaml
-	extra_mounts=(-v "$PWD/build/bib/def.yaml:/usr/share/bootc-image-builder/defs/atlasos-$version.yaml:ro")
+	extra_mounts=(-v "$PWD/build/bib/def.yaml:/usr/share/bootc-image-builder/defs/telamonos-$version.yaml:ro")
 	;;
 *)
 	echo "usage: $0 qcow2|iso <image>" >&2

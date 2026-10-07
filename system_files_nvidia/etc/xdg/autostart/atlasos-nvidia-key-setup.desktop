@@ -2,7 +2,7 @@
 Type=Application
 Name=NVIDIA driver key setup
 Comment=Offers to set up the NVIDIA driver's Secure Boot key when it is needed
-Exec=/usr/libexec/atlasos/nvidia-key-setup --first-login
+Exec=/usr/libexec/telamon/nvidia-key-setup --first-login
 OnlyShowIn=KDE;
 NoDisplay=true
 X-KDE-autostart-phase=2

@@ -1,13 +1,13 @@
 /*
-    SPDX-FileCopyrightText: 2026 AtlasOS
+    SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
-    Atlas Launcher replaces Andromeda and the stock launchers. In every panel
+    Telamon Launcher replaces Andromeda and the stock launchers. In every panel
     each AndromedaLauncher, Kickoff, Kicker, Kicker Dashboard or Simple
-    Kickoff widget becomes the Atlas Launcher button at the same spot, and the
+    Kickoff widget becomes the Telamon Launcher button at the same spot, and the
     old favourites (favoriteApps, or Kickoff's favorites) are copied into the
-    button's ImportPins. The AtlasOS menu bar's Kicker (icon "atlasos" on a
-    top panel) was already turned into the AtlasOS menu by the 20261003 script
+    button's ImportPins. The Telamon OS menu bar's Kicker (icon "atlasos" on a
+    top panel) was already turned into the Telamon OS menu by the 20261003 script
     and is not touched when that script has run. A panel without these widgets is left alone, and a
     second run finds nothing to change. Plasma runs each script here once per
     user (plasmashellrc, [Updates]); never rename this file.
@@ -22,7 +22,7 @@ var OLD = [
     "org.kde.plasma.kickerdash",
     "org.kde.plasma.simplekickoff"
 ];
-var BUTTON = "net.eterneon.atlas.launcher.button";
+var BUTTON = "net.eterneon.telamon.launcher.button";
 
 panels().forEach(function (panel) {
     var found = [];

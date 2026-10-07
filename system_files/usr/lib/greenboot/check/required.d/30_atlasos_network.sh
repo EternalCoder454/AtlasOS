@@ -4,7 +4,7 @@
 # boot. Waits until 90 s after boot at most; limit 120 s.
 export hc_name=network
 # shellcheck source=/dev/null
-. /usr/libexec/atlasos/health-lib
+. /usr/libexec/telamon/health-lib
 hc_guard 120
 hc_skip_without_rollback
 

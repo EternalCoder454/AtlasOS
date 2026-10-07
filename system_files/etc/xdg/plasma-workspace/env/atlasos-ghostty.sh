@@ -1,4 +1,4 @@
-# Ghostty has no system-wide configuration, so each user gets AtlasOS's
+# Ghostty has no system-wide configuration, so each user gets Telamon OS's
 # (/etc/skel) once, at their first Plasma session: new users and users from
 # before it existed. Never over a config of their own, and not again after they
 # delete it.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The boot passed its health checks. Never fails.
-#  - Tells Atlas Updater's helper once per deployment, on its first good boot,
+#  - Tells Telamon Updater's helper once per deployment, on its first good boot,
 #    not on every boot. The digest goes in the list of passed ones only when the
 #    helper call worked, so a failed call is tried again at the next boot.
 #  - A digest that boots healthy is no longer a bad one: it comes off
@@ -8,7 +8,7 @@
 state=/var/lib/atlasos
 passed=$state/health-passed-digests
 bad=$state/bad-image-digests
-helper=/usr/libexec/atlas-system-helper
+helper=/usr/libexec/telamon-system-helper
 digest=$(timeout 30 bootc status --json 2>/dev/null | jq -r '.status.booted.image.imageDigest // empty' 2>/dev/null)
 [ -n "$digest" ] || exit 0
 mkdir -p "$state" 2>/dev/null || exit 0

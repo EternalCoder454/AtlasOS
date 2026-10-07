@@ -13,8 +13,8 @@ Before=greenboot-healthcheck.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/libexec/atlasos/grub-greenboot start
-ExecStop=/usr/libexec/atlasos/grub-greenboot stop
+ExecStart=/usr/libexec/telamon/grub-greenboot start
+ExecStop=/usr/libexec/telamon/grub-greenboot stop
 # Like bootloader-update.service: /boot is made writable in a private mount
 # namespace, so it stays read-only for everything else.
 MountFlags=slave

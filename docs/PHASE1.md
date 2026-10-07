@@ -1,5 +1,9 @@
 # Phase 1 report
 
+> Written when the project was called AtlasOS: the names below (`ID=atlasos`, `atlasos`,
+> Atlas Updater, ...) are the ones the tests ran with. See DEV.md, "The rename to
+> Telamon", for what they are called now.
+
 AtlasOS Phase 1: a Fedora Kinoite 44 bootc image with a lighter app set,
 AtlasOS branding, two themes, a Windows 11-style taskbar with a macOS-style
 menu bar, and a macOS-style login screen.

@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["pexpect>=4.9"]
 # ///
-"""Measures or checks one boot of a prepared AtlasOS test VM.
+"""Measures or checks one boot of a prepared Telamon OS test VM.
 
     vmbench.py <boot|mem|check|all> <domain> <out dir> <password file>
 
@@ -169,12 +169,12 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
        "ls -d -1 --color=never /usr/share/icons/Bibata-Modern-*/cursors /usr/share/icons/breeze_cursors 2>&1",
        r"(?s)\ABibata-Modern-(Ice|Classic)\n(?=.*^/usr/share/icons/Bibata-Modern-Classic/cursors$)"
        r"(?=.*^/usr/share/icons/Bibata-Modern-Ice/cursors$)(?=.*breeze_cursors.*No such file)")
-    ok("icons (Papirus, violet folders) and Plasma style (AtlasOS)",
+    ok("icons (Papirus, violet folders) and Plasma style (Telamon OS)",
        "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file kdeglobals --group Icons --key Theme; "
        "XDG_CONFIG_DIRS=$HOME/.config/kdedefaults:/etc/xdg kreadconfig6 --file plasmarc --group Theme --key name; "
-       "ls -d -1 --color=never /usr/share/icons/Papirus/index.theme /usr/share/icons/Papirus-Dark/index.theme /usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg; "
+       "ls -d -1 --color=never /usr/share/icons/Papirus/index.theme /usr/share/icons/Papirus-Dark/index.theme /usr/share/plasma/desktoptheme/telamon/widgets/tasks.svg; "
        "readlink /usr/share/icons/Papirus/48x48/places/folder.svg",
-       r"\APapirus(-Dark)?\natlasos\n/usr/share/icons/Papirus/index.theme\n/usr/share/icons/Papirus-Dark/index.theme\n/usr/share/plasma/desktoptheme/atlasos/widgets/tasks.svg\nfolder-violet.svg$")
+       r"\APapirus(-Dark)?\natlasos\n/usr/share/icons/Papirus/index.theme\n/usr/share/icons/Papirus-Dark/index.theme\n/usr/share/plasma/desktoptheme/telamon/widgets/tasks.svg\nfolder-violet.svg$")
 
     apps = [
         ("Ghostty", "ghostty", "(^|/)ghostty( |$)"),
@@ -201,9 +201,9 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     con.run(
         "gdbus call --session --dest org.freedesktop.Notifications "
         "--object-path /org/freedesktop/Notifications "
-        "--method org.freedesktop.Notifications.Notify 'AtlasOS check' 0 "
+        "--method org.freedesktop.Notifications.Notify 'Telamon OS check' 0 "
         "'dialog-information' 'Update ready' "
-        "'AtlasOS 44 will finish installing the next time you restart.' "
+        "'Telamon OS 44 will finish installing the next time you restart.' "
         "\"['restart', 'Restart Now']\" '{}' 10000"
     )
     time.sleep(2)
@@ -213,7 +213,7 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     ok("no failed system units", "systemctl --failed --no-legend --plain | wc -l", r"^0$")
     ok("no failed user units", "systemctl --user --failed --no-legend --plain | wc -l", r"^0$")
     # Any crash fails the gate. (Closing Dolphin used to crash its thumbnail
-    # kioworkers; AtlasOS's KIO build fixes that, see build_files/kio.)
+    # kioworkers; Telamon OS's KIO build fixes that, see build_files/kio.)
     dumps = con.sudo("coredumpctl list --no-legend --no-pager --since=\"$(uptime -s)\" 2>&1 | grep -v 'No coredumps' || true",
                      password)
     crashes = [line for line in dumps.splitlines() if line.strip()]

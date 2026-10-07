@@ -1,4 +1,4 @@
-# Flatpak apps AtlasOS installs for every user (system-wide). They are set up
+# Flatpak apps Telamon OS installs for every user (system-wide). They are set up
 # in the background after the network is up (atlasos-flatpak-preinstall.service,
 # `flatpak preinstall`); one the user uninstalls stays uninstalled.
 #
