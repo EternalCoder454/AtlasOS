@@ -36,3 +36,7 @@ Script=atlasos-20261003-kvantum.sh,sh
 
 Id=atlasos-20261003-papirus
 Script=atlasos-20261003-papirus.sh,sh
+
+# Telamon Screenshot replaces KDE Spectacle: the shortcuts a user changed for it move over.
+Id=telamon-20261008-remove-spectacle
+Script=telamon-20261008-remove-spectacle.sh,sh
