@@ -24,17 +24,17 @@ find / -xdev \( -path /proc -o -path /sys -o -path /hints -o -path '/run/*' -o -
 
 # mark COMPONENT INTERVAL FILE...: regular files only (the kernel refuses
 # user.* attributes on symlinks; a symlink stays with its RPM, which is fine:
-# it is a few bytes). The interval needs to be on one file of the component.
+# it is a few bytes). Every file of the component gets the interval: chunkah
+# refuses a component whose files disagree, and a file marked before (a Telamon
+# RPM's file that system_files also holds, such as
+# /etc/xdg/telamon-launcher/pinned.list) changes component with its interval.
 mark() {
-	local component=$1 interval=$2 f first=1
+	local component=$1 interval=$2 f
 	shift 2
 	for f in "$@"; do
 		[ -f "$f" ] && [ ! -L "$f" ] || continue
 		setfattr -n user.component -v "$component" "$f"
-		if [ -n "$first" ]; then
-			setfattr -n user.update-interval -v "$interval" "$f"
-			first=
-		fi
+		setfattr -n user.update-interval -v "$interval" "$f"
 	done
 }
 

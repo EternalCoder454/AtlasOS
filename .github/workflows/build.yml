@@ -716,6 +716,28 @@ jobs:
             scripts/verify-image.sh "${IMAGE_REGISTRY}/${name}" "${{ steps.push.outputs.digest }}" >/dev/null
           done
 
+      # What an update to this build downloads (scripts/update-size.py): the
+      # compressed size of the layers a machine on the previous build, the
+      # build a week earlier and the one four weeks earlier doesn't have yet.
+      # It reads manifests only. The job summary gets the table; the
+      # changelog (next step) gets the "Download size" line. A failure here
+      # costs the line, never the build. (--warn-mb: an annotation when the
+      # download from the previous build is over that many MB.)
+      - name: Update size
+        if: steps.push.outcome == 'success'
+        continue-on-error: true
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+          VERSION: ${{ steps.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          args=("${IMAGE_REGISTRY}/${IMAGE_NAME}:${TAG}-${VERSION}"
+            --history "${IMAGE_REGISTRY}/${IMAGE_NAME}" --history "${IMAGE_REGISTRY}/${LEGACY_IMAGE_NAME}"
+            --prefix "${TAG}-")
+          rm -f "$RUNNER_TEMP/download-size.txt"
+          scripts/update-size.py "${args[@]}" --line >"$RUNNER_TEMP/download-size.txt"
+          scripts/update-size.py "${args[@]}" --format markdown --warn-mb 1000 >>"$GITHUB_STEP_SUMMARY"
+
       # The SBOM, signed with the same key, beside the image on the registry
       # (`cosign download attestation`), then checked against cosign.pub.
       # Every testing build gets its changelog, the GitHub pre-release named
@@ -736,7 +758,7 @@ jobs:
             exit 0
           fi
           git fetch --quiet --unshallow --tags origin || git fetch --quiet --tags origin
-          scripts/build-notes.py "$VERSION" "$GITHUB_SHA" >"$RUNNER_TEMP/notes.md"
+          scripts/build-notes.py "$VERSION" "$GITHUB_SHA" "$RUNNER_TEMP/download-size.txt" >"$RUNNER_TEMP/notes.md"
           gh release create "$VERSION" --target "$GITHUB_SHA" --prerelease \
             --title "Telamon OS ${VERSION}" --notes-file "$RUNNER_TEMP/notes.md"
 

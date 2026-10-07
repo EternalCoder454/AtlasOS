@@ -403,7 +403,7 @@ lint:
     just --unstable --fmt --check --justfile system_files/usr/share/telamon/telamon.just
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/telamon/pinlib.py
     python3 -m py_compile system_files/usr/libexec/telamon/pin-admin system_files/usr/libexec/telamon/pin-daemon
-    python3 -m py_compile scripts/telamon-pins.py
+    python3 -m py_compile scripts/telamon-pins.py scripts/update-size.py scripts/build-notes.py
     scripts/telamon-pins.py list >/dev/null
     rm -rf system_files/usr/libexec/telamon/__pycache__ scripts/__pycache__
 
