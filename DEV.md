@@ -962,4 +962,16 @@ read (other apps' saves cost only that check); then it waits a second for a
 theme switch's burst of saves to settle, and reads again (twice at most) if
 one landed while it ran, since that starts nothing new. Running apps keep their style until restarted.
 
+It keeps GTK in step too. Plasma's gtkconfig (kded) sets GTK's dark
+preference, icon theme and gsettings colour scheme when kdeglobals notifies a
+change of `[General] ColorScheme` or `[Icons] Theme`, and once when kded
+starts. Applying a Global Theme writes both keys into `kdedefaults`, which
+notifies nothing, so GTK (Brave's dark mode, GTK dialogs) kept the theme the
+session started with. When `~/.config/gtk-3.0/settings.ini` disagrees with
+the scheme, kvantum-sync sends gtkconfig that notification itself
+(`org.kde.kconfig.notify` `ConfigChanged` on `/kdeglobals`), so gtkconfig does
+the usual work. A settings.ini with no `gtk-theme-name` (GTK then draws its
+light Adwaita) gets `Breeze`, which gtkconfig colours from the scheme, and the
+gtkconfig module is reloaded so the name reaches xsettingsd.
+
 To go back to Breeze: System Settings > Colors & Themes > Application Style.
