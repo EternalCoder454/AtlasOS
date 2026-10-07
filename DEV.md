@@ -479,6 +479,27 @@ the base image from Koji, adds the patch, builds with release `.atlas1`, and
 `packages.sh` installs those RPMs over Kinoite's. The build fails if the patch
 stops applying; drop the stage once Fedora ships the fix.
 
+## Patched login screen
+
+`plasma-login-manager` is Fedora's own package, rebuilt with one patch
+(`build_files/login/`, same method as the KIO one). The sign-in PIN is typed in
+the login screen's password field, whose "Password" placeholder is fixed in the
+greeter's compiled QML (`Login.qml`), so no PAM change can relabel it. The patch
+makes `Login.qml` read `/etc/authselect/authselect.conf` once (QML
+`XMLHttpRequest`; `main()` sets `QML_XHR_ALLOW_FILE_READ` for that) and show
+"Password or PIN" when the file lists `with-pin`, "Password" otherwise (also if
+the file can't be read). Only the placeholder changes; the file is world-readable
+(`etc_t`). The Containerfile's `login` stage downloads the source RPM of
+exactly the version in the base image from Koji (checked against Fedora's key),
+builds it with release `.atlas1` (plasma-login-manager and kcm-plasmalogin),
+and `packages.sh` upgrades the image's two packages with those RPMs, with every
+repo off, and checks the release and that the greeter binary holds the new
+strings. To drop it: when upstream makes the placeholder configurable (or says
+"PIN" itself), delete `build_files/login/`, the `login` stage and its bind in
+the Containerfile, and the "Login screen" block of `packages.sh`; the build
+fails earlier if the patch stops applying. The same applies to the lock screen
+patch in `build.sh` (MainBlock.qml).
+
 ## First-run setup
 
 The wizard on first boot is Telamon Setup (`telamon-wizard`, built from the
@@ -647,9 +668,10 @@ password always keeps working.
   by neither greeter: both draw a fixed placeholder in QML and answer PAM's
   conversation with the text typed. So no PAM module or option can relabel the
   field. The lock screen's placeholder is patched in `build.sh` to "Password or
-  PIN" (MainBlock.qml; the build fails if the line moves). The login screen's is
-  in `plasma-login-greeter`'s compiled QML (`Login.qml`, "Password") and stays
-  until that package is rebuilt with a patch or upstream makes it configurable.
+  PIN" (MainBlock.qml; the build fails if the line moves). The login screen's
+  is in `plasma-login-greeter`'s compiled QML, so the image rebuilds
+  plasma-login-manager with a patch (see "Patched login screen"): "Password or
+  PIN" when `/etc/authselect/authselect.conf` lists `with-pin`, else "Password".
 - **First login.** `/etc/xdg/autostart/atlasos-pin-setup.desktop` runs
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes
@@ -839,6 +861,7 @@ sudo bootc switch ghcr.io/eternalcoder454/telamonos:latest
 | `build_files/build.sh` | Services, settings, branding, initramfs |
 | `build_files/version.sh` | The image's version in os-release (last: it changes daily) |
 | `build_files/kio/` | The KIO crash fix: rebuilds Fedora's `kf6-kio` with one patch |
+| `build_files/login/` | The login screen's "Password or PIN" placeholder: rebuilds Fedora's `plasma-login-manager` with one patch |
 | `build_files/drop-build-deps.sh` | Runs a builder stage's build, then removes its build dependencies |
 | `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `telamonos-nvidia` image (and `atlasos-nvidia`) |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |

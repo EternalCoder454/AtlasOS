@@ -1,0 +1,47 @@
+diff --git a/src/frontend/greeter/main.cpp b/src/frontend/greeter/main.cpp
+index 699e2ad..51ed91a 100644
+--- a/src/frontend/greeter/main.cpp
++++ b/src/frontend/greeter/main.cpp
+@@ -109,6 +109,9 @@ bool LoginGreeter::testModeEnabled()
+ 
+ int main(int argc, char *argv[])
+ {
++    // Telamon OS: Login.qml reads /etc/authselect/authselect.conf (see pinSignIn).
++    qputenv("QML_XHR_ALLOW_FILE_READ", "1");
++
+     KLocalizedString::setApplicationDomain(QByteArrayLiteral("plasma-login"));
+ 
+     QCommandLineParser parser;
+diff --git a/src/frontend/greeter/qml/Login.qml b/src/frontend/greeter/qml/Login.qml
+index 5b69e34..b1bcd23 100644
+--- a/src/frontend/greeter/qml/Login.qml
++++ b/src/frontend/greeter/qml/Login.qml
+@@ -23,6 +23,19 @@ SessionManagementScreen {
+ 
+     property bool showUsernamePrompt: !showUserList
+ 
++    // Telamon OS: with the authselect feature with-pin the sign-in PIN is
++    // typed in the password field, so the placeholder says so. Read once.
++    readonly property bool pinSignIn: {
++        try {
++            const xhr = new XMLHttpRequest();
++            xhr.open("GET", "file:///etc/authselect/authselect.conf", false);
++            xhr.send();
++            return /^with-pin$/m.test(xhr.responseText);
++        } catch (e) {
++            return false;
++        }
++    }
++
+     property bool loginScreenUiVisible: false
+ 
+     //the y position that should be ensured visible when the on screen keyboard is visible
+@@ -102,7 +115,7 @@ SessionManagementScreen {
+             font.pointSize: fontSize + 1
+             Layout.fillWidth: true
+ 
+-            placeholderText: i18nd("plasma_login", "Password")
++            placeholderText: root.pinSignIn ? i18nd("plasma_login", "Password or PIN") : i18nd("plasma_login", "Password")
+             focus: !showUsernamePrompt
+ 
+             onAccepted: {

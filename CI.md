@@ -213,7 +213,7 @@ GitHub's runners start empty every time; their only cache is dnf's downloads
 
 | What | Where (runner container) | Saves |
 |---|---|---|
-| Podman's images and layers | `/home/podman/.local/share/containers` | Pulling Kinoite and Fedora (about 4 GB); every Containerfile stage and step whose inputs didn't change: branding, the Telamon apps' RPMs, KIO, and the image's own steps (see below) |
+| Podman's images and layers | `/home/podman/.local/share/containers` | Pulling Kinoite and Fedora (about 4 GB); every Containerfile stage and step whose inputs didn't change: branding, the Telamon apps' RPMs, KIO, the login screen, and the image's own steps (see below) |
 | Rust build cache | `/var/tmp` (Podman's `RUN --mount=type=cache`, `TELAMON_BUILD_CACHE`) | Crates and their build output: when Telamon Updater changes, its dependencies come from the cache and only its own crates and app recompile (the checkout gives every source file a new time) |
 | dnf's downloads | `/cache/dnf` (`TELAMON_DNF_CACHE`) | Fedora packages for the build |
 
@@ -222,7 +222,7 @@ only when its inputs change, and everything after it with it:
 
 | Step | Reruns when |
 |---|---|
-| `packages.sh`: packages, KIO, plasma-setup removal, greenboot | New Kinoite, the script or KIO changed, or a new day (`PACKAGES_DATE`, so Brave's and Fedora's updates arrive daily) |
+| `packages.sh`: packages, KIO, login screen, plasma-setup removal, greenboot | New Kinoite, the script, KIO or the login screen changed, or a new day (`PACKAGES_DATE`, so Brave's and Fedora's updates arrive daily) |
 | `apps.sh`: the Telamon apps | Telamon Updater changed |
 | `build.sh`: services, settings, branding, initramfs | `system_files`, branding or the script changed |
 | `version.sh`: the version in os-release | Every build (a few seconds) |
