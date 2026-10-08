@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The changelog of one testing build, as Markdown on stdout.
 
-    build-notes.py <version> <revision>
+    build-notes.py <version> <revision> [<download-size file>]
 
 Run in a full clone of this repository (history and tags), with `gh` signed
 in. It compares <revision> with the newest earlier release (stable or
@@ -11,6 +11,11 @@ testing; each is tagged with its version) and lists:
   (pull request titles and commit subjects from the app's repository);
 - System: this repository's own commits, without the pin moves;
 - Fedora's updates, which every build takes.
+
+The optional file holds the line scripts/update-size.py --line printed ("Download
+size: 364 MB from the previous build."), which goes under the title; it is left
+out when the file is missing or empty (the size is a courtesy, never a reason
+to fail a changelog).
 
 Telamon Updater shows this text as the build's "What's New". A release that
 already exists (hand-written notes) is never touched: build.yml only calls
@@ -128,16 +133,29 @@ def short(release: str, commit: str) -> str:
     return release or commit[:7]
 
 
+def download_size(path: str) -> str:
+    """The "Download size: ..." line in the file, or nothing."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read().strip()
+    except OSError:
+        return ""
+    return text if re.fullmatch(r"Download size: [^\n]+", text) else ""
+
+
 def main() -> None:
-    if len(sys.argv) != 3 or not VERSION.match(sys.argv[1]):
-        sys.exit("usage: build-notes.py <44.YYYYMMDD-N> <revision>")
+    if len(sys.argv) not in (3, 4) or not VERSION.match(sys.argv[1]):
+        sys.exit("usage: build-notes.py <44.YYYYMMDD-N> <revision> [<download-size file>]")
     version, rev = sys.argv[1], sys.argv[2]
+    size = download_size(sys.argv[3]) if len(sys.argv) == 4 else ""
     prev = previous_release(version)
     before = pins(prev) if prev else {}
     now = pins(rev)
 
     out = [f"A testing build of Telamon OS, from `{rev[:12]}`."]
     out.append(f"Changes since `{prev}`." if prev else "")
+    if size:
+        out += ["", size]
 
     apps = []
     for name, (repo, commit, release) in now.items():

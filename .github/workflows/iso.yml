@@ -196,6 +196,15 @@ jobs:
           mv "$RUNNER_TEMP/$ISO" "$out/"
           cd "$out"
           sha256sum "$ISO" >"$ISO.sha256"
+          # <iso>.zsync (about 6 MB for 2.9 GB, 5 s): lets `zsync` download only
+          # the parts of a new ISO that an older one doesn't have, over plain
+          # HTTP range requests. It is uploaded with the ISO (the "<image>-44.*"
+          # rule below). It does nothing until the site serves it, and the ISO
+          # by range request, under /dl/ (CI.md, "Update size and ISO deltas"). Not worth
+          # failing the ISO for: without it only that download method is missing.
+          { command -v zsyncmake >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q zsync; }
+            zsyncmake -u "https://${DOWNLOAD_HOST}/dl/${ISO}" -o "$ISO.zsync" "$ISO"; } ||
+            { echo "::warning::No .zsync file for ${ISO}."; rm -f "$ISO.zsync"; }
           jq -n --arg image "$IMAGE" --arg version "$VERSION" --arg file "$ISO" \
             --argjson size "$(stat -c %s "$ISO")" --arg sha256 "$(cut -d' ' -f1 "$ISO.sha256")" \
             --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \

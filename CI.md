@@ -206,6 +206,25 @@ Both tools run from the container images pinned by digest in the Justfile
   images share the key): `cosign verify-attestation --type spdxjson
   --insecure-ignore-tlog=true --key cosign.pub <image>@<digest>`.
 
+## Update size and ISO deltas
+
+- **Update size.** After a push, the build job's "Update size" step runs
+  `scripts/update-size.py` against the registry (manifests only, no pulls):
+  the job summary gets how much a machine on the previous build, on the build a week
+  earlier and on the one four weeks earlier downloads, and the biggest new
+  layers; an annotation appears when the download from the previous build is
+  over 1,000 MB. The step cannot fail the build (`continue-on-error`). Its
+  one-line result goes into the testing build's changelog ("Download size: X
+  MB from the previous build"). DEV.md, "Update size", has what keeps the
+  numbers down.
+- **ISO deltas.** `iso.yml` makes `<iso>.zsync` beside each ISO (6 MB for a
+  2.9 GB ISO, 5 seconds) and uploads it with it. It is only useful once the
+  site serves it. **Change needed in the site's repository** (not made here):
+  the `/dl/` allow-list must also serve `*.iso.zsync` publicly, and the ISO
+  itself must be fetchable at `https://<download host>/dl/<iso>` with HTTP
+  range requests (today ISOs are served only through signed links). Until
+  then `zsync` has nothing to read and the file is just 6 MB on the VPS.
+
 ## Caches on the VPS
 
 GitHub's runners start empty every time; their only cache is dnf's downloads
