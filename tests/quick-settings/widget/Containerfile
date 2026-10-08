@@ -1,0 +1,5 @@
+# The image under test plus what the widget tests need: qmltestrunner and
+# python-dbusmock (the services the widget talks to are mocked).
+ARG IMAGE
+FROM ${IMAGE}
+RUN dnf -y -q install --setopt=install_weak_deps=False qt6-qtdeclarative-devel python3-dbusmock && dnf clean all

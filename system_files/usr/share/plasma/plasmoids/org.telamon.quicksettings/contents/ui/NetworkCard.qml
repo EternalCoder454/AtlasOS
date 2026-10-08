@@ -57,7 +57,14 @@ Card {
     switchLabel: i18n("Wi-Fi")
     onSwitchToggled: checked => nmHandler.enableWireless(checked)
     // Looking for networks when the list opens
-    onExpandedChanged: if (expanded && wifiOn) nmHandler.requestScan("")
+    Connections {
+        target: card
+        function onExpandedChanged() {
+            if (card.expanded && card.wifiOn) {
+                nmHandler.requestScan("");
+            }
+        }
+    }
 
     PlasmaNM.EnabledConnections { id: enabled }
     PlasmaNM.AvailableDevices { id: devices }
@@ -106,6 +113,8 @@ Card {
                 visible: wifiList.count > card.shown
                 Layout.alignment: Qt.AlignHCenter
                 text: i18n("Show more networks")
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: card.shown = wifiList.count
             }
             PC3.Button {
@@ -113,6 +122,8 @@ Card {
                 flat: true
                 text: i18n("Network settings…")
                 icon.name: "preferences-system-symbolic"
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: card.settingsRequested()
             }
         }

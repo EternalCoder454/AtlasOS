@@ -6,7 +6,7 @@
 # with a bar of their own are started with the update pending, and what
 # plasmashell wrote back is checked. With no argument: the newest testing
 # image plus this repository's update script, Quick Settings widget and
-# new-user layout; with an image: that image as it is.
+# (Telamon Light's) new-user layout; with an image: that image as it is.
 #
 #   [OUT=dir] tests/quick-settings/run.sh [IMAGE]
 set -eu
@@ -17,7 +17,7 @@ image=${1:-ghcr.io/eternalcoder454/telamonos:testing}
 mounts="-v $here:/t:ro"
 if [ $# -eq 0 ]; then
 	for d in plasma/shells/org.kde.plasma.desktop/contents/updates plasma/plasmoids/org.telamon.quicksettings \
-		plasma/look-and-feel/org.telamon.desktop plasma/look-and-feel/org.telamon.dark.desktop; do
+		plasma/look-and-feel/org.telamon.desktop/contents/layouts; do
 		mounts="$mounts -v $share/$d:/usr/share/$d:ro"
 	done
 fi

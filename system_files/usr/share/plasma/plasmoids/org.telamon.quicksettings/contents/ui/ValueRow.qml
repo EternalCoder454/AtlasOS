@@ -41,6 +41,8 @@ RowLayout {
         PC3.ToolTip.text: text
         PC3.ToolTip.visible: hovered || activeFocus
         PC3.ToolTip.delay: Kirigami.Units.toolTipDelay
+        Keys.onReturnPressed: clicked()
+        Keys.onEnterPressed: clicked()
         onClicked: row.muteToggled()
     }
     Kirigami.Icon {

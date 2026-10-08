@@ -27,6 +27,9 @@ PC3.ItemDelegate {
         battery >= 0 ? i18n(", battery %1 %", battery) : "")
     Accessible.description: connected ? i18n("Disconnect") : i18n("Connect")
 
+    activeFocusOnTab: true
+    Keys.onReturnPressed: clicked()
+    Keys.onEnterPressed: clicked()
     onClicked: {
         if (busy) {
             return;
@@ -41,7 +44,11 @@ PC3.ItemDelegate {
     contentItem: RowLayout {
         spacing: Kirigami.Units.smallSpacing * 2
         Kirigami.Icon {
-            source: item.device.Icon ? item.device.Icon : "network-bluetooth-symbolic"
+            // The symbolic one follows the text colour (the plain one is dark in the dark theme)
+            source: item.device.Icon ? item.device.Icon + "-symbolic" : "network-bluetooth-symbolic"
+            fallback: "network-bluetooth-symbolic"
+            isMask: true
+            color: Kirigami.Theme.textColor
             implicitWidth: Kirigami.Units.iconSizes.smallMedium
             implicitHeight: implicitWidth
             Accessible.ignored: true

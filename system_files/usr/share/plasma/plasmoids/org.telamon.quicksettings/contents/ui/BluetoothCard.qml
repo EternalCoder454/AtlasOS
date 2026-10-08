@@ -87,6 +87,8 @@ Card {
                 flat: true
                 text: i18n("Bluetooth settings…")
                 icon.name: "preferences-system-symbolic"
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: card.settingsRequested()
             }
         }

@@ -45,6 +45,10 @@ Rectangle {
     border.width: 1
     border.color: Qt.alpha(Kirigami.Theme.textColor, 0.1)
 
+    // Screen readers announce the section and its name
+    Accessible.role: Accessible.Grouping
+    Accessible.name: card.title
+
     ColumnLayout {
         id: column
         anchors {
@@ -66,8 +70,12 @@ Rectangle {
                 visible: card.hasDetails
                 text: card.title
                 Accessible.name: card.title
-                Accessible.description: card.subtitle
+                Accessible.description: card.subtitle + ", " + (card.expanded ? i18n("expanded") : i18n("collapsed"))
                 Accessible.role: Accessible.Button
+                activeFocusOnTab: true
+                // Space is built in; Enter should do the same
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: card.expanded = !card.expanded
                 contentItem: RowLayout {
                     spacing: Kirigami.Units.smallSpacing * 2
@@ -78,7 +86,7 @@ Rectangle {
                         subtitle: card.subtitle
                     }
                     Kirigami.Icon {
-                        source: card.expanded ? "go-up-symbolic" : "go-down-symbolic"
+                        source: card.expanded ? "pan-up-symbolic" : "pan-down-symbolic"
                         implicitWidth: Kirigami.Units.iconSizes.small
                         implicitHeight: implicitWidth
                         isMask: true
@@ -111,6 +119,8 @@ Rectangle {
                 PC3.ToolTip.text: text
                 PC3.ToolTip.visible: hovered || activeFocus
                 PC3.ToolTip.delay: Kirigami.Units.toolTipDelay
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: card.settingsRequested()
             }
         }

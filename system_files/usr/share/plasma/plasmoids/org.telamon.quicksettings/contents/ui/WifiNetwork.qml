@@ -66,6 +66,9 @@ ColumnLayout {
             network.ItemUniqueName, secured ? i18n("secured") : i18n("open"), signalWord,
             active ? i18n("connected") : busy ? i18n("connecting") : item.network.Uuid ? i18n("saved") : i18n("not connected"))
         Accessible.description: actionText
+        activeFocusOnTab: true
+        Keys.onReturnPressed: clicked()
+        Keys.onEnterPressed: clicked()
         onClicked: item.toggle()
         contentItem: RowLayout {
             spacing: Kirigami.Units.smallSpacing * 2
@@ -129,6 +132,8 @@ ColumnLayout {
         PC3.Button {
             text: i18n("Connect")
             enabled: password.acceptableInput
+            Keys.onReturnPressed: clicked()
+            Keys.onEnterPressed: clicked()
             onClicked: item.submitPassword()
         }
     }

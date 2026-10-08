@@ -89,9 +89,12 @@ Card {
                 checked: profiles.activeProfile === modelData
                 text: card.labels[modelData]
                 icon.name: card.icons[modelData]
+                icon.color: Kirigami.Theme.textColor
                 Accessible.name: i18n("Power profile %1", text)
                 Accessible.checkable: true
                 Accessible.checked: checked
+                Keys.onReturnPressed: clicked()
+                Keys.onEnterPressed: clicked()
                 onClicked: {
                     profiles.setProfile(modelData);
                     // Back to what the daemon says if it refuses

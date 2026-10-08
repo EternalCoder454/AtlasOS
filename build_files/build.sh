@@ -196,6 +196,37 @@ command -v qdbus-qt6 >/dev/null || {
 	exit 1
 }
 [ -f /usr/share/kglobalaccel/org.telamon.menubar-toggle.desktop ]
+# Quick Settings (org.telamon.quicksettings) is the tray island's last widget,
+# the new-user layout and telamon-20261008-quick-settings.js turn the tray's
+# system widgets off, and the widget needs Plasma's own modules for each of its
+# sections. Every widget Plasma can put in the tray (the notification bell
+# aside, which stays) has to be named in both, so a widget a Plasma update adds
+# is decided on here, not found in everyone's tray.
+qs=/usr/share/plasma/plasmoids/org.telamon.quicksettings
+for f in metadata.json contents/config/main.xml contents/ui/main.qml contents/ui/QuickSettings.qml; do
+	[ -f "$qs/$f" ]
+done
+for m in org/kde/plasma/private/volume org/kde/plasma/networkmanagement org/kde/bluezqt org/kde/plasma/private/bluetooth \
+	org/kde/plasma/private/batterymonitor org/kde/plasma/private/battery org/kde/plasma/private/brightnesscontrolplugin; do
+	[ -f "/usr/lib64/qt6/qml/$m/qmldir" ] || {
+		echo "build.sh: Quick Settings needs the QML module $m" >&2
+		exit 1
+	}
+done
+quick_layout=/usr/share/plasma/look-and-feel/org.telamon.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
+quick_update=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/telamon-20261008-quick-settings.js
+[ -f "$quick_layout" ] && [ -f "$quick_update" ]
+for so in /usr/lib64/qt6/plugins/plasma/applets/*.so; do
+	grep -q X-Plasma-NotificationAreaCategory "$so" || continue
+	id=$(basename "$so" .so)
+	[ "$id" = org.kde.plasma.notifications ] && continue
+	for f in "$quick_layout" "$quick_update"; do
+		grep -qF "\"$id\"" "$f" || {
+			echo "build.sh: the tray widget $id is not in $f: decide whether it belongs in the tray (DEV.md, Quick Settings)" >&2
+			exit 1
+		}
+	done
+done
 # Notifications drop down at the top centre of the screen, just under the
 # clock island; KWin's built-in Sliding Notifications effect slides them down
 # from the top edge. Left "near the notification icon" (Plasma's default),

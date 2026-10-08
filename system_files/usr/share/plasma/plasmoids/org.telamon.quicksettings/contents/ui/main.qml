@@ -22,6 +22,7 @@ import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
 import org.kde.plasma.private.volume as Volume
+import org.kde.plasma.private.clipboard as Clipboard
 import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
@@ -37,6 +38,15 @@ PlasmoidItem {
 
     Component.onCompleted: Volume.MicrophoneIndicator.init()
 
+    // Plasma has no separate Klipper any more: the clipboard history, its
+    // Meta+V shortcut and the org.kde.klipper D-Bus service (the app menu's
+    // Edit > Clipboard History uses it) exist while something has loaded
+    // this, which the tray's Clipboard widget did. With that widget off, this
+    // keeps them running.
+    Clipboard.KlipperInterface {
+        id: klipper
+    }
+
     // Starts a program as the user would from a launcher. Only fixed
     // command lines go through here.
     P5Support.DataSource {
@@ -50,6 +60,12 @@ PlasmoidItem {
     function openSettings(page) {
         run.connectSource(page ? "telamon-settings --page " + page : "telamon-settings");
         root.expanded = false;
+    }
+
+    // The clipboard history's own menu, at the pointer (as Meta+V)
+    function showClipboardHistory() {
+        root.expanded = false;
+        run.connectSource("gdbus call --session --dest org.kde.klipper --object-path /klipper --method org.kde.klipper.klipper.showKlipperPopupMenu");
     }
 
     compactRepresentation: MouseArea {
@@ -111,5 +127,6 @@ PlasmoidItem {
 
     fullRepresentation: QuickSettings {
         onSettingsRequested: page => root.openSettings(page)
+        onClipboardRequested: root.showClipboardHistory()
     }
 }

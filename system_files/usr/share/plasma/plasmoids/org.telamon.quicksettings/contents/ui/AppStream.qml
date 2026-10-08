@@ -13,7 +13,7 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components as PC3
 import org.kde.kirigami as Kirigami
-import org.kde.plasma.private.volume as Volume
+import org.kde.plasma.private.volume
 
 ColumnLayout {
     id: item
@@ -33,7 +33,7 @@ ColumnLayout {
         const name = stream.Properties ? stream.Properties["media.name"] : "";
         return name && !/playback|audio|stream|alsa|pulse|pipewire/i.test(name) ? name : "";
     }
-    readonly property int percent: Math.round(stream.Volume / Volume.PulseAudio.NormalVolume * 100)
+    readonly property int percent: Math.round(stream.Volume / PulseAudio.NormalVolume * 100)
 
     spacing: Kirigami.Units.smallSpacing
 
@@ -65,9 +65,9 @@ ColumnLayout {
         iconName: item.percent === 0 || stream.Muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic"
         canMute: true
         muted: stream.Muted
-        from: Volume.PulseAudio.MinimalVolume
-        to: Math.max(Volume.PulseAudio.NormalVolume, stream.Volume)
-        stepSize: Volume.PulseAudio.NormalVolume / 100
+        from: PulseAudio.MinimalVolume
+        to: Math.max(PulseAudio.NormalVolume, stream.Volume)
+        stepSize: PulseAudio.NormalVolume / 100
         value: stream.Volume
         valueText: item.percent + " %"
         sliderEnabled: stream.VolumeWritable !== false
