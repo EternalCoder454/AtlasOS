@@ -61,6 +61,13 @@ remove=(
 	# Ark: Telamon Archive replaces it (both ship KIO service menus)
 	ark
 	ark-libs
+	# Dolphin: Files (Telamon Explorer) replaces it. Only dolphin-plugins
+	# requires dolphin (nothing requires dolphin-libs), so no Plasma package
+	# goes with it; Files owns org.freedesktop.FileManager1, inode/directory
+	# and Meta+E (apps.sh checks all three).
+	dolphin
+	dolphin-plugins
+	dolphin-libs
 	# Spectacle: Telamon Screenshot replaces it (everything but screen
 	# recording). Removed before apps.sh installs telamon-screenshot-spectacle-compat,
 	# which Conflicts with it and Provides spectacle for what asks for it.
@@ -68,7 +75,7 @@ remove=(
 	# KDE PIM: the Akonadi server and the MariaDB it runs on
 	akonadi-server
 	akonadi-server-mysql
-	# Baloo's file indexer. Its library stays: Dolphin and plasma-workspace
+	# Baloo's file indexer. Its library stays: plasma-workspace and Gwenview
 	# link it, and it does nothing without the indexer.
 	kf6-baloo-file
 	# Discover's tray notifier, which checks for and applies updates in the
@@ -212,8 +219,9 @@ systemctl enable power-profiles-daemon.service
 vendor_repo ghostty ghostty.gpg 2DEFB319CCC3F393B6DAEAB297C83CA0FEB5DAFB
 "${dnf[@]}" install ghostty
 vendor_repo_remove ghostty
-# Ghostty's package adds "Open Ghostty Here" to Dolphin's right-click menu,
-# beside Dolphin's own "Open Terminal Here", which opens Ghostty there too
+# Ghostty's package adds "Open Ghostty Here" to the file manager's right-click
+# menu (a KIO service menu), beside Files' own "Open Terminal Here", which opens
+# Ghostty there too
 # (/etc/xdg/kdeglobals TerminalApplication, a separate instance so it gets the
 # folder even with a Ghostty window open): one entry is enough. A plain rm, so the
 # build fails if the package moves it.
@@ -266,7 +274,7 @@ leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*nvidia-contai
 # libcamera backend also drives the MIPI cameras of newer laptops, which
 # plain V4L2 apps like Kamoso can't open). The image formats beyond
 # JPEG and PNG (HEIC, AVIF, WebP, JXL) come from kimageformats and
-# qt6-qtimageformats, and Dolphin's PDF and image previews from
+# qt6-qtimageformats, and Files' PDF and image previews from
 # kdegraphics-thumbnailers; named here because install_weak_deps=False would
 # leave out a weak dependency on them. Okular's PDF reader is its Poppler
 # generator, in okular-part. No office suite.
@@ -390,7 +398,7 @@ systemctl enable cups.socket
 # is here, in the stock image, until apps.sh installs Telamon Settings'
 # telamon-settings-systemsettings, which replaces it and is checked there.)
 keep=(
-	plasma-workspace plasma-desktop kwin ghostty dolphin plasma-systemsettings
+	plasma-workspace plasma-desktop kwin ghostty plasma-systemsettings
 	plasma-login-manager NetworkManager NetworkManager-wifi
 	pipewire pipewire-pulseaudio wireplumber bluez cups
 	flatpak plasma-discover plasma-discover-flatpak
@@ -411,8 +419,9 @@ for pkg in brave-origin brave-browser firefox gh mise gdb strace perf; do
 done
 
 # Everyday names for the everyday apps, in every language (as macOS calls
-# its file manager Finder everywhere): Terminal, Files (Telamon Explorer) and Discover. (Telamon
-# Notepad is called Notepad already.)
+# its file manager Finder everywhere): Terminal, Files (Telamon Explorer, named
+# Files by its own desktop file) and Discover. (Telamon Notepad is called
+# Notepad already.)
 # Only the app's own entry is renamed, not its actions; searching the old
 # name still finds it. Ghostty's shortcut copy above is renamed with it.
 rename_app() { # desktop file, new name
@@ -436,7 +445,6 @@ rename_app() { # desktop file, new name
 }
 rename_app /usr/share/applications/com.mitchellh.ghostty.desktop Terminal
 rename_app /usr/share/kglobalaccel/com.mitchellh.ghostty.desktop Terminal
-rename_app /usr/share/applications/org.kde.dolphin.desktop Dolphin
 rename_app /usr/share/applications/org.kde.discover.desktop Discover
 
 # Tools kept but left out of the app menu. Kvantum Manager would fight

@@ -14,7 +14,7 @@ AnimationDurationFactor=0.7071
 # appended at build time by build.sh.
 # The terminal is a command, not Ghostty's desktop file: that file starts
 # Ghostty single-instance, so with a Ghostty window already open, "Open
-# Terminal Here" (Dolphin, the desktop, Shift+F4) would open in the first
+# Terminal Here" (Files, the desktop, Shift+F4) would open in the first
 # window's folder instead of the one asked for. A separate instance inherits
 # the folder. Ctrl+Alt+T and the launcher still use the desktop file.
 [General]

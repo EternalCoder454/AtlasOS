@@ -16,7 +16,7 @@ work doesn't count. Writes <out dir>/report.txt and, for boot and mem,
          shell started
   mem    120 s after Plasma's shell starts: free -h and ps_mem
   check  Plasma, network, audio, Bluetooth, printing, Flatpak, the security
-         services, Brave Origin, Ghostty and Dolphin opening, a notification,
+         services, Brave Origin, Ghostty and Files opening, a notification,
          and stability (no failed units, crashes or KWin/Plasma restarts),
          with screenshots
   all    boot and mem from the same boot
@@ -178,7 +178,7 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
 
     apps = [
         ("Ghostty", "ghostty", "(^|/)ghostty( |$)"),
-        ("Dolphin", "dolphin", "(^|/)dolphin( |$)"),
+        ("Files", "telamon-explorer", "(^|/)telamon-explorer( |$)"),
         ("Brave Origin", "brave-origin-stable --password-store=basic", "brave.com/brave-origin/brave( |$)"),
     ]
     for i, (name, cmd, pattern) in enumerate(apps):
@@ -212,7 +212,7 @@ def check(con: Console, password: str, out: pathlib.Path, report: list, result: 
     # Stability: nothing failed or crashed during the boot and the app launches.
     ok("no failed system units", "systemctl --failed --no-legend --plain | wc -l", r"^0$")
     ok("no failed user units", "systemctl --user --failed --no-legend --plain | wc -l", r"^0$")
-    # Any crash fails the gate. (Closing Dolphin used to crash its thumbnail
+    # Any crash fails the gate. (Closing a KIO file manager used to crash its thumbnail
     # kioworkers; Telamon OS's KIO build fixes that, see build_files/kio.)
     dumps = con.sudo("coredumpctl list --no-legend --no-pager --since=\"$(uptime -s)\" 2>&1 | grep -v 'No coredumps' || true",
                      password)

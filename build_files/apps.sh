@@ -94,29 +94,79 @@ grep -q '"link":"displays/night-light"' /usr/share/telamon-settings/search-index
 # Telamon Store sits beside Discover (the default for Flatpak links and RPM files).
 [ -f /usr/share/applications/net.eterneon.telamon.store.desktop ]
 [ -x /usr/bin/telamon-store ]
-# Telamon Explorer (Files) is the default file manager (inode/directory in
-# mimeapps.list) and owns org.freedesktop.FileManager1. Dolphin stays installed
-# but its service file for that name goes, so it can't be started for it. The
-# index service is D-Bus activated (no preset, not started at login).
+# Telamon Explorer (Files) replaces Dolphin (packages.sh removes dolphin,
+# dolphin-plugins and dolphin-libs; nothing else required them). It owns
+# org.freedesktop.FileManager1 (so "Show in Folder" from a browser, the portal
+# and Plasma's notifications open Files) and Dolphin's global shortcut, Meta+E.
+# The default for inode/directory (mimeapps.list, system_files) is checked in
+# build.sh, which copies it. The index service is D-Bus activated (no preset,
+# not started at login).
 [ -f /usr/share/applications/net.eterneon.telamon.explorer.desktop ]
 [ -x /usr/bin/telamon-explorer ]
 [ -x /usr/bin/telamon-explorer-indexd ]
 [ -x /usr/bin/telamon-explorer-search ]
 [ -f /usr/share/dbus-1/services/net.eterneon.telamon.explorer.Search.service ]
 [ -f /usr/lib/systemd/user/telamon-explorer-indexd.service ]
+for gone in dolphin dolphin-plugins dolphin-libs; do
+	if rpm -q --quiet "$gone"; then
+		echo "apps.sh: $gone is still installed beside telamon-explorer" >&2
+		exit 1
+	fi
+done
+for gone in /usr/bin/dolphin /usr/share/applications/org.kde.dolphin.desktop /usr/share/kglobalaccel/org.kde.dolphin.desktop \
+	/usr/share/dbus-1/services/org.kde.dolphin.FileManager1.service /usr/lib/systemd/user/plasma-dolphin.service; do
+	if [ -e "$gone" ] || [ -L "$gone" ]; then
+		echo "apps.sh: $gone is left from Dolphin" >&2
+		exit 1
+	fi
+done
+# Files' D-Bus activation file is the only one for the name, and it starts Files.
 [ -f /usr/share/dbus-1/services/org.freedesktop.FileManager1.service ]
-rm -f /usr/share/dbus-1/services/org.kde.dolphin.FileManager1.service
+[ "$(rpm -qf /usr/share/dbus-1/services/org.freedesktop.FileManager1.service --qf '%{NAME}\n')" = telamon-explorer ]
 [ "$(grep -l '^Name=org.freedesktop.FileManager1$' /usr/share/dbus-1/services/*.service)" = /usr/share/dbus-1/services/org.freedesktop.FileManager1.service ]
-grep -q telamon-explorer /usr/share/dbus-1/services/org.freedesktop.FileManager1.service
+grep -qx 'Exec=/usr/bin/telamon-explorer --daemon-activation' /usr/share/dbus-1/services/org.freedesktop.FileManager1.service
+# Meta+E: Dolphin's global shortcut. Files' desktop file carries it (and kglobalaccel/
+# holds the copy Plasma reads, as for Settings and Screenshot). Added here when the
+# package does not have it yet; the checks below hold either way.
+explorer_desktop=/usr/share/applications/net.eterneon.telamon.explorer.desktop
+if ! grep -qx 'X-KDE-Shortcuts=Meta+E' "$explorer_desktop"; then
+	if grep -q '^X-KDE-Shortcuts=' "$explorer_desktop"; then
+		echo "apps.sh: $explorer_desktop has shortcuts other than Meta+E" >&2
+		exit 1
+	fi
+	sed -i '0,/^X-DBUS-StartupType=Unique$/ s//&\nX-KDE-Shortcuts=Meta+E/' "$explorer_desktop"
+fi
+if [ ! -e /usr/share/kglobalaccel/net.eterneon.telamon.explorer.desktop ]; then
+	ln -s ../applications/net.eterneon.telamon.explorer.desktop /usr/share/kglobalaccel/net.eterneon.telamon.explorer.desktop
+fi
+for f in "$explorer_desktop" /usr/share/kglobalaccel/net.eterneon.telamon.explorer.desktop; do
+	grep -qx 'X-KDE-Shortcuts=Meta+E' "$f"
+	# The shortcut is in [Desktop Entry], not in an action.
+	[ "$(awk '/^\[/ { s = $0 } /^X-KDE-Shortcuts=Meta\+E$/ { print s }' "$f")" = '[Desktop Entry]' ]
+done
+# Nothing else takes Meta+E.
+[ "$(grep -l 'X-KDE-Shortcuts=.*Meta+E\($\|,\)' /usr/share/applications/*.desktop /usr/share/kglobalaccel/*.desktop | sort | tr '\n' ' ')" = \
+	'/usr/share/applications/net.eterneon.telamon.explorer.desktop /usr/share/kglobalaccel/net.eterneon.telamon.explorer.desktop ' ]
+# Fedora's default favourites for the old Kicker menu name Dolphin; they name Files.
+sed -i 's/\borg\.kde\.dolphin\.desktop\b/net.eterneon.telamon.explorer.desktop/' /usr/share/kde-settings/kde-profile/default/xdg/kicker-extra-favoritesrc
 # Telamon Archive replaces Ark (removed in packages.sh, with ark-libs); both ship
-# KIO service menus, so Ark must be gone and Archive's menu present.
+# KIO service menus, so Ark must be gone and Archive's menu present. Archive is
+# D-Bus activatable (net.eterneon.telamon.archive, the Archive1 API).
 [ -f /usr/share/applications/net.eterneon.telamon.archive.desktop ]
 [ -x /usr/bin/telamon-archive ]
 [ -f /usr/share/kio/servicemenus/net.eterneon.telamon.archive.desktop ]
-if rpm -q --quiet ark ark-libs; then
-	echo "apps.sh: ark is still installed beside telamon-archive" >&2
-	exit 1
-fi
+for gone in ark ark-libs; do
+	if rpm -q --quiet "$gone"; then
+		echo "apps.sh: $gone is still installed beside telamon-archive" >&2
+		exit 1
+	fi
+done
+for gone in /usr/bin/ark /usr/share/applications/org.kde.ark.desktop /usr/share/kio/servicemenus/ark_servicemenu.desktop; do
+	if [ -e "$gone" ] || [ -L "$gone" ]; then
+		echo "apps.sh: $gone is left from Ark" >&2
+		exit 1
+	fi
+done
 # Telamon Launcher replaces Andromeda: the binary, its user unit (enabled in
 # build.sh), the D-Bus activation file, the dock button plasmoid and the
 # default pins (system_files overrides the list later, in build.sh).

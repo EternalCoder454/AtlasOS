@@ -118,6 +118,30 @@ label is the Telamon OS commit the image was built from,
   (the new defaults then apply), and leaves the recording shortcuts behind.
   Test it with `tests/remove-spectacle/run.sh [IMAGE]`.
 
+- **Files (Telamon Explorer) replaces Dolphin; Telamon Archive replaces
+  Ark.** `packages.sh` removes `dolphin`, `dolphin-plugins` and `dolphin-libs`
+  (only dolphin-plugins required dolphin, so no Plasma package goes with it and
+  no stand-in package is needed) and `ark`, `ark-libs`; it no longer lists
+  `dolphin` in the packages the image must keep. What Dolphin owned goes to
+  Files: `org.freedesktop.FileManager1` (Files' own D-Bus activation file,
+  the only one for the name), `inode/directory` (`system_files/etc/xdg/mimeapps.list`
+  and `kde-mimeapps.list`; the dock's `preferred://filemanager` is the
+  preferred application for that type, so it follows), and Meta+E (Files'
+  desktop file and its copy in `/usr/share/kglobalaccel`, which `apps.sh` adds
+  when the package does not carry them yet). The archive types Archive
+  claims (zip, tar and its compressed forms, 7z, rar, gz, xz, zst, bz2, lz4,
+  cab, cpio, ar, deb) are Archive's in the same lists; ISO and RPM stay with
+  their own apps. Fedora's own `kde-mimeapps.list` and Kicker favourites are
+  renamed in the build, and `apps.sh` and `build.sh` fail if Dolphin or Ark,
+  their files, or a second owner of FileManager1 or Meta+E is left.
+  `telamon-20261008-replace-dolphin-ark.sh` (`kconf_update`, once per user)
+  moves a user's dock and launcher pins (`launchers=`, `favorites=`,
+  `favoriteApps=`, `ImportPins=`, the activity manager's favourites, the Telamon
+  Launcher's `pinned.list`), Open With and default applications in
+  `mimeapps.list`/`kde-mimeapps.list`, and a Meta+E the user changed (a
+  default one is dropped: Files has the same) to Files and Archive. Test it
+  with `tests/replace-dolphin-ark/run.sh [IMAGE]`.
+
 ## Update size
 
 What an update downloads is the compressed size of the layers a machine does
@@ -383,7 +407,7 @@ sudo bootc status                       # booted / staged / rollback
   [scottames/ghostty](https://copr.fedorainfracloud.org/coprs/scottames/ghostty/)
   COPR that Ghostty's install guide points to, since Fedora doesn't package
   it; IBM Plex Sans for the interface and JetBrains Mono for terminals
-  and code. Dolphin's "Open Terminal Here" (and Shift+F4) opens
+  and code. Files' "Open Terminal Here" (and Shift+F4) opens
   Ghostty; Ghostty's own duplicate "Open Ghostty Here" entry is removed. Native RPMs for the everyday apps, so
   they take the Kvantum style and Papirus icons: Gwenview, Okular,
   Qalculate! (`qalculate-qt`) and Haruna, with `kf6-kimageformats`,
@@ -420,7 +444,7 @@ sudo bootc status                       # booted / staged / rollback
   (controller udev rules) and `plasma-print-manager`. Discover's firmware
   updates come with `plasma-discover-libs` (its fwupd backend); there is no
   separate package.
-- **Kept:** Plasma, KWin, Dolphin, Discover for Flatpaks,
+- **Kept:** Plasma, KWin, Discover for Flatpaks,
   NetworkManager, PipeWire, Bluetooth, CUPS printing, Flatpak, zram swap.
 - **Branding:** Telamon OS boot splash, Plasma splash, launcher icon, About page,
   login screen and wallpaper; `os-release` says Telamon OS (`ID=telamonos`,
@@ -1081,7 +1105,7 @@ Needs Podman, just, libvirt with OVMF, `qemu-img`, `uv` and ImageMagick.
 
 The Telamon apps' shared base, telamon-framework (Telamon.Ui and its fonts), and the
 Telamon apps (Telamon Updater with telamon-system-helper, Telamon Monitor, Telamon
-Notepad, Telamon Settings, Telamon Setup, Telamon Explorer (Files, the default file manager), Telamon Archive (replaces Ark), Telamon Launcher (replaces Andromeda), Telamon Screenshot (Print and Meta+Shift+S; replaces Spectacle), Telamon Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
+Notepad, Telamon Settings, Telamon Setup, Telamon Explorer (Files, replaces Dolphin), Telamon Archive (replaces Ark), Telamon Launcher (replaces Andromeda), Telamon Screenshot (Print and Meta+Shift+S; replaces Spectacle), Telamon Store (beside Discover, which stays the default for Flatpak and RPM links), and the Installer's first-boot apps files) come from their own repositories, each passed to `podman build` as a
 named build context: `telamon-framework`, `telamon-updater`, `telamon-monitor`, `telamon-notepad`,
 `telamon-settings`, `telamon-wizard`, `telamon-store`, `telamon-explorer`, `telamon-archive`, `telamon-launcher`, `telamon-screenshot` and `telamon-installer` (no RPM: its `firstboot/` is bound into the
 `apps.sh` step, which runs `install.sh`). telamon-framework's `framework` stage makes the RPMs; the app

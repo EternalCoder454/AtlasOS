@@ -63,7 +63,7 @@ app() { # name, class pattern, command...
 }
 
 apps() {
-	app Files 'dolphin' dolphin
+	app Files 'telamon.explorer' telamon-explorer
 	app Terminal 'ghostty' ghostty
 	app Notepad 'notepad' telamon-notepad
 	app Settings 'telamon.settings' telamon-settings
