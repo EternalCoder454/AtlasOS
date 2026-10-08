@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Telamon OS"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Sound, display, Wi-Fi, Bluetooth and power in one popup, like Control Center",
+        "Icon": "configure-symbolic",
+        "Id": "org.telamon.quicksettings",
+        "License": "Apache-2.0",
+        "Name": "Telamon OS Quick Settings"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

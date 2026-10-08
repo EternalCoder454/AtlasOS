@@ -5,7 +5,7 @@
 // the left the Telamon OS menu (About, settings and power, like the Apple menu)
 // and the active window's menus (File, Edit, View...); in the middle the time
 // over the date (the calendar opens on a click); on the right the system
-// tray. The islands hide while a window covers them, so maximized and
+// tray (apps' icons) and Quick Settings. The islands hide while a window covers them, so maximized and
 // fullscreen apps get the whole screen. Meta+M shows them over the windows
 // (/usr/libexec/telamon/menubar-toggle), which keep their size.
 //
@@ -92,5 +92,41 @@ clock.writeConfig("dateDisplayFormat", 2); // below the time
 clock.writeConfig("dateFormat", "custom");
 clock.writeConfig("customDateFormat", "ddd MMM d"); // Fri Oct 2
 
-var tray = island("right");
-tray.addWidget("org.kde.plasma.systemtray");
+// The tray island: apps' status icons, then Quick Settings (sound, display,
+// Wi-Fi, Bluetooth and power in one popup) where Plasma's "show hidden
+// icons" arrow would be.
+var rightIsland = island("right");
+var tray = rightIsland.addWidget("org.kde.plasma.systemtray");
+// Only apps' icons (StatusNotifierItems) and the notification bell: the
+// bell's widget draws the notification popups, so it has to be loaded. The
+// widgets Quick Settings replaces (volume, Wi-Fi, Bluetooth, battery,
+// brightness) and the other system ones are turned off: "known" so Plasma
+// doesn't turn them back on. Everything is shown in the tray itself, so
+// there is no overflow popup and no arrow. See DEV.md, "Quick Settings".
+tray.currentConfigGroup = ["General"];
+tray.writeConfig("showAllItems", true);
+tray.writeConfig("extraItems", ["org.kde.plasma.notifications"]);
+tray.writeConfig("knownItems", [
+    "org.kde.plasma.notifications",
+    "org.kde.plasma.volume",
+    "org.kde.plasma.networkmanagement",
+    "org.kde.plasma.bluetooth",
+    "org.kde.plasma.battery",
+    "org.kde.plasma.brightness",
+    "org.kde.plasma.clipboard",
+    "org.kde.plasma.devicenotifier",
+    "org.kde.plasma.mediacontroller",
+    "org.kde.plasma.keyboardlayout",
+    "org.kde.plasma.keyboardindicator",
+    "org.kde.plasma.manage-inputmethod",
+    "org.kde.plasma.cameraindicator",
+    "org.kde.plasma.printmanager",
+    "org.kde.plasma.diskquota",
+    "org.kde.plasma.vault",
+    "org.kde.plasma.weather",
+    "org.kde.plasma.trash",
+    "org.kde.plasma.addons.katesessions",
+    "org.kde.kscreen",
+    "org.kde.kdeconnect",
+]);
+rightIsland.addWidget("org.telamon.quicksettings");
