@@ -28,7 +28,8 @@ rolls itself back.
 
 **It looks good out of the box**
 - A macOS-style menu bar on top, as three floating islands (app menus on
-  the left, the time and date in the middle, the tray on the right), and a
+  the left, the time and date in the middle, the tray on the right: apps' icons,
+  then **Quick Settings** for sound, display, Wi-Fi, Bluetooth and power), and a
   floating dock at the bottom with your apps, a short underline under the
   ones that are open. Both are see-through and blurred, and both get out of
   the way: a maximized app gets the whole screen, and **Meta+M** brings the

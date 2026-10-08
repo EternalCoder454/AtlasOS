@@ -440,7 +440,8 @@ sudo bootc status                       # booted / staged / rollback
   top, as three floating islands each only as wide as what it holds: the
   Telamon OS menu and the active app's menus (File, Edit, View...) on the left,
   the time over the date in the middle (the calendar opens on a click), and
-  the tray on the right. The islands hide while a window covers them
+  the tray on the right: apps' status icons and the notification bell, then
+  Quick Settings (below). The islands hide while a window covers them
   (`dodgewindows`), so maximized and fullscreen apps get the whole screen,
   and come back when the pointer reaches the top edge. **Meta+M**
   (`/usr/libexec/telamon/menubar-toggle`, registered by
@@ -927,6 +928,119 @@ accepts anything, so the pull wouldn't check the signature. Until then nothing
 needs to change on them. The
 ISOs and `/dl/*.json` keep their file names (`atlasos-44.*.iso`,
 `atlasos.json`, `atlasos-nvidia.json`): the website reads them.
+
+## Quick Settings
+
+The tray island shows apps' status icons (StatusNotifierItems: Telamon
+Updater, Claude, Discord...) and the notification bell, and, as its last
+widget, where Plasma's "show hidden icons" arrow was, **Quick Settings**
+(`system_files/usr/share/plasma/plasmoids/org.telamon.quicksettings`, QML).
+Its popup is narrow and fixed (about 360 px): a main view and detail views
+that replace it in place (a Back arrow and a title; Escape goes back).
+
+- **Main view**: tiles for Wi-Fi, Bluetooth, Power mode and Do Not Disturb (the
+  tile body switches it on or off, the power tile goes to the next mode; the
+  chevron opens the detail view; active tiles are filled with the accent
+  colour), a volume slider (its icon mutes) and a brightness slider (one slider
+  for the built-in display; with several displays its chevron lists them), and
+  a bottom row: the battery charge (only with a battery), Clipboard history and
+  Settings. What the computer lacks (Bluetooth, brightness control, a battery,
+  a Wi-Fi adapter: then the tile is "Network" and opens the network settings)
+  is left out and the tiles that remain share the width.
+- **Detail views**: Wi-Fi (networks to connect or disconnect, a password for a
+  new one), Bluetooth (paired devices), Power mode (Power Saver, Balanced,
+  Performance, with a check mark), Sound (the outputs as a list with a check
+  mark, then every app playing sound with its own volume, mute and output
+  chooser: this moves the stream, as Plasma's volume widget does) and
+  Brightness (one slider for each display). Each ends with one "... settings"
+  link to its page of Telamon Settings (`telamon-settings --page
+  network|devices|power|sound|displays`; the ids are in
+  `crates/settings-registry/src/pages.rs` of atlasos-settings); the gear in the
+  bottom row opens Telamon Settings itself.
+- Do Not Disturb is the same switch the notification bell's popup has
+  (`org.kde.notificationmanager`); it is left out when plasmashell's
+  notification server is not there.
+
+It adds no backend: the models and handlers are Plasma's own (plasma-pa's
+`org.kde.plasma.private.volume`, plasma-nm's `org.kde.plasma.networkmanagement`,
+BlueZ-Qt's `org.kde.bluezqt` and `org.kde.plasma.private.bluetooth`,
+`org.kde.plasma.private.batterymonitor` and `.battery`,
+`org.kde.plasma.private.brightnesscontrolplugin`, `org.kde.notificationmanager`), so it follows them across
+Plasma updates (`build.sh` checks the modules exist). The widget's state
+objects (`SoundState.qml`, `NetworkState.qml`...) wrap those modules; the
+views only draw. Tab, Space and Enter work and every control has an accessible name (a
+screen reader hears "Volume of Speakers", "Wi-Fi networks"...). A Wi-Fi
+password typed here goes to NetworkManager through plasma-nm's handler and is
+neither logged nor kept; a company (802.1X) network is left to NetworkManager's
+own prompt.
+
+**What the tray keeps and what moved** (decided here, not by Plasma's defaults):
+
+- *Volume, Network, Bluetooth, Battery and Brightness* are in Quick Settings.
+- *Notifications*: the bell stays in the tray. Its widget draws the
+  notification popups (without it no notification shows), so it has to be
+  loaded, and "show all entries" below shows it. Its popup has the history; Quick Settings also has a Do Not Disturb tile.
+- *Microphone in use*: the Volume widget used to start Plasma's microphone
+  indicator. Quick Settings starts it (`MicrophoneIndicator.init()`), so a
+  "Microphone" icon is in the tray, as an app status icon, exactly while an
+  app records. (The camera indicator widget is off; see the gaps below.)
+- *Clipboard*: the widget is off, but Plasma 6.7 has no separate Klipper: the
+  clipboard history, Meta+V and the `org.kde.klipper` D-Bus service (the app
+  menu's Edit > Clipboard History) run while something has loaded
+  `org.kde.plasma.private.clipboard`, which the widget did. Quick Settings
+  loads it (`KlipperInterface`), so all three keep working, and its bottom row
+  has a "Clipboard history" button (the same menu as Meta+V).
+- *Disks & Devices, media controls, keyboard layout, Caps Lock indicator,
+  input method, Vault, print manager, disk quota, weather, trash, Kate
+  sessions, display configuration, camera indicator, KDE Connect's widget* are
+  off: only their own window or tray UI goes (what runs in the background,
+  such as the pairing agent, the print and volume key services and the
+  keyboard layout shortcuts, are separate services and stay). Apps' own icons
+  (KDE Connect's, Telamon Updater's) stay. There is no replacement yet for the
+  media controls, the keyboard layout indicator, the removable-drive popup and
+  the camera-in-use indicator.
+- *Show all entries* is on (`showAllItems`): every icon is in the tray itself,
+  so there is no overflow popup and no arrow, and an app icon is never hidden
+  out of reach. A widget Plasma enables by default later would then be shown
+  at once, so `build.sh` fails when a widget that can go in the tray is missing from
+  the new-user layout's list or the update script's list below.
+
+New users get this from the layout
+(`system_files/usr/share/plasma/look-and-feel/org.telamon.desktop/contents/layouts/org.kde.plasma.desktop-layout.js`,
+copied to the dark theme by `build.sh`). Existing users get it from the Plasma
+update `telamon-20261008-quick-settings.js` (the `Id` is the file name; it runs
+once per user at the next Plasma start, after the islands update): in the right
+island of the menu bar (a right-aligned top "fit" panel with a system tray and
+no Quick Settings, on a screen with the Telamon OS Menu) it adds the widget at the
+end of the panel, turns the widgets above off (and records them as known so
+Plasma does not turn them back on), turns "show all entries" on, and keeps
+everything else: the app icons they turned off, the ones they showed or hid
+(hidden ones are now shown), plasmoids they added to the tray, other widgets in
+the panel. It adds the widget first, so if that fails the tray is not touched
+and the next start tries again. A full-width bar of the user's own is left
+alone. Test it with `[OUT=dir] tests/quick-settings/run.sh [IMAGE]`: a real
+plasmashell on a virtual KWin in a container is started on sample homes (an
+existing user, one whose update already ran, the one-piece bar of an older
+image, a user's own bar) and the panel config it writes is checked.
+
+Test the widget itself with `tests/quick-settings/widget/run.sh [IMAGE]`: its
+QML runs under Qt Test (no GPU or compositor) against PipeWire with two null
+outputs and two playing apps (it moves a stream between the outputs from the
+keyboard, sets an app's volume and mute with the mouse, then asks PulseAudio),
+mocked NetworkManager (connecting, a password typed for a new network),
+BlueZ, UPower and power-profiles-daemon, and a PowerDevil stand-in; it also
+walks the controls with Tab and checks each has an accessible name, and runs
+once more as a desktop (no battery, Bluetooth, brightness or Wi-Fi).
+
+Trying it by eye, without the desktop: a container of the image with a private session
+bus, PipeWire with two null sinks (`support.null-audio-sink`: two outputs and
+playing apps to move between them), a virtual KWin and plasmashell, and
+python-dbusmock's NetworkManager, BlueZ, UPower and power-profiles-daemon on a
+private system bus plus a small PowerDevil stand-in (brightness, profiles) on
+the session bus. Run containers with `--ulimit core=0`, so a crash does not
+reach the host's core dumps. KWin's screenshot interface needs the host's GPU
+render node (`--device /dev/dri/renderD128`) to render; the software
+compositor cancels every screenshot.
 
 ## Switching an existing Fedora Atomic install
 

@@ -1,0 +1,46 @@
+[PlasmaViews][Panel 10]
+alignment=132
+floating=1
+panelLengthMode=1
+panelOpacity=2
+panelVisibility=2
+shell=org.kde.plasma.desktop
+
+[PlasmaViews][Panel 10][Defaults]
+thickness=34
+
+[PlasmaViews][Panel 13]
+alignment=2
+floating=1
+panelLengthMode=1
+panelOpacity=2
+panelVisibility=2
+shell=org.kde.plasma.desktop
+
+[PlasmaViews][Panel 13][Defaults]
+thickness=34
+
+[PlasmaViews][Panel 2]
+alignment=132
+floating=1
+panelLengthMode=1
+panelOpacity=2
+panelVisibility=1
+shell=org.kde.plasma.desktop
+
+[PlasmaViews][Panel 2][Defaults]
+thickness=60
+
+[PlasmaViews][Panel 6]
+alignment=1
+floating=1
+panelLengthMode=1
+panelOpacity=2
+panelVisibility=2
+shell=org.kde.plasma.desktop
+
+[PlasmaViews][Panel 6][Defaults]
+thickness=34
+
+[Updates]
+performed=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261003-appmenu.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261003-dock-autohide.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261003-menu.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261004-islands.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261004-launcher.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261005-clock-centre.js,/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/atlasos-20261005-launcher.js
