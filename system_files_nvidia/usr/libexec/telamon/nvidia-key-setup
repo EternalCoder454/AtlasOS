@@ -115,7 +115,7 @@ if [ "$mode" = --first-login ]; then
 	for _ in $(seq 40); do
 		pgrep -u "$(id -u)" -f '/usr/libexec/telamon/(fingerprint|pin)-setup' >/dev/null ||
 			pgrep -u "$(id -u)" -x kdialog >/dev/null ||
-			pgrep -u "$(id -u)" -x systemsettings >/dev/null || break
+			pgrep -u "$(id -u)" -x 'systemsettings|telamon-setting|kcmshell6' >/dev/null || break
 		sleep 3
 	done
 	kdialog --title "$title" --yes-label "Set Up Now" --no-label "Not Now" --yesno \

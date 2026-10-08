@@ -19,6 +19,10 @@ Version=6
 Id=telamon-20261007-rename
 Script=telamon-20261007-rename.sh,sh
 
+# Telamon Settings replaces KDE's System Settings: pins move to its desktop file.
+Id=telamon-20261007-settings-cutover
+Script=telamon-20261007-settings-cutover.sh,sh
+
 Id=atlasos-20261001-look-and-feel
 Script=atlasos-20261001-look-and-feel.sh,sh
 

@@ -68,7 +68,7 @@ answer=$(notify-send --app-name="Telamon OS" --icon=fingerprint-gui \
 case $answer in
 setup)
 	mark_done
-	exec systemsettings kcm_users
+	exec telamon-settings --kcm kcm_users
 	;;
 later) mark_done ;;
 *) unanswered ;;

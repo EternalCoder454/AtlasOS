@@ -48,7 +48,7 @@ tasks.writeConfig("launchers", [
     "applications:com.mitchellh.ghostty.desktop",
     "applications:net.eterneon.telamon.store.desktop",
     "applications:org.kde.discover.desktop",
-    "applications:systemsettings.desktop",
+    "applications:net.eterneon.telamon.settings.desktop",
 ]);
 
 // The menu bar's islands. See-through with the desktop blurred behind them,

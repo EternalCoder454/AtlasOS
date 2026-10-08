@@ -295,7 +295,7 @@ PlasmoidItem {
             text: i18n("Help")
             PlasmaExtras.MenuItem {
                 text: i18n("Keyboard Shortcuts…")
-                onClicked: run.command("systemsettings kcm_keys")
+                onClicked: run.command("telamon-settings --kcm kcm_keys")
             }
         }
     }

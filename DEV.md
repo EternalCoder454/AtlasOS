@@ -723,7 +723,7 @@ password always keeps working.
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes
   `~/.local/state/atlasos/pin-setup-done`. It waits for the fingerprint
-  question, any other kdialog and System Settings first, so two dialogs never
+  question, any other kdialog and Settings first, so two dialogs never
   show at once.
 - **KWallet.** After a PIN login the keyring modules are skipped (above), so
   KWallet asks for the password once, itself: the wallet opens with the real
@@ -876,6 +876,24 @@ Test it with a throwaway `HOME` in a container (the image has
 `kconf_update`): seed `~/.config` with an AtlasOS-era `kdeglobals`, Kvantum
 config and appletsrc, run `/usr/libexec/kf6/kconf_update
 /usr/share/kconf_update/atlasos.upd`, and diff.
+
+### Settings replaces System Settings
+
+Telamon Settings' `telamon-settings-systemsettings` package replaces
+Fedora's `plasma-systemsettings` (`apps.sh` checks it: the old package is
+gone, plasma-desktop, colord-kde and kcm-plasmalogin stay, `/usr/bin/systemsettings`
+is the shim). The image's own callers open Settings directly
+(`telamon-settings [--kcm kcm_x]`: the menu, the shortcuts plasmoid,
+`fingerprint-setup`); anything else that runs `systemsettings <kcm>` goes
+through the shim. The dock's default pin and the Launcher's list name
+`net.eterneon.telamon.settings.desktop`. Existing users' pins that name
+`systemsettings.desktop`, `kdesystemsettings.desktop` or
+`org.kde.systemsettings.desktop` (dock `launchers=`, `favorites=`,
+`favoriteApps=`, `ImportPins=`, the activity manager's favourites and the
+Launcher's `pinned.list`) move over once, in
+`telamon-20261007-settings-cutover.sh`; test it with
+`tests/settings-cutover/run.sh [IMAGE]`. The first-login scripts wait for
+`telamon-settings` or `kcmshell6` where they waited for `systemsettings`.
 
 ### The two image names
 

@@ -378,7 +378,9 @@ systemctl enable cups.socket
 "${dnf[@]}" install plasma-firewall-firewalld
 
 # The desktop the image promises. A removal above that took one of these with
-# it fails the build here instead of shipping a broken image.
+# it fails the build here instead of shipping a broken image. (plasma-systemsettings
+# is here, in the stock image, until apps.sh installs Telamon Settings'
+# telamon-settings-systemsettings, which replaces it and is checked there.)
 keep=(
 	plasma-workspace plasma-desktop kwin ghostty dolphin plasma-systemsettings
 	plasma-login-manager NetworkManager NetworkManager-wifi
