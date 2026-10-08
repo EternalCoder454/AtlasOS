@@ -55,7 +55,7 @@ PY
 	paplay --client-name="Discord" /tmp/tone.wav &
 	sleep 2
 
-	echo "== sound"
+	echo "== volume, mute, per-app routing"
 	qtest tst_sound.qml
 	# PulseAudio's own view of what the UI did
 	rows=$(pactl -f json list sink-inputs)
@@ -77,7 +77,11 @@ for s in json.load(sys.stdin):
 	chk "Discord is muted" '[ "$(field Discord "s[\"mute\"]")" = True ]'
 	chk "Discord's volume is about 25 % (is $(pct Discord))" '[ "$(pct Discord)" -ge 15 ] && [ "$(pct Discord)" -le 35 ]'
 	chk "YouTube Music's volume is untouched (is $(pct 'YouTube Music'))" '[ "$(pct "YouTube Music")" = 100 ]'
-	chk "the speakers are muted by the main mute button" '[ "$(pactl get-sink-mute speakers)" = "Mute: yes" ]'
+	chk "the speakers were muted by the main mute button" '[ "$(pactl get-sink-mute speakers)" = "Mute: yes" ]'
+	chk "the speakers' volume is about 50 % (is $(pactl get-sink-volume speakers | grep -o '[0-9]*%' | head -1))" 'pactl get-sink-volume speakers | grep -qE " (4[2-9]|5[0-8])%"'
+	echo "== choosing the default output"
+	qtest tst_output.qml
+	chk "the default output is now the headphones (is $(pactl get-default-sink))" '[ "$(pactl get-default-sink)" = headphones ]'
 	pkill paplay || true
 
 	echo "== display, power, Wi-Fi, Bluetooth"

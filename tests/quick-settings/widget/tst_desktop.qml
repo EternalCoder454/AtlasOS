@@ -1,33 +1,28 @@
 import QtQuick
-import QtQuick.Layouts
 import QtTest
 import "file:///usr/share/plasma/plasmoids/org.telamon.quicksettings/contents/ui"
 
-// A desktop with a cable: the sections for hardware it does not have stay out of the way.
+// A desktop with a cable: what it lacks is left out and the rest fills the width
 Item {
     width: 420; height: 800
-    ColumnLayout {
-        width: 400
-        SoundCard { id: sound }
-        DisplayCard { id: display }
-        NetworkCard { id: network }
-        BluetoothCard { id: bluetooth }
-        PowerCard { id: power }
-    }
-    TestCase {
+    QuickSettings { id: popup; width: 360 }
+    Util {
         name: "desktop"
+        popup: popup
         when: windowShown
-        function test_sections() {
-            wait(3000);
-            verify(!display.visible, "no brightness slider without a controllable display");
-            verify(!bluetooth.visible, "no Bluetooth section without an adapter");
-            compare(network.title, "Network");
-            verify(!network.hasSwitch, "no Wi-Fi switch without a Wi-Fi adapter");
-            verify(power.visible, "the power profiles still show");
-            verify(!power.hasBattery, "no battery");
-            compare(power.title, "Power");
-            verify(power.subtitle.indexOf("%") < 0, "nothing about a charge: " + power.subtitle);
-            verify(power.subtitle.indexOf("left") < 0 && power.subtitle.indexOf("Charging") < 0, power.subtitle);
+        function test_main_view() {
+            tryVerify(() => has("Power mode") && has("Network"), 10000, "tiles");
+            verify(!has("Bluetooth"), "no Bluetooth tile without an adapter");
+            verify(!has("Wi-Fi"), "no Wi-Fi tile without a Wi-Fi adapter: it is a Network tile");
+            verify(!has("Brightness"), "no brightness slider without a controllable display");
+            verify(!has("Wi-Fi networks"), "no Wi-Fi list to open");
+            verify(findAll(popup, i => i.Accessible && i.Accessible.name.indexOf("Battery") === 0 && !i.Accessible.ignored && i.visible).length === 0, "nothing about a battery");
+            verify(has("Volume of Speakers") || has("Volume of Headphones") || findAll(popup, i => i.Accessible && i.Accessible.name.indexOf("Volume of") === 0).length > 0, "the volume slider stays");
+            // the Network tile has no toggle
+            verify(one("Network").Accessible.checkable === false);
+            // two tiles left (Network, Power mode): they share the row
+            const a = one("Network"), b = one("Power mode");
+            verify(Math.abs(a.width - b.width) < 2 && a.width < 200, "two tiles share the row");
         }
     }
 }

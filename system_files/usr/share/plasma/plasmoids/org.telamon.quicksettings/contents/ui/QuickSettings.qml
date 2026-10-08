@@ -2,94 +2,99 @@
     SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
-    The popup: a column of sections, common ones first, details folded.
-    Tab walks the controls top to bottom; Escape closes it (Plasma).
+    The popup: a main view (tiles, two sliders, a bottom row) and detail
+    views that replace it in place (Wi-Fi, Bluetooth, power mode, sound,
+    displays), each with a Back arrow. Fixed width, nothing scrolls on the main
+    view. Tab walks the controls; Escape goes back, then (Plasma) closes.
 */
 
 import QtQuick
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import org.kde.plasma.components as PC3
-import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 
-PC3.ScrollView {
+Item {
     id: popup
 
     signal settingsRequested(string page)
     signal clipboardRequested()
 
-    // Sections that exist on this computer decide the height
-    implicitWidth: Kirigami.Units.gridUnit * 22
-    implicitHeight: Math.min(column.implicitHeight + Kirigami.Units.smallSpacing * 2, Kirigami.Units.gridUnit * 40)
+    readonly property alias stack: stack
+
+    implicitWidth: Kirigami.Units.gridUnit * 20
+    implicitHeight: stack.currentItem ? stack.currentItem.implicitHeight : Kirigami.Units.gridUnit * 16
     Layout.minimumWidth: implicitWidth
     Layout.maximumWidth: implicitWidth
-    Layout.minimumHeight: Math.min(implicitHeight, Kirigami.Units.gridUnit * 16)
+    Layout.preferredWidth: implicitWidth
+    Layout.minimumHeight: implicitHeight
     Layout.preferredHeight: implicitHeight
 
-    contentWidth: availableWidth
-    PC3.ScrollBar.horizontal.policy: PC3.ScrollBar.AlwaysOff
-    Accessible.name: i18n("Quick Settings")
+    // The popup opens on the main view
+    onVisibleChanged: if (!visible && stack.depth > 1) stack.pop(null, QQC2.StackView.Immediate)
 
-    // The setting is also changed from outside (Plasma's scripting)
-    Connections {
-        target: Plasmoid.configuration
-        function onSoundOpenChanged() { sound.expanded = Plasmoid.configuration.soundOpen; }
-        function onNetworkOpenChanged() { network.expanded = Plasmoid.configuration.networkOpen; }
-        function onBluetoothOpenChanged() { bluetooth.expanded = Plasmoid.configuration.bluetoothOpen; }
+    SoundState { id: soundState }
+    DisplayState { id: displayState }
+    NetworkState { id: netState }
+    BluetoothState { id: bluetoothState }
+    PowerState { id: powerState }
+    DoNotDisturbState { id: dndState }
+
+    function open(component) {
+        stack.push(component);
     }
 
-    ColumnLayout {
-        id: column
-        width: popup.availableWidth
-        spacing: Kirigami.Units.smallSpacing
+    QQC2.StackView {
+        id: stack
+        anchors.fill: parent
+        clip: true
+        initialItem: mainView
 
-        SoundCard {
-            id: sound
-            // Which sections are open is remembered
-            Component.onCompleted: expanded = Plasmoid.configuration.soundOpen
-            onExpandedChanged: Plasmoid.configuration.soundOpen = expanded
-            onSettingsRequested: popup.settingsRequested("sound")
-        }
-        DisplayCard {
-            onSettingsRequested: popup.settingsRequested("displays")
-        }
-        NetworkCard {
-            id: network
-            // Which sections are open is remembered
-            Component.onCompleted: expanded = Plasmoid.configuration.networkOpen
-            onExpandedChanged: Plasmoid.configuration.networkOpen = expanded
-            onSettingsRequested: popup.settingsRequested("network")
-        }
-        BluetoothCard {
-            id: bluetooth
-            // Which sections are open is remembered
-            Component.onCompleted: expanded = Plasmoid.configuration.bluetoothOpen
-            onExpandedChanged: Plasmoid.configuration.bluetoothOpen = expanded
-            onSettingsRequested: popup.settingsRequested("devices")
-        }
-        PowerCard {
-            onSettingsRequested: popup.settingsRequested("power")
-        }
-
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
-            spacing: Kirigami.Units.largeSpacing
-            PC3.Button {
-                flat: true
-                text: i18n("Clipboard history")
-                icon.name: "edit-paste-symbolic"
-                Keys.onReturnPressed: clicked()
-                Keys.onEnterPressed: clicked()
-                onClicked: popup.clipboardRequested()
+        // Views slide in from the right and out to the left, and the other
+        // way back
+        pushEnter: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "x"; from: stack.width / 4; to: 0; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Kirigami.Units.shortDuration }
             }
-            PC3.Button {
-                flat: true
-                text: i18n("All settings…")
-                icon.name: "preferences-system-symbolic"
-                Keys.onReturnPressed: clicked()
-                Keys.onEnterPressed: clicked()
-                onClicked: popup.settingsRequested("")
+        }
+        pushExit: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "x"; from: 0; to: -stack.width / 4; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Kirigami.Units.shortDuration }
+            }
+        }
+        popEnter: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "x"; from: -stack.width / 4; to: 0; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Kirigami.Units.shortDuration }
+            }
+        }
+        popExit: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "x"; from: 0; to: stack.width / 4; duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Kirigami.Units.shortDuration }
             }
         }
     }
+
+    Component {
+        id: mainView
+        MainView {
+            net: netState
+            bluetooth: bluetoothState
+            power: powerState
+            sound: soundState
+            display: displayState
+            dnd: dndState
+            onOpenPage: name => popup.open(name === "wifi" ? wifiPage : name === "bluetooth" ? bluetoothPage
+                : name === "power" ? powerPage : name === "sound" ? soundPage : displayPage)
+            onSettingsRequested: page => popup.settingsRequested(page)
+            onClipboardRequested: popup.clipboardRequested()
+        }
+    }
+    Component { id: wifiPage; WifiPage { net: netState; onBack: stack.pop(); onSettingsRequested: page => popup.settingsRequested(page) } }
+    Component { id: bluetoothPage; BluetoothPage { bluetooth: bluetoothState; onBack: stack.pop(); onSettingsRequested: page => popup.settingsRequested(page) } }
+    Component { id: powerPage; PowerPage { power: powerState; onBack: stack.pop(); onSettingsRequested: page => popup.settingsRequested(page) } }
+    Component { id: soundPage; SoundPage { sound: soundState; onBack: stack.pop(); onSettingsRequested: page => popup.settingsRequested(page) } }
+    Component { id: displayPage; DisplayPage { display: displayState; onBack: stack.pop(); onSettingsRequested: page => popup.settingsRequested(page) } }
 }

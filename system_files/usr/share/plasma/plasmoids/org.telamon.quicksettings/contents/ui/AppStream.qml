@@ -2,11 +2,11 @@
     SPDX-FileCopyrightText: 2026 Telamon OS
     SPDX-License-Identifier: Apache-2.0
 
-    One app playing sound: its name, mute, volume and the output device its
-    stream goes to. `stream` is the row of plasma-pa's stream model, so
-    assigning Volume, Muted or DeviceIndex on it changes the stream (a new
-    DeviceIndex moves it to that output, and PulseAudio remembers the choice
-    for the app).
+    One app playing sound: its icon and name, mute and volume, and a compact
+    chooser for the output its stream goes to. `stream` is the row of
+    plasma-pa's stream model, so assigning Volume, Muted or DeviceIndex on it
+    changes the stream (a new DeviceIndex moves it to that output, and
+    PulseAudio remembers the choice for the app).
 */
 
 import QtQuick
@@ -35,11 +35,13 @@ ColumnLayout {
     }
     readonly property int percent: Math.round(stream.Volume / PulseAudio.NormalVolume * 100)
 
-    spacing: Kirigami.Units.smallSpacing
+    spacing: 0
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: Kirigami.Units.smallSpacing * 2
+        Layout.leftMargin: 8
+        Layout.topMargin: 8
+        spacing: 8
         Kirigami.Icon {
             source: stream.IconName || "applications-multimedia-symbolic"
             implicitWidth: Kirigami.Units.iconSizes.smallMedium
@@ -56,55 +58,42 @@ ColumnLayout {
         PC3.Label {
             visible: stream.Corked === true
             text: i18n("Paused")
-            opacity: 0.7
+            opacity: 0.65
         }
     }
 
-    ValueRow {
+    SliderRow {
         Layout.fillWidth: true
         label: i18n("Volume of %1", item.appName)
         iconName: item.percent === 0 || stream.Muted ? "audio-volume-muted-symbolic" : "audio-volume-high-symbolic"
-        canMute: true
+        iconAction: stream.Muted ? i18n("Unmute %1", item.appName) : i18n("Mute %1", item.appName)
         muted: stream.Muted
         from: PulseAudio.MinimalVolume
         to: Math.max(PulseAudio.NormalVolume, stream.Volume)
         stepSize: PulseAudio.NormalVolume / 100
         value: stream.Volume
         valueText: item.percent + " %"
-        sliderEnabled: stream.VolumeWritable !== false
+        enabled: stream.VolumeWritable !== false
         onMoved: v => {
             stream.Volume = v;
             stream.Muted = v === 0;
         }
-        onMuteToggled: stream.Muted = !stream.Muted
+        onIconClicked: stream.Muted = !stream.Muted
     }
 
     // Only when there is another output to choose
-    RowLayout {
+    PC3.ComboBox {
+        id: picker
         Layout.fillWidth: true
+        Layout.leftMargin: 8
+        Layout.rightMargin: 8
         visible: item.devices && item.devices.count > 1
-        spacing: Kirigami.Units.smallSpacing
-        PC3.Label {
-            text: i18n("Output")
-            opacity: 0.7
-        }
-        PC3.ComboBox {
-            id: picker
-            Layout.fillWidth: true
-            model: item.devices
-            textRole: "Description"
-            valueRole: "Index"
-            Accessible.name: i18n("Output device of %1", item.appName)
-            currentIndex: indexOfValue(stream.DeviceIndex)
-            onActivated: stream.DeviceIndex = currentValue
-            onCountChanged: currentIndex = Qt.binding(() => indexOfValue(stream.DeviceIndex))
-        }
-    }
-
-    Rectangle {
-        Layout.fillWidth: true
-        Layout.topMargin: Kirigami.Units.smallSpacing
-        Layout.preferredHeight: 1
-        color: Qt.alpha(Kirigami.Theme.textColor, 0.1)
+        model: item.devices
+        textRole: "Description"
+        valueRole: "Index"
+        Accessible.name: i18n("Output device of %1", item.appName)
+        currentIndex: indexOfValue(stream.DeviceIndex)
+        onActivated: stream.DeviceIndex = currentValue
+        onCountChanged: currentIndex = Qt.binding(() => indexOfValue(stream.DeviceIndex))
     }
 }

@@ -1,64 +1,65 @@
 import QtQuick
-import QtQuick.Layouts
 import QtTest
 import "file:///usr/share/plasma/plasmoids/org.telamon.quicksettings/contents/ui"
 
 Item {
-    id: root
-    width: 420; height: 1200
-    ColumnLayout {
-        width: 400
-        SoundCard { id: sound }
-        DisplayCard { id: display }
-        NetworkCard { id: network }
-        BluetoothCard { id: bluetooth }
-        PowerCard { id: power }
-    }
-    TestCase {
+    width: 420; height: 800
+    QuickSettings { id: popup; width: 360 }
+
+    Util {
         name: "keys"
+        popup: popup
         when: windowShown
-        function name(item) {
-            return item.Accessible.name || item.text || "";
-        }
-        function test_tab_walk_reaches_every_control_with_a_name() {
-            tryVerify(() => power.visible && bluetooth.on, 10000);
-            wait(1500);
+
+        function test_1_tab_walk_reaches_every_control_with_a_name() {
+            tryVerify(() => has("Power mode") && has("Brightness") && has("Bluetooth"), 10000);
+            wait(800);
             const seen = [];
-            // start at the first focusable control
             keyClick(Qt.Key_Tab);
             for (let i = 0; i < 30; i++) {
-                const f = Window.activeFocusItem ? Window.activeFocusItem : null;
+                const f = Window.activeFocusItem;
                 if (!f) break;
-                const n = name(f);
-                seen.push(n);
+                const n = f.Accessible.name || f.text || "";
                 verify(n.length > 0, "a focused control has no accessible name: " + f);
+                if (seen.indexOf(n) >= 0) break;
+                seen.push(n);
                 keyClick(Qt.Key_Tab);
-                if (seen.length > 3 && n === seen[0]) break;
             }
             console.warn("TAB_ORDER", JSON.stringify(seen));
-            for (const want of ["Sound", "Open Sound settings", "Open Display settings", "Wi-Fi", "Open Network settings", "Bluetooth", "Open Bluetooth settings", "Open Power settings"]) {
-                verify(seen.indexOf(want) >= 0, "Tab never reaches: " + want);
+            for (const want of ["Wi-Fi", "Wi-Fi networks", "Bluetooth", "Bluetooth devices", "Power mode", "Power modes", "Do Not Disturb",
+                                "Sound outputs and apps", "Brightness", "Clipboard history", "Settings"]) {
+                if (want === "Do Not Disturb") continue; // needs plasmashell's notification server
+                verify(seen.indexOf(want) >= 0, "Tab never reaches: " + want + " (got " + JSON.stringify(seen) + ")");
             }
         }
-        function test_header_opens_with_space_and_enter() {
-            const hdr = (function find(i) {
-                if (i.hasOwnProperty("checkable") && i.hasOwnProperty("highlighted") && i.Accessible.name === "Sound") return i;
-                for (let k = 0; k < i.children.length; k++) { const r = find(i.children[k]); if (r) return r; }
-                return null;
-            })(sound);
-            verify(hdr, "the Sound header button");
-            verify(!sound.expanded);
-            hdr.forceActiveFocus();
-            keyClick(Qt.Key_Space);
-            verify(sound.expanded, "Space opens the details");
-            keyClick(Qt.Key_Return);
-            verify(!sound.expanded, "Enter closes them");
+
+        function test_1b_the_mute_button_and_volume_slider_are_reached() {
+            verify(has("Mute") || has("Unmute"), "a mute button");
+            verify(findAll(popup, i => i.Accessible && i.Accessible.name.indexOf("Volume of") === 0 && i.activeFocusOnTab).length > 0, "the volume slider takes Tab");
         }
-        function test_slider_by_keyboard() {
-            const sliders = [];
-            (function walk(i) { if (i.hasOwnProperty("snapMode") && i.hasOwnProperty("handle")) sliders.push(i); for (let k = 0; k < i.children.length; k++) walk(i.children[k]); })(display);
-            verify(sliders.length >= 1);
-            const s = sliders[0];
+
+        function test_2_tile_toggles_with_space() {
+            const tile = one("Bluetooth");
+            tile.forceActiveFocus();
+            const before = tile.Accessible.checked;
+            keyClick(Qt.Key_Space);
+            tryVerify(() => one("Bluetooth").Accessible.checked !== before, 6000, "Space switched Bluetooth");
+            one("Bluetooth").forceActiveFocus();
+            keyClick(Qt.Key_Return);
+            tryVerify(() => one("Bluetooth").Accessible.checked === before, 6000, "Enter switched it back");
+        }
+
+        function test_3_chevron_opens_with_enter_and_escape_goes_back() {
+            const chevron = one("Wi-Fi networks");
+            chevron.forceActiveFocus();
+            keyClick(Qt.Key_Return);
+            tryVerify(() => stack().depth === 2 && !stack().busy, 3000, "opened");
+            keyClick(Qt.Key_Escape);
+            tryVerify(() => stack().depth === 1 && !stack().busy, 3000, "Escape went back");
+        }
+
+        function test_4_slider_by_keyboard() {
+            const s = sliderOf("Brightness");
             s.forceActiveFocus();
             const before = s.value;
             keyClick(Qt.Key_Left);
@@ -66,6 +67,14 @@ Item {
             keyClick(Qt.Key_Right);
             keyClick(Qt.Key_Right);
             verify(s.value > before, "Right raises it");
+        }
+
+        function test_5_every_detail_view_has_a_back_button_with_focus_order() {
+            for (const chevron of ["Wi-Fi networks", "Bluetooth devices", "Power modes", "Sound outputs and apps", "Brightness of each display"]) {
+                open(chevron);
+                verify(has("Back to Quick Settings"), chevron + ": Back");
+                back();
+            }
         }
     }
 }

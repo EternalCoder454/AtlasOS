@@ -203,12 +203,12 @@ command -v qdbus-qt6 >/dev/null || {
 # aside, which stays) has to be named in both, so a widget a Plasma update adds
 # is decided on here, not found in everyone's tray.
 qs=/usr/share/plasma/plasmoids/org.telamon.quicksettings
-for f in metadata.json contents/config/main.xml contents/ui/main.qml contents/ui/QuickSettings.qml; do
+for f in metadata.json contents/ui/main.qml contents/ui/QuickSettings.qml; do
 	[ -f "$qs/$f" ]
 done
 for m in org/kde/plasma/private/volume org/kde/plasma/networkmanagement org/kde/networkmanager org/kde/bluezqt org/kde/plasma/private/bluetooth \
 	org/kde/plasma/private/batterymonitor org/kde/plasma/private/battery org/kde/plasma/private/brightnesscontrolplugin \
-	org/kde/plasma/private/clipboard org/kde/plasma/plasma5support org/kde/plasma/extras org/kde/kitemmodels org/kde/coreaddons; do
+	org/kde/plasma/private/clipboard org/kde/notificationmanager org/kde/plasma/plasma5support org/kde/plasma/extras org/kde/kitemmodels org/kde/coreaddons; do
 	[ -f "/usr/lib64/qt6/qml/$m/qmldir" ] || {
 		echo "build.sh: Quick Settings needs the QML module $m" >&2
 		exit 1

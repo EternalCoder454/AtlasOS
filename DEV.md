@@ -917,28 +917,41 @@ The tray island shows apps' status icons (StatusNotifierItems: Telamon
 Updater, Claude, Discord...) and the notification bell, and, as its last
 widget, where Plasma's "show hidden icons" arrow was, **Quick Settings**
 (`system_files/usr/share/plasma/plasmoids/org.telamon.quicksettings`, QML).
-Its popup is a column of sections, common ones first, details folded (the
-rule of Telamon Settings), each with a gear that opens its page of Telamon
-Settings (`telamon-settings --page <id>`; the ids are in
-`crates/settings-registry/src/pages.rs` of atlasos-settings):
+Its popup is narrow and fixed (about 360 px): a main view and detail views
+that replace it in place (a Back arrow and a title; Escape goes back).
 
-| Section | Shows | Folded | Page |
-|---|---|---|---|
-| Sound | output volume and mute | the output device; every app playing sound with its own volume, mute and output device (moves its stream, as Plasma's volume widget does) | `sound` |
-| Display | a brightness slider per display PowerDevil controls (hidden when there is none) | | `displays` |
-| Wi-Fi | switch, current network (a "Network" line with the wired connection without a Wi-Fi adapter) | networks in range: connect, disconnect, password for a new one, "Network settings..." | `network` |
-| Bluetooth | switch, devices connected (hidden without Bluetooth) | paired devices: connect, disconnect, battery, "Bluetooth settings..." | `devices` |
-| Power & Battery | Power Saver / Balanced / Performance (power-profiles-daemon through PowerDevil); battery charge and time left only where there is a battery | | `power` |
+- **Main view**: tiles for Wi-Fi, Bluetooth, Power mode and Do Not Disturb (the
+  tile body switches it on or off, the power tile goes to the next mode; the
+  chevron opens the detail view; active tiles are filled with the accent
+  colour), a volume slider (its icon mutes) and a brightness slider (one slider
+  for the built-in display; with several displays its chevron lists them), and
+  a bottom row: the battery charge (only with a battery), Clipboard history and
+  Settings. What the computer lacks (Bluetooth, brightness control, a battery,
+  a Wi-Fi adapter: then the tile is "Network" and opens the network settings)
+  is left out and the tiles that remain share the width.
+- **Detail views**: Wi-Fi (networks to connect or disconnect, a password for a
+  new one), Bluetooth (paired devices), Power mode (Power Saver, Balanced,
+  Performance, with a check mark), Sound (the outputs as a list with a check
+  mark, then every app playing sound with its own volume, mute and output
+  chooser: this moves the stream, as Plasma's volume widget does) and
+  Brightness (one slider for each display). Each ends with one "... settings"
+  link to its page of Telamon Settings (`telamon-settings --page
+  network|devices|power|sound|displays`; the ids are in
+  `crates/settings-registry/src/pages.rs` of atlasos-settings); the gear in the
+  bottom row opens Telamon Settings itself.
+- Do Not Disturb is the same switch the notification bell's popup has
+  (`org.kde.notificationmanager`); it is left out when plasmashell's
+  notification server is not there.
 
 It adds no backend: the models and handlers are Plasma's own (plasma-pa's
 `org.kde.plasma.private.volume`, plasma-nm's `org.kde.plasma.networkmanagement`,
 BlueZ-Qt's `org.kde.bluezqt` and `org.kde.plasma.private.bluetooth`,
 `org.kde.plasma.private.batterymonitor` and `.battery`,
-`org.kde.plasma.private.brightnesscontrolplugin`), so it follows them across
-Plasma updates (`build.sh` checks the modules exist). Which sections are open
-is remembered (`contents/config/main.xml`). Controls are Plasma Components, so
-Tab, Space and Enter work and every control has an accessible name (a
-screen reader hears "Volume of Speakers", "Power profile Balanced"...). A Wi-Fi
+`org.kde.plasma.private.brightnesscontrolplugin`, `org.kde.notificationmanager`), so it follows them across
+Plasma updates (`build.sh` checks the modules exist). The widget's state
+objects (`SoundState.qml`, `NetworkState.qml`...) wrap those modules; the
+views only draw. Tab, Space and Enter work and every control has an accessible name (a
+screen reader hears "Volume of Speakers", "Wi-Fi networks"...). A Wi-Fi
 password typed here goes to NetworkManager through plasma-nm's handler and is
 neither logged nor kept; a company (802.1X) network is left to NetworkManager's
 own prompt.
@@ -948,8 +961,7 @@ own prompt.
 - *Volume, Network, Bluetooth, Battery and Brightness* are in Quick Settings.
 - *Notifications*: the bell stays in the tray. Its widget draws the
   notification popups (without it no notification shows), so it has to be
-  loaded, and "show all entries" below shows it. Its popup has the history and
-  Do Not Disturb.
+  loaded, and "show all entries" below shows it. Its popup has the history; Quick Settings also has a Do Not Disturb tile.
 - *Microphone in use*: the Volume widget used to start Plasma's microphone
   indicator. Quick Settings starts it (`MicrophoneIndicator.init()`), so a
   "Microphone" icon is in the tray, as an app status icon, exactly while an
@@ -958,8 +970,8 @@ own prompt.
   clipboard history, Meta+V and the `org.kde.klipper` D-Bus service (the app
   menu's Edit > Clipboard History) run while something has loaded
   `org.kde.plasma.private.clipboard`, which the widget did. Quick Settings
-  loads it (`KlipperInterface`), so all three keep working, and its footer has
-  a "Clipboard history" button (the same menu as Meta+V).
+  loads it (`KlipperInterface`), so all three keep working, and its bottom row
+  has a "Clipboard history" button (the same menu as Meta+V).
 - *Disks & Devices, media controls, keyboard layout, Caps Lock indicator,
   input method, Vault, print manager, disk quota, weather, trash, Kate
   sessions, display configuration, camera indicator, KDE Connect's widget* are

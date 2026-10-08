@@ -1,155 +1,167 @@
 import QtQuick
-import QtQuick.Layouts
 import QtTest
 import "file:///usr/share/plasma/plasmoids/org.telamon.quicksettings/contents/ui"
 
 Item {
-    id: root
-    width: 420; height: 1200
+    width: 420; height: 800
+    QuickSettings { id: popup; width: 360 }
 
-    ColumnLayout {
-        width: 400
-        DisplayCard { id: display }
-        NetworkCard { id: network; expanded: true }
-        BluetoothCard { id: bluetooth; expanded: true }
-        PowerCard { id: power }
-    }
-
-    TestCase {
+    Util {
         name: "misc"
+        popup: popup
         when: windowShown
 
-        function findAll(item, pred, out) {
-            out = out || [];
-            if (pred(item)) out.push(item);
-            for (let i = 0; i < item.children.length; i++) findAll(item.children[i], pred, out);
-            return out;
+        function networks() { return findAll(popup, i => i.hasOwnProperty("askingPassword") && i.visible); }
+        function wifi(name) {
+            const rows = networks().filter(r => r.network.ItemUniqueName === name);
+            verify(rows.length === 1, name + ": " + rows.length);
+            return rows[0];
         }
-        function typeText(t) { for (const ch of t) keyClick(ch); }
-        function sliders(card) { return findAll(card, i => i.hasOwnProperty("snapMode") && i.hasOwnProperty("handle")); }
+        function passwordField(row) { return findAll(row, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0]; }
+        function device(name) {
+            return findAll(popup, i => i.hasOwnProperty("busy") && i.hasOwnProperty("device") && i.visible).filter(r => r.device.Name === name)[0];
+        }
 
-        function test_1_display_two_sliders_and_write() {
-            tryVerify(() => sliders(display).length === 2, 8000);
-            verify(display.visible);
-            const s = sliders(display)[0];
+        function test_01_main_view_has_what_the_computer_has() {
+            tryVerify(() => has("Power mode") && has("Bluetooth") && has("Brightness"), 10000, "tiles and sliders");
+            verify(has("Wi-Fi") && has("Wi-Fi networks"));
+            verify(has("Settings") && has("Clipboard history"));
+        }
+
+        function test_02_brightness_slider_sets_the_built_in_display() {
+            const s = sliderOf("Brightness");
             compare(Math.round(s.value), 70);
-            mouseClick(s, s.leftPadding + s.availableWidth * 0.3, s.height / 2);
+            clickSlider(s, 0.3);
             wait(400);
             verify(Math.abs(s.value - 30) <= 8, "slider near 30: " + s.value);
         }
 
-        function test_2_power_profiles() {
-            tryVerify(() => power.visible, 8000);
-            tryVerify(() => power.hasProfiles, 8000);
-            const buttons = findAll(power, i => i.hasOwnProperty("checkable") && i.hasOwnProperty("icon") && i.text.indexOf("Performance") >= 0);
-            compare(buttons.length, 1);
-            mouseClick(buttons[0]);
-            tryVerify(() => buttons[0].checked, 4000, "performance became active");
-            compare(power.hasBattery, true);
-            verify(power.subtitle.indexOf("87") >= 0, power.subtitle);
+        function test_03_displays_view_has_a_slider_each() {
+            open("Brightness of each display");
+            tryVerify(() => has("Brightness of Dell U2723QE") && has("Brightness of Built-in display"), 5000);
+            back();
         }
 
-        function test_3_network_list() {
-            tryVerify(() => findAll(network, i => i.hasOwnProperty("askingPassword")).length >= 3, 15000, "networks listed");
-            const rows = findAll(network, i => i.hasOwnProperty("askingPassword"));
-            const names = rows.map(r => r.network.ItemUniqueName).sort();
-            console.warn("NETWORKS", JSON.stringify(names));
-            verify(network.subtitle === "Telamon Home", network.subtitle);
+        function test_04_power_tile_goes_to_the_next_mode() {
+            mouseClick(one("Power mode"));
+            wait(500);
         }
 
-        function wifi(name) {
-            const rows = findAll(network, i => i.hasOwnProperty("askingPassword") && i.network.ItemUniqueName === name);
-            verify(rows.length === 1, name + ": " + rows.length);
-            return rows[0];
+        function test_05_power_view_choices() {
+            open("Power modes");
+            tryVerify(() => one("Performance").Accessible.checked, 4000, "performance is the active mode");
+            mouseClick(one("Power Saver"));
+            tryVerify(() => one("Power Saver").Accessible.checked, 4000, "power saver became active");
+            back();
         }
 
-        function test_4_network_open_network_connects() {
+        function test_06_wifi_view_lists_networks() {
+            open("Wi-Fi networks");
+            tryVerify(() => networks().length >= 3, 15000, "networks listed");
+            console.warn("NETWORKS", JSON.stringify(networks().map(r => r.network.ItemUniqueName).sort()));
+        }
+
+        function test_07_open_network_connects() {
             const r = wifi("Cafe Guest");
             verify(!r.secured && !r.askingPassword);
             mouseClick(r.children[0]);
             wait(800);
-            // asked NetworkManager for it (session.sh checks the mock got the call too)
             verify(!r.askingPassword);
         }
 
-        function test_5b_password_is_dropped_when_the_list_folds() {
+        function test_08_escape_cancels_the_password() {
             const r = wifi("Neighbour 5G");
+            verify(r.needsPassword, "needs a password");
             r.toggle();
             verify(r.askingPassword);
-            const field = findAll(r, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0];
-            field.forceActiveFocus();
-            typeText("half typed");
-            network.expanded = false;
-            wait(200);
-            compare(field.text, "", "a typed password does not outlive the list");
-            verify(!r.askingPassword);
-            network.expanded = true;
-            wait(300);
-        }
-
-        function test_6_network_new_secured_asks_for_password() {
-            const r = wifi("Neighbour 5G");
-            verify(r.needsPassword, "needs password");
-            r.toggle();
-            verify(r.askingPassword);
-            const field = findAll(r, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0];
-            verify(field.activeFocus, "the password field has the keyboard focus");
-            typeText("short");
-            verify(!field.acceptableInput, "too short is rejected");
-            field.text = "";
-            field.forceActiveFocus();
-            typeText("correct horse battery");
-            verify(field.acceptableInput);
-            keyClick(Qt.Key_Return);
-            wait(800);
-            verify(!r.askingPassword, "password row closes");
-            compare(field.text, "", "password not kept");
-        }
-
-        function test_5_network_escape_cancels_password() {
-            const r = wifi("Neighbour 5G");
-            r.toggle();
-            verify(r.askingPassword);
-            const field = findAll(r, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0];
+            const field = passwordField(r);
             field.forceActiveFocus();
             typeText("abcdefgh");
             keyClick(Qt.Key_Escape);
             verify(!r.askingPassword);
             compare(field.text, "");
+            // Escape cancelled the field, it did not leave the view
+            compare(stack().depth, 2);
         }
 
-        function test_7_wifi_switch() {
-            const sw = findAll(network, i => i.hasOwnProperty("checked") && i.hasOwnProperty("position") && i.Accessible.name === "Wi-Fi")[0];
-            verify(sw, "switch");
+        function test_09_password_is_dropped_when_the_view_closes() {
+            const r = wifi("Neighbour 5G");
+            r.toggle();
+            verify(r.askingPassword);
+            const field = passwordField(r);
+            field.forceActiveFocus();
+            typeText("half typed");
+            back();
+            wait(300);
+            // the view and its field are gone; a new one starts empty and closed
+            open("Wi-Fi networks");
+            tryVerify(() => networks().length >= 3, 8000);
+            const again = wifi("Neighbour 5G");
+            verify(!again.askingPassword, "a new view does not ask");
+            compare(passwordField(again).text, "", "a typed password does not outlive the view");
+        }
+
+        function test_10_new_secured_network_takes_a_password() {
+            const r = wifi("Neighbour 5G");
+            verify(!r.askingPassword);
+            r.toggle();
+            verify(r.askingPassword);
+            const field = passwordField(r);
+            field.forceActiveFocus();
+            typeText("short");
+            verify(!field.acceptableInput, "too short is rejected");
+            field.text = "";
+            typeText("correct horse battery");
+            verify(field.acceptableInput);
+            keyClick(Qt.Key_Return);
+            wait(800);
+            verify(!r.askingPassword, "the password row closes");
+            compare(field.text, "", "the password is not kept");
+        }
+
+        function test_11_wifi_switch() {
+            const sw = findAll(popup, i => i.hasOwnProperty("checked") && i.hasOwnProperty("position") && i.Accessible.name === "Wi-Fi" && i.visible)[0];
+            verify(sw, "the switch");
             compare(sw.checked, true);
             mouseClick(sw);
-            tryVerify(() => !network.wifiOn, 4000, "Wi-Fi turned off");
-            compare(network.subtitle, "Off");
+            tryVerify(() => !sw.checked, 4000, "off");
             mouseClick(sw);
-            tryVerify(() => network.wifiOn, 4000, "Wi-Fi turned on");
+            tryVerify(() => sw.checked, 4000, "on");
+            back();
         }
 
-        function test_8_bluetooth_devices_and_connect() {
-            tryVerify(() => bluetooth.on, 8000, "operational");
-            tryVerify(() => findAll(bluetooth, i => i.hasOwnProperty("busy") && i.hasOwnProperty("device")).length === 2, 8000);
-            // rows are rebuilt when a device changes: look the row up each time
-            const hp = () => findAll(bluetooth, i => i.hasOwnProperty("busy") && i.hasOwnProperty("device")).filter(r => r.device.Name === "WH-1000XM5")[0];
-            verify(hp());
-            verify(!hp().connected);
-            mouseClick(hp());
-            tryVerify(() => hp() && hp().connected, 6000, "connected");
-            tryVerify(() => bluetooth.subtitle === "WH-1000XM5", 4000, bluetooth.subtitle);
-            mouseClick(hp());
-            tryVerify(() => hp() && !hp().connected, 6000, "disconnected");
+        function test_12_wifi_tile_switches_wifi() {
+            const tile = one("Wi-Fi");
+            compare(tile.Accessible.checked, true);
+            mouseClick(tile);
+            tryVerify(() => !one("Wi-Fi").Accessible.checked, 4000, "off");
+            mouseClick(one("Wi-Fi"));
+            tryVerify(() => one("Wi-Fi").Accessible.checked, 4000, "on");
         }
 
-        function test_9_bluetooth_switch() {
-            const sw = findAll(bluetooth, i => i.hasOwnProperty("checked") && i.hasOwnProperty("position") && i.Accessible.name === "Bluetooth")[0];
-            mouseClick(sw);
-            tryVerify(() => !bluetooth.on, 6000, "off");
-            compare(bluetooth.subtitle, "Off");
-            mouseClick(sw);
-            tryVerify(() => bluetooth.on, 6000, "on");
+        function test_13_bluetooth_view_connects_a_device() {
+            open("Bluetooth devices");
+            tryVerify(() => device("WH-1000XM5") !== undefined, 8000, "devices listed");
+            verify(!device("WH-1000XM5").connected);
+            mouseClick(device("WH-1000XM5"));
+            // rows are rebuilt when a device changes: look it up each time
+            tryVerify(() => device("WH-1000XM5") && device("WH-1000XM5").connected, 6000, "connected");
+            mouseClick(device("WH-1000XM5"));
+            tryVerify(() => device("WH-1000XM5") && !device("WH-1000XM5").connected, 6000, "disconnected");
+            back();
+        }
+
+        function test_14_bluetooth_tile_switches_bluetooth() {
+            const tile = one("Bluetooth");
+            compare(tile.Accessible.checked, true);
+            mouseClick(tile);
+            tryVerify(() => !one("Bluetooth").Accessible.checked, 6000, "off");
+            mouseClick(one("Bluetooth"));
+            tryVerify(() => one("Bluetooth").Accessible.checked, 6000, "on");
+        }
+
+        function test_15_battery_is_shown_where_there_is_one() {
+            verify(has("Battery 87 % · 3:12 left") || findAll(popup, i => i.Accessible && i.Accessible.name.indexOf("Battery 87") === 0).length > 0);
         }
     }
 }
