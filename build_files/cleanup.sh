@@ -21,6 +21,11 @@ rm -rf /var/lib/dnf /var/log/dnf5.log* /run/dnf /var/cache/ldconfig/aux-cache \
 # (power-profiles-daemon's: systemd makes it, StateDirectory=. authselect
 # backs up the files it replaces, and semodule leaves its work in /run.)
 mountpoint -q /var/cache/libdnf5 || rm -rf /var/cache/libdnf5
+# dnf5's history of this build's transactions (the base image has none): their
+# times and a 1.5 MB write-ahead log made a 3.6 MB layer new in every build,
+# for a record nothing reads on an image-based system. (The package state,
+# packages.toml and the rest of the directory, stays.)
+rm -f /usr/lib/sysimage/libdnf5/transaction_history.sqlite*
 
 # The library cache, made again from what the image now holds: a library put
 # down without dnf (whose trigger runs ldconfig) would otherwise be missing

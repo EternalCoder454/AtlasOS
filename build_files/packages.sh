@@ -13,7 +13,11 @@ set -euxo pipefail
 # Every dnf call keeps its downloads, so the cache the Justfile and CI bind to
 # /var/cache/libdnf5 is worth saving. It never reaches the image: a build
 # volume is not part of any layer.
-dnf=(dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
+# SOURCE_DATE_EPOCH: rpm 6 writes it, not the clock, as a package's install time
+# (and transaction id) in the RPM database, a 100 MB file that was new in every
+# build for nothing but those times (36 MB of every update). An installed
+# system has no use for the build's clock either.
+dnf=(env SOURCE_DATE_EPOCH=1 dnf5 -y --setopt=keepcache=True --setopt=install_weak_deps=False)
 
 ### Third-party repos: pinned keys
 # Ghostty's COPR and NVIDIA's container toolkit are outside repos. Their .repo files are in
