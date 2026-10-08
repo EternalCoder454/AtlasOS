@@ -35,7 +35,7 @@ Item {
             compare(Math.round(s.value), 70);
             mouseClick(s, s.leftPadding + s.availableWidth * 0.3, s.height / 2);
             wait(400);
-            console.warn("BRIGHTNESS_SLIDER", Math.round(s.value));
+            verify(Math.abs(s.value - 30) <= 8, "slider near 30: " + s.value);
         }
 
         function test_2_power_profiles() {
@@ -68,6 +68,23 @@ Item {
             verify(!r.secured && !r.askingPassword);
             mouseClick(r.children[0]);
             wait(800);
+            // asked NetworkManager for it (session.sh checks the mock got the call too)
+            verify(!r.askingPassword);
+        }
+
+        function test_5b_password_is_dropped_when_the_list_folds() {
+            const r = wifi("Neighbour 5G");
+            r.toggle();
+            verify(r.askingPassword);
+            const field = findAll(r, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0];
+            field.forceActiveFocus();
+            typeText("half typed");
+            network.expanded = false;
+            wait(200);
+            compare(field.text, "", "a typed password does not outlive the list");
+            verify(!r.askingPassword);
+            network.expanded = true;
+            wait(300);
         }
 
         function test_6_network_new_secured_asks_for_password() {
@@ -76,7 +93,7 @@ Item {
             r.toggle();
             verify(r.askingPassword);
             const field = findAll(r, i => i.hasOwnProperty("placeholderText") && i.hasOwnProperty("acceptableInput"))[0];
-            verify(field.activeFocus || true);
+            verify(field.activeFocus, "the password field has the keyboard focus");
             typeText("short");
             verify(!field.acceptableInput, "too short is rejected");
             field.text = "";

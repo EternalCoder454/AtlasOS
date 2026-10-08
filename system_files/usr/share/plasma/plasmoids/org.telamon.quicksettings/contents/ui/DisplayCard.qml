@@ -44,6 +44,7 @@ Card {
             PC3.Label {
                 visible: display.several
                 text: display.model.label
+                textFormat: Text.PlainText
                 font: Kirigami.Theme.smallFont
                 opacity: 0.7
                 elide: Text.ElideRight

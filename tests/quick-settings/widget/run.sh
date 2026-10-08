@@ -20,7 +20,9 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../.." && pwd)
 image=${1:-ghcr.io/eternalcoder454/telamonos:testing}
-tag=localhost/telamon-quicksettings-test:$(printf %s "$image" | cksum | cut -d' ' -f1)
+# keyed on the image's ID, so a re-pulled tag is not tested on a stale build
+id=$(podman image inspect --format '{{.Id}}' "$image" 2>/dev/null || podman pull -q "$image")
+tag=localhost/telamon-quicksettings-test:$(printf %s "$id" | cut -c1-16)
 podman image exists "$tag" || podman build --ulimit core=0 -q --build-arg "IMAGE=$image" -t "$tag" -f "$here/Containerfile" "$here" >/dev/null
 # core=0: a crash in the container must not land in the host's core dumps
 exec podman run --rm --ulimit core=0 --network=none --security-opt label=disable \

@@ -109,7 +109,11 @@ Rectangle {
                 checked: card.switchChecked
                 enabled: card.switchEnabled
                 Accessible.name: card.switchLabel || card.title
-                onToggled: card.switchToggled(checked)
+                onToggled: {
+                    card.switchToggled(checked);
+                    // Back to what the system says (it may refuse, e.g. a hardware block)
+                    checked = Qt.binding(() => card.switchChecked);
+                }
             }
             PC3.ToolButton {
                 icon.name: "preferences-system-symbolic"

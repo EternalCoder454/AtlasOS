@@ -36,6 +36,14 @@ ColumnLayout {
 
     spacing: 0
 
+    // A typed password is not kept: closing the popup or folding the list drops it
+    onVisibleChanged: {
+        if (!visible) {
+            password.text = "";
+            askingPassword = false;
+        }
+    }
+
     function toggle() {
         if (busy) {
             return;
@@ -83,6 +91,7 @@ ColumnLayout {
             PC3.Label {
                 Layout.fillWidth: true
                 text: item.network.ItemUniqueName
+                textFormat: Text.PlainText
                 elide: Text.ElideRight
                 font.weight: item.active ? Font.DemiBold : Font.Normal
                 Accessible.ignored: true
@@ -119,8 +128,11 @@ ColumnLayout {
             placeholderText: i18n("Password")
             Accessible.name: i18n("Password for %1", item.network.ItemUniqueName)
             validator: RegularExpressionValidator {
+                // WEP: 5 or 13 characters, or 10 or 26 hex digits; WPA: 8 to 63
+                // printable ASCII characters or 64 hex digits; WPA3 takes any 1 to 128
                 regularExpression: item.security === PlasmaNM.Enums.StaticWep
-                    ? /^(?:.{5}|[0-9a-fA-F]{10}|.{13}|[0-9a-fA-F]{26})$/ : /^(?:.{8,64})$/
+                    ? /^(?:.{5}|[0-9a-fA-F]{10}|.{13}|[0-9a-fA-F]{26})$/
+                    : item.security === PlasmaNM.Enums.SAE ? /^.{1,128}$/ : /^(?:[\x20-\x7e]{8,63}|[0-9a-fA-F]{64})$/
             }
             onAccepted: item.submitPassword()
             Keys.onEscapePressed: event => {

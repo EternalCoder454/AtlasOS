@@ -82,7 +82,8 @@ for s in json.load(sys.stdin):
 
 	echo "== display, power, Wi-Fi, Bluetooth"
 	qtest tst_misc.qml
-	chk "the first display was set (writes: $(tr '\n' ' ' </tmp/brightness.log))" 'grep -q "^display0=" /tmp/brightness.log'
+	chk "the first display was set to about 30 % (writes: $(tr '\n' ' ' </tmp/brightness.log))" 'grep -qE "^display0=(2[2-9]|3[0-8])$" /tmp/brightness.log'
+	chk "connecting to the open network asked NetworkManager (AddAndActivateConnection)" 'grep -q "AddAndActivateConnection.*Cafe Guest\|AddAndActivateConnection.*\[67, 97, 102, 101" /tmp/mock-networkmanager.log'
 	chk "PowerDevil was asked for the performance profile" 'grep -qx performance /tmp/profile.log'
 	chk "NetworkManager got a connection with the password typed" 'grep -q "\"psk\": \"correct horse battery\"" /tmp/mock-networkmanager.log'
 	chk "the password is in no test output" '! grep -rq "correct horse battery" /tmp/out/'

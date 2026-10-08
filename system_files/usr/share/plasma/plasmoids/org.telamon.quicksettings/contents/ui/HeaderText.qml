@@ -33,6 +33,7 @@ RowLayout {
         PC3.Label {
             Layout.fillWidth: true
             text: header.title
+            textFormat: Text.PlainText
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }
@@ -40,6 +41,7 @@ RowLayout {
             Layout.fillWidth: true
             visible: text.length > 0
             text: header.subtitle
+            textFormat: Text.PlainText
             opacity: 0.7
             font: Kirigami.Theme.smallFont
             elide: Text.ElideRight

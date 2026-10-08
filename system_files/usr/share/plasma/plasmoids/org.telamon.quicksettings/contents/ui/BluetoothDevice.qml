@@ -56,6 +56,7 @@ PC3.ItemDelegate {
         PC3.Label {
             Layout.fillWidth: true
             text: item.device.Name
+            textFormat: Text.PlainText
             elide: Text.ElideRight
             font.weight: item.connected ? Font.DemiBold : Font.Normal
             Accessible.ignored: true

@@ -49,6 +49,7 @@ ColumnLayout {
         PC3.Label {
             Layout.fillWidth: true
             text: item.mediaName ? i18nc("app name · what it plays", "%1 · %2", item.appName, item.mediaName) : item.appName
+            textFormat: Text.PlainText
             elide: Text.ElideRight
             font.weight: Font.DemiBold
         }

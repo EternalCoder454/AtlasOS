@@ -206,8 +206,9 @@ qs=/usr/share/plasma/plasmoids/org.telamon.quicksettings
 for f in metadata.json contents/config/main.xml contents/ui/main.qml contents/ui/QuickSettings.qml; do
 	[ -f "$qs/$f" ]
 done
-for m in org/kde/plasma/private/volume org/kde/plasma/networkmanagement org/kde/bluezqt org/kde/plasma/private/bluetooth \
-	org/kde/plasma/private/batterymonitor org/kde/plasma/private/battery org/kde/plasma/private/brightnesscontrolplugin; do
+for m in org/kde/plasma/private/volume org/kde/plasma/networkmanagement org/kde/networkmanager org/kde/bluezqt org/kde/plasma/private/bluetooth \
+	org/kde/plasma/private/batterymonitor org/kde/plasma/private/battery org/kde/plasma/private/brightnesscontrolplugin \
+	org/kde/plasma/private/clipboard org/kde/plasma/plasma5support org/kde/plasma/extras org/kde/kitemmodels org/kde/coreaddons; do
 	[ -f "/usr/lib64/qt6/qml/$m/qmldir" ] || {
 		echo "build.sh: Quick Settings needs the QML module $m" >&2
 		exit 1
@@ -215,10 +216,20 @@ for m in org/kde/plasma/private/volume org/kde/plasma/networkmanagement org/kde/
 done
 quick_layout=/usr/share/plasma/look-and-feel/org.telamon.desktop/contents/layouts/org.kde.plasma.desktop-layout.js
 quick_update=/usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/telamon-20261008-quick-settings.js
-[ -f "$quick_layout" ] && [ -f "$quick_update" ]
-for so in /usr/lib64/qt6/plugins/plasma/applets/*.so; do
-	grep -q X-Plasma-NotificationAreaCategory "$so" || continue
-	id=$(basename "$so" .so)
+[ -f "$quick_layout" ]
+[ -f "$quick_update" ]
+# Widgets that can go in the tray: compiled ones (a plugin that names a tray
+# category) and packaged ones (metadata.json)
+tray_widgets=$(
+	for so in /usr/lib64/qt6/plugins/plasma/applets/*.so; do
+		if grep -q X-Plasma-NotificationAreaCategory "$so"; then basename "$so" .so; fi
+	done
+	for md in /usr/share/plasma/plasmoids/*/metadata.json; do
+		if grep -q X-Plasma-NotificationAreaCategory "$md"; then basename "$(dirname "$md")"; fi
+	done
+)
+[ -n "$tray_widgets" ]
+for id in $tray_widgets; do
 	[ "$id" = org.kde.plasma.notifications ] && continue
 	for f in "$quick_layout" "$quick_update"; do
 		grep -qF "\"$id\"" "$f" || {

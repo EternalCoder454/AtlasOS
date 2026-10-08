@@ -41,7 +41,12 @@ Item {
             }
         }
         function test_header_opens_with_space_and_enter() {
-            const hdr = sound.children[0].children[0].children[0];
+            const hdr = (function find(i) {
+                if (i.hasOwnProperty("checkable") && i.hasOwnProperty("highlighted") && i.Accessible.name === "Sound") return i;
+                for (let k = 0; k < i.children.length; k++) { const r = find(i.children[k]); if (r) return r; }
+                return null;
+            })(sound);
+            verify(hdr, "the Sound header button");
             verify(!sound.expanded);
             hdr.forceActiveFocus();
             keyClick(Qt.Key_Space);

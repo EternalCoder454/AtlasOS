@@ -7,7 +7,8 @@
     "show hidden icons" arrow. Now the tray shows only apps' icons (and the
     notification bell), and our Quick Settings widget (org.telamon.quicksettings)
     sits after it where the arrow was. In the tray of the right island of the
-    menu bar (a top panel in "fit" mode with a system tray):
+    menu bar (a right-aligned top panel in "fit" mode with a system tray, on a
+    screen with the Telamon OS Menu):
 
       * the widgets Quick Settings replaces and the other system ones are
         turned off, and recorded as known so Plasma doesn't turn them back on;
@@ -76,10 +77,18 @@ function withEach(items, add) {
     return out;
 }
 
-panels().filter(function (panel) {
-    return panel.location === "top" && panel.lengthMode === "fit"
+// The right island of the menu bar Telamon OS made: a top, right-aligned "fit"
+// panel with a tray, on a screen whose top panels include the Telamon OS Menu
+// (a "fit" bar of the user's own, on another screen say, is not ours)
+var all = panels();
+all.filter(function (panel) {
+    return panel.location === "top" && panel.lengthMode === "fit" && panel.alignment === "right"
         && panel.widgets("org.kde.plasma.systemtray").length > 0
-        && panel.widgets("org.telamon.quicksettings").length === 0;
+        && panel.widgets("org.telamon.quicksettings").length === 0
+        && all.some(function (other) {
+            return other.screen === panel.screen && other.location === "top"
+                && other.widgets("org.telamon.menu").length > 0;
+        });
 }).forEach(function (panel) {
     // Add the widget first: if it can't be, the tray keeps its volume,
     // network and the rest, and the next start tries again

@@ -972,15 +972,16 @@ own prompt.
 - *Show all entries* is on (`showAllItems`): every icon is in the tray itself,
   so there is no overflow popup and no arrow, and an app icon is never hidden
   out of reach. A widget Plasma enables by default later would then be shown
-  at once, so `build.sh` fails when a widget that can go in the tray is named in
-  neither the new-user layout nor the update script below.
+  at once, so `build.sh` fails when a widget that can go in the tray is missing from
+  the new-user layout's list or the update script's list below.
 
 New users get this from the layout
 (`system_files/usr/share/plasma/look-and-feel/org.telamon.desktop/contents/layouts/org.kde.plasma.desktop-layout.js`,
 copied to the dark theme by `build.sh`). Existing users get it from the Plasma
 update `telamon-20261008-quick-settings.js` (the `Id` is the file name; it runs
-once per user at the next Plasma start, after the islands update): in a top
-"fit" panel with a system tray and no Quick Settings it adds the widget at the
+once per user at the next Plasma start, after the islands update): in the right
+island of the menu bar (a right-aligned top "fit" panel with a system tray and
+no Quick Settings, on a screen with the Telamon OS Menu) it adds the widget at the
 end of the panel, turns the widgets above off (and records them as known so
 Plasma does not turn them back on), turns "show all entries" on, and keeps
 everything else: the app icons they turned off, the ones they showed or hid
@@ -992,7 +993,16 @@ plasmashell on a virtual KWin in a container is started on sample homes (an
 existing user, one whose update already ran, the one-piece bar of an older
 image, a user's own bar) and the panel config it writes is checked.
 
-Trying it without the desktop: a container of the image with a private session
+Test the widget itself with `tests/quick-settings/widget/run.sh [IMAGE]`: its
+QML runs under Qt Test (no GPU or compositor) against PipeWire with two null
+outputs and two playing apps (it moves a stream between the outputs from the
+keyboard, sets an app's volume and mute with the mouse, then asks PulseAudio),
+mocked NetworkManager (connecting, a password typed for a new network),
+BlueZ, UPower and power-profiles-daemon, and a PowerDevil stand-in; it also
+walks the controls with Tab and checks each has an accessible name, and runs
+once more as a desktop (no battery, Bluetooth, brightness or Wi-Fi).
+
+Trying it by eye, without the desktop: a container of the image with a private session
 bus, PipeWire with two null sinks (`support.null-audio-sink`: two outputs and
 playing apps to move between them), a virtual KWin and plasmashell, and
 python-dbusmock's NetworkManager, BlueZ, UPower and power-profiles-daemon on a
