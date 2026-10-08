@@ -8,7 +8,7 @@
         ],
         "Category": "System Information",
         "Description": "Sound, display, Wi-Fi, Bluetooth and power in one popup, like Control Center",
-        "Icon": "configure-symbolic",
+        "Icon": "view-media-equalizer-symbolic",
         "Id": "org.telamon.quicksettings",
         "License": "Apache-2.0",
         "Name": "Telamon OS Quick Settings"

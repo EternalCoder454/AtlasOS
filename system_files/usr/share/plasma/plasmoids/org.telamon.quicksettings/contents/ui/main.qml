@@ -30,7 +30,7 @@ PlasmoidItem {
 
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
 
-    Plasmoid.icon: "configure-symbolic"
+    Plasmoid.icon: "view-media-equalizer-symbolic"
     Plasmoid.title: i18n("Quick Settings")
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     toolTipMainText: i18n("Quick Settings")
@@ -115,13 +115,11 @@ PlasmoidItem {
             border.color: Kirigami.Theme.highlightColor
         }
 
-        Kirigami.Icon {
+        ControlsGlyph {
             anchors.centerIn: parent
             width: Kirigami.Units.iconSizes.smallMedium
             height: width
-            source: Plasmoid.icon
             color: Kirigami.Theme.textColor
-            isMask: true
         }
     }
 
