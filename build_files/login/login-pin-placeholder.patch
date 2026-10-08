@@ -1,0 +1,77 @@
+diff --git a/src/frontend/greeter/main.cpp b/src/frontend/greeter/main.cpp
+index 699e2ad..3253d3b 100644
+--- a/src/frontend/greeter/main.cpp
++++ b/src/frontend/greeter/main.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include <QCommandLineOption>
+ #include <QCommandLineParser>
++#include <QFile>
+ #include <QGuiApplication>
+ #include <QObject>
+ #include <QQmlContext>
+@@ -28,6 +29,32 @@
+ #include "plasmaloginsettings.h"
+ #include "stateconfig.h"
+ 
++// Telamon OS: whether the authselect profile has the with-pin feature, so the
++// password field's placeholder can say "Password or PIN". One bounded read of
++// /etc/authselect/authselect.conf at start; any failure means false. QML gets
++// this one boolean and no file access.
++class TelamonSignIn : public QObject
++{
++    Q_OBJECT
++    Q_PROPERTY(bool pinSignIn READ pinSignIn CONSTANT)
++public:
++    explicit TelamonSignIn(QObject *parent = nullptr)
++        : QObject(parent)
++    {
++        QFile conf(QStringLiteral("/etc/authselect/authselect.conf"));
++        if (conf.open(QIODevice::ReadOnly)) {
++            m_pinSignIn = conf.read(4096).split('\n').contains(QByteArrayLiteral("with-pin"));
++        }
++    }
++    bool pinSignIn() const
++    {
++        return m_pinSignIn;
++    }
++
++private:
++    bool m_pinSignIn = false;
++};
++
+ class LoginGreeter : public QObject
+ {
+     Q_OBJECT
+@@ -129,6 +156,7 @@ int main(int argc, char *argv[])
+     qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "UserModel", new UserModel);
+     qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "SessionManagement", new SessionManagement());
+     qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "Settings", &PlasmaLoginSettings::getInstance());
++    qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "TelamonSignIn", new TelamonSignIn);
+     qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "StateConfig", StateConfig::self());
+     qmlRegisterSingletonInstance("org.kde.plasma.login", 0, 1, "BlurScreenBridge", new BlurScreenBridge);
+ 
+diff --git a/src/frontend/greeter/qml/Login.qml b/src/frontend/greeter/qml/Login.qml
+index 5b69e34..1522e36 100644
+--- a/src/frontend/greeter/qml/Login.qml
++++ b/src/frontend/greeter/qml/Login.qml
+@@ -23,6 +23,10 @@ SessionManagementScreen {
+ 
+     property bool showUsernamePrompt: !showUserList
+ 
++    // Telamon OS: with the authselect feature with-pin the sign-in PIN is
++    // typed in the password field, so the placeholder says so.
++    readonly property bool pinSignIn: PlasmaLogin.TelamonSignIn.pinSignIn
++
+     property bool loginScreenUiVisible: false
+ 
+     //the y position that should be ensured visible when the on screen keyboard is visible
+@@ -102,7 +106,7 @@ SessionManagementScreen {
+             font.pointSize: fontSize + 1
+             Layout.fillWidth: true
+ 
+-            placeholderText: i18nd("plasma_login", "Password")
++            placeholderText: root.pinSignIn ? i18nd("plasma_login", "Password or PIN") : i18nd("plasma_login", "Password")
+             focus: !showUsernamePrompt
+ 
+             onAccepted: {

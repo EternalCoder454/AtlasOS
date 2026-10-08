@@ -1,0 +1,15 @@
+[Containments][2][Applets][5][Configuration][General]
+launchers=preferred://filemanager,preferred://browser,applications:com.mitchellh.ghostty.desktop,applications:systemsettings.desktop,applications:net.eterneon.telamon.store.desktop
+
+[Containments][2][Applets][6][Configuration][General]
+launchers=applications:org.kde.systemsettings.desktop,applications:org.kde.discover.desktop,file:///usr/share/applications/kdesystemsettings.desktop
+
+[Containments][2][Applets][7][Configuration][General]
+launchers=applications:systemsettings.desktop,applications:net.eterneon.telamon.settings.desktop,applications:mysystemsettings.desktop,applications:org.kde.systemsettings.desktop.bak
+
+[Containments][2][Applets][8][Configuration][General]
+ImportPins=systemsettings.desktop,org.kde.dolphin.desktop
+favoriteApps=kdesystemsettings.desktop,systemsettings.desktop
+
+[Containments][2][Applets][9][Configuration][General]
+launchers=applications:net.eterneon.telamon.settings.desktop,applications:org.kde.discover.desktop

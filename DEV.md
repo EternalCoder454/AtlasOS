@@ -542,6 +542,29 @@ the base image from Koji, adds the patch, builds with release `.atlas1`, and
 `packages.sh` installs those RPMs over Kinoite's. The build fails if the patch
 stops applying; drop the stage once Fedora ships the fix.
 
+## Patched login screen
+
+`plasma-login-manager` is Fedora's own package, rebuilt with one patch
+(`build_files/login/`, same method as the KIO one). The sign-in PIN is typed in
+the login screen's password field, whose "Password" placeholder is fixed in the
+greeter's compiled QML (`Login.qml`), so no PAM change can relabel it. The patch
+makes the greeter's `main()` read `/etc/authselect/authselect.conf` once (a
+bounded read of 4 KiB, any failure meaning "no") and expose one boolean to QML
+(`PlasmaLogin.TelamonSignIn.pinSignIn`); `Login.qml` shows "Password or PIN"
+when it is true, "Password" otherwise. The greeter runs before anyone has
+authenticated, so QML gets no file access (`QML_XHR_ALLOW_FILE_READ` stays
+off, and `packages.sh` checks the binary for it). Only the placeholder
+changes; the file is world-readable (`etc_t`). The Containerfile's `login` stage downloads the source RPM of
+exactly the version in the base image from Koji (checked against Fedora's key),
+builds it with release `.atlas1` (plasma-login-manager and kcm-plasmalogin),
+and `packages.sh` upgrades the image's two packages with those RPMs, with every
+repo off, and checks the release and that the greeter binary holds the new
+strings. To drop it: when upstream makes the placeholder configurable (or says
+"PIN" itself), delete `build_files/login/`, the `login` stage and its bind in
+the Containerfile, and the "Login screen" block of `packages.sh`; the build
+fails earlier if the patch stops applying. The same applies to the lock screen
+patch in `build.sh` (MainBlock.qml).
+
 ## First-run setup
 
 The wizard on first boot is Telamon Setup (`telamon-wizard`, built from the
@@ -700,13 +723,25 @@ password always keeps working.
   own password), acts only for PKEXEC_UID and reads the PIN from stdin.
   It refuses PINs that are not 4 to 8 digits, one repeated digit, or a straight
   run (1234, 4321). `pin-admin status` needs no pkexec. The user-facing pieces
-  are `pin-setup` (kdialog; the "Set Up PIN" launcher entry), and
-  `telamon pin set|remove|status`.
+  are `pin-setup` (the "Set Up PIN" launcher entry), `pin-prompt` (the
+  window where the PIN is typed twice, fields labelled PIN; GTK 4 through
+  PyGObject, which `build.sh` checks is there; kdialog's `--password` is only
+  the fallback when no window can be shown, because its field says "Password"),
+  and `telamon pin set|remove|status`. The polkit prompt that follows asks for
+  the account password on purpose: it confirms the user, it is not the PIN.
+- **What the screens say.** The PAM prompt (pam_unix's "Password: ") is shown
+  by neither greeter: both draw a fixed placeholder in QML and answer PAM's
+  conversation with the text typed. So no PAM module or option can relabel the
+  field. The lock screen's placeholder is patched in `build.sh` to "Password or
+  PIN" (MainBlock.qml; the build fails if the line moves). The login screen's
+  is in `plasma-login-greeter`'s compiled QML, so the image rebuilds
+  plasma-login-manager with a patch (see "Patched login screen"): "Password or
+  PIN" when `/etc/authselect/authselect.conf` lists `with-pin`, else "Password".
 - **First login.** `/etc/xdg/autostart/atlasos-pin-setup.desktop` runs
   `pin-setup --first-login`: once the first-run wizard is done, a user without
   a PIN is asked once; any answer writes
   `~/.local/state/atlasos/pin-setup-done`. It waits for the fingerprint
-  question, any other kdialog and System Settings first, so two dialogs never
+  question, any other kdialog and Settings first, so two dialogs never
   show at once.
 - **KWallet.** After a PIN login the keyring modules are skipped (above), so
   KWallet asks for the password once, itself: the wallet opens with the real
@@ -860,6 +895,24 @@ Test it with a throwaway `HOME` in a container (the image has
 config and appletsrc, run `/usr/libexec/kf6/kconf_update
 /usr/share/kconf_update/atlasos.upd`, and diff.
 
+### Settings replaces System Settings
+
+Telamon Settings' `telamon-settings-systemsettings` package replaces
+Fedora's `plasma-systemsettings` (`apps.sh` checks it: the old package is
+gone, plasma-desktop, colord-kde and kcm-plasmalogin stay, `/usr/bin/systemsettings`
+is the shim). The image's own callers open Settings directly
+(`telamon-settings [--kcm kcm_x]`: the menu, the shortcuts plasmoid,
+`fingerprint-setup`); anything else that runs `systemsettings <kcm>` goes
+through the shim. The dock's default pin and the Launcher's list name
+`net.eterneon.telamon.settings.desktop`. Existing users' pins that name
+`systemsettings.desktop`, `kdesystemsettings.desktop` or
+`org.kde.systemsettings.desktop` (dock `launchers=`, `favorites=`,
+`favoriteApps=`, `ImportPins=`, the activity manager's favourites and the
+Launcher's `pinned.list`) move over once, in
+`telamon-20261007-settings-cutover.sh`; test it with
+`tests/settings-cutover/run.sh [IMAGE]`. The first-login scripts wait for
+`telamon-settings` or `kcmshell6` where they waited for `systemsettings`.
+
 ### The two image names
 
 Installed computers follow `ghcr.io/eternalcoder454/atlasos:<channel>` (or
@@ -891,6 +944,7 @@ sudo bootc switch ghcr.io/eternalcoder454/telamonos:latest
 | `build_files/build.sh` | Services, settings, branding, initramfs |
 | `build_files/version.sh` | The image's version in os-release (last: it changes daily) |
 | `build_files/kio/` | The KIO crash fix: rebuilds Fedora's `kf6-kio` with one patch |
+| `build_files/login/` | The login screen's "Password or PIN" placeholder: rebuilds Fedora's `plasma-login-manager` with one patch |
 | `build_files/drop-build-deps.sh` | Runs a builder stage's build, then removes its build dependencies |
 | `Containerfile.nvidia`, `build_files/nvidia/`, `system_files_nvidia/` | The `telamonos-nvidia` image (and `atlasos-nvidia`) |
 | `system_files/usr/lib/greenboot/` | The boot health checks and their red/green hooks |

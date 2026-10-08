@@ -401,7 +401,7 @@ updtest:
 [group('Checks')]
 lint:
     just --unstable --fmt --check
-    shellcheck build_files/*.sh build_files/kio/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/telamon/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/telamon/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
+    shellcheck build_files/*.sh build_files/kio/*.sh build_files/login/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/telamon/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/telamon/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
     shellcheck -s sh branding/render.sh system_files/usr/bin/telamon system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
     shellcheck -s sh system_files/usr/share/kconf_update/*.sh
     just --unstable --fmt --check --justfile system_files/usr/share/telamon/telamon.just

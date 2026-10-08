@@ -87,8 +87,8 @@ RUN --mount=type=cache,target=/var/cache/telamon-notepad-cargo,sharing=locked \
     CARGO_HOME=/var/cache/telamon-notepad-cargo drop-build-deps.sh /src/packaging/build-rpm.sh /out
 
 # Telamon Settings, built the same way from the build context named
-# "telamon-settings". It sits beside systemsettings and every KDE KCM and
-# replaces none of them.
+# "telamon-settings". Its telamon-settings-systemsettings subpackage replaces
+# plasma-systemsettings (apps.sh); every KDE KCM stays, for kcmshell6.
 FROM registry.fedoraproject.org/fedora:44 AS settings-app
 COPY --from=telamon-settings --exclude=.git --exclude=target --exclude=out --exclude=build / /src
 COPY build_files/drop-build-deps.sh /usr/local/bin/
@@ -200,6 +200,19 @@ RUN echo keepcache=True >>/etc/dnf/dnf.conf
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     drop-build-deps.sh /kio/build-rpm.sh /out
 
+# The login screen with Telamon OS's placeholder (see build_files/login/build-rpm.sh):
+# Fedora's plasma-login-manager, rebuilt at the version the base image has.
+FROM ${BASE_IMAGE} AS base-login
+RUN rpm -q plasma-login-manager --qf '%{VERSION}-%{RELEASE}' >/login-nvr
+
+FROM registry.fedoraproject.org/fedora:44 AS login
+COPY --from=base-login /login-nvr /login-nvr
+COPY build_files/login /login
+COPY build_files/drop-build-deps.sh /usr/local/bin/
+RUN echo keepcache=True >>/etc/dnf/dnf.conf
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
+    drop-build-deps.sh /login/build-rpm.sh /out
+
 # The SELinux modules (selinux/: the PIN verifier's, see DEV.md "PIN sign-in",
 # and atlasos_bootc, bootc's install_t from services, see DEV.md "SELinux"),
 # compiled in Fedora's own container, which has selinux-policy-devel; the
@@ -254,6 +267,7 @@ ARG BASE_IMAGE
 ARG PACKAGES_DATE=
 RUN --mount=type=bind,from=ctx-packages,source=/,target=/ctx \
     --mount=type=bind,from=kio,source=/out,target=/kio-rpms \
+    --mount=type=bind,from=login,source=/out,target=/login-rpms \
     --mount=type=tmpfs,dst=/tmp \
     PACKAGES_DATE="${PACKAGES_DATE}" /ctx/packages.sh
 

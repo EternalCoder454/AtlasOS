@@ -82,7 +82,7 @@ PlasmoidItem {
             PlasmaExtras.MenuItem { separator: true }
             PlasmaExtras.MenuItem {
                 text: i18n("System Settings…")
-                onClicked: run.command("systemsettings")
+                onClicked: run.command("telamon-settings")
             }
             PlasmaExtras.MenuItem {
                 text: i18n("Store…")

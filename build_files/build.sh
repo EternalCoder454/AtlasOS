@@ -447,9 +447,14 @@ if grep -q 'pam_atlasos_pin\|pin-auth\|pin-session' /etc/pam.d/system-auth; then
 	echo "build.sh: system-auth must not use the PIN" >&2
 	exit 1
 fi
-for f in pin-admin pin-daemon pin-setup; do
+for f in pin-admin pin-daemon pin-prompt pin-setup; do
 	[ -x "/usr/libexec/telamon/$f" ]
 done
+# pin-prompt (the window where the PIN is typed, fields labelled PIN) needs
+# GTK 4 and its Python bindings; nothing else here requires them, so the build
+# stops if a cleanup ever removes them (pin-setup would fall back to kdialog,
+# whose field says "Password").
+python3 -c 'import gi; gi.require_version("Gtk", "4.0"); from gi.repository import Gtk'
 [ -f /usr/libexec/telamon/pinlib.py ]
 [ -f /usr/lib/systemd/system/atlasos-pin@.service ]
 grep -qx 'ListenStream=/run/atlasos/pin.sock' /usr/lib/systemd/system/atlasos-pin.socket
@@ -813,6 +818,23 @@ for old, new in edits:
     qml = qml.replace(old, new)
 open(path, "w").write(qml)
 EOF
+
+# Lock screen: the field says "Password or PIN". The sign-in PIN is typed in
+# the password field (DEV.md, "PIN sign-in"), and the field's text is a fixed
+# placeholder in MainBlock.qml, not the PAM prompt (no greeter shows that), so
+# the PAM stack cannot change it. (The login screen's own placeholder is in
+# plasma-login-greeter, compiled in; DEV.md says what that leaves.)
+python3 - /usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/MainBlock.qml <<'EOF'
+import sys
+path = sys.argv[1]
+qml = open(path).read()
+old = 'placeholderText: i18ndc("plasma_shell_org.kde.plasma.desktop", "@info:placeholder in text field", "Password")\n'
+new = 'placeholderText: i18ndc("plasma_shell_org.kde.plasma.desktop", "@info:placeholder in text field", "Password or PIN")\n'
+if qml.count(old) != 1:
+    sys.exit(f"build.sh: lock screen password placeholder not found once in {path}")
+open(path, "w").write(qml.replace(old, new))
+EOF
+grep -q '"Password or PIN")' /usr/share/plasma/shells/org.kde.plasma.desktop/contents/lockscreen/MainBlock.qml
 
 # Boot splash: Fedora's spinner theme with the Telamon OS lockup as the watermark
 mkdir -p /usr/share/plymouth/themes/telamon
