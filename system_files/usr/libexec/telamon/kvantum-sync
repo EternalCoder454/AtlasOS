@@ -22,10 +22,22 @@ set -eu
 cfg=${XDG_CONFIG_HOME:-$HOME/.config}
 etc=${TELAMON_ETC_XDG:-${ATLAS_ETC_XDG:-/etc/xdg}}
 
-# Reads one key: first file that has it wins.
+# Reads one key from that one file. kreadconfig6 would also look through
+# XDG_CONFIG_DIRS, which names /etc/xdg (the Light scheme) and, only once
+# Plasma has started, the Global Theme's defaults before it: a user whose
+# kdeglobals has no ColorScheme (the Global Theme's is in kdedefaults) was read
+# as Light at login, so Kvantum, and with it the Qt apps and the portal's
+# colour-scheme, came up Light on a Dark desktop.
 get() { # file group key
 	[ -f "$1" ] || return 0
-	kreadconfig6 --file "$1" --group "$2" --key "$3" 2>/dev/null || true
+	awk -v g="$2" -v k="$3" '
+		/^\[/ { in_g = ($0 == "[" g "]"); next }
+		in_g {
+			i = index($0, "=")
+			if (i && substr($0, 1, i - 1) == k) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v); sub(/[ \t\r]+$/, "", v); r = v }
+		}
+		END { if (r != "") print r }
+	' "$1" 2>/dev/null || true
 }
 
 sync_theme() {
