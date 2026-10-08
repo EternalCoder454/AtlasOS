@@ -209,6 +209,16 @@ if grep -q '^\[Notifications\]' /etc/xdg/plasmanotifyrc; then
 	exit 1
 fi
 printf '\n# Telamon OS (build.sh): see there.\n[Notifications]\nPopupPosition=TopCenter\n' >>/etc/xdg/plasmanotifyrc
+# Telamon Screenshot's notifications (saved, copied, Open / Show in Folder / Edit)
+# are explicit user interactions, as Spectacle's were: the stock file shows
+# Spectacle's in Do Not Disturb (ShowPopupsInDndMode) and Spectacle is gone.
+# `net.eterneon.telamon.screenshot` is the desktop-entry hint the notification
+# carries.
+if grep -q '^\[Applications\]\[net\.eterneon\.telamon\.screenshot\]' /etc/xdg/plasmanotifyrc; then
+	echo "build.sh: plasmanotifyrc now has an [Applications][net.eterneon.telamon.screenshot] group; drop the one added here" >&2
+	exit 1
+fi
+printf '\n# Telamon OS (build.sh): Telamon Screenshot replaces Spectacle, whose group has this.\n[Applications][net.eterneon.telamon.screenshot]\nShowPopupsInDndMode=true\n' >>/etc/xdg/plasmanotifyrc
 
 # Telamon Launcher's user unit (installed by apps.sh) runs it at every login, so
 # its search and Meta key answer at once.

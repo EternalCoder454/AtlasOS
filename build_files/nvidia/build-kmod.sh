@@ -37,7 +37,10 @@ for pkg in kernel-devel kernel-devel-matched; do
 		exit 1
 	}
 done
-"${dnf[@]}" install "$devel/kernel-devel.rpm" "$devel/kernel-devel-matched.rpm"
+# --refresh: kernel-devel-matched needs the base image's kernel-core from the
+# repositories, and the cached metadata (build.yml caches it for a week) can be
+# older than a kernel that just reached updates.
+"${dnf[@]}" --refresh install "$devel/kernel-devel.rpm" "$devel/kernel-devel-matched.rpm"
 rm -rf "$devel"
 "${dnf[@]}" --enablerepo=rpmfusion-nonfree-nvidia-driver install akmod-nvidia
 
