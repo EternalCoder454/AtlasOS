@@ -5,15 +5,15 @@
 # checks the file.
 #
 # name       GitHub repository                 commit (40 hex)                           release
-framework    EternalCoder454/atlas-framework   b40693828d053ae59567529fdbac4bb3a397ca71  v2.0.2
+framework    EternalCoder454/atlas-framework   08afb18cc7488154ae67d5ab2e3ee6767b761b2f  v2.0.4
 updater      EternalCoder454/atlasos-updater   5304c8f5c921ae014af7f84500b3e59ed3d15a13
-monitor      EternalCoder454/atlasos-monitor   8762bafa2565a2ce09f7072a81f64ad7c72d9d20
+monitor      EternalCoder454/atlasos-monitor   7dba733ec0a7bd4a6aad67064bf0350061c5a5ef
 notepad      EternalCoder454/atlasos-notepad   abbd4f6bba0fc5dfef919eea15cc16b27f800c93
-settings     EternalCoder454/atlasos-settings  f538bb99b1eb51bbe7ff4eb1dd57d2c6b2ca7897  v0.4.5
-wizard       EternalCoder454/atlasos-wizard    be7ddef59c83b9d18098fc55a454f90f0701eba3  v0.2.1
-store        EternalCoder454/atlasos-store     e1086eccf09b9b68ea0342d6a1e7f2e1ab9828f9  v0.3.1
-explorer     EternalCoder454/atlasos-explorer  b77ec42b6be28bea2deb8e33a358c386c1db45f2
+settings     EternalCoder454/atlasos-settings  2e46d5690b7065b254e2d7fa380616bedcb295e2  v0.4.6
+wizard       EternalCoder454/atlasos-wizard    2769951fbb7f4366e392af356d349f2dd844b7c7  v0.2.2
+store        EternalCoder454/atlasos-store     f7898e3eae36355a63e3ae1a69ab079237c65ad3  v0.4.0
+explorer     EternalCoder454/atlasos-explorer  e249aa027c4b9fb02aa1bb3f9528874d9efbc410
 archive      EternalCoder454/atlasos-archive   94784318c29191328f3d0708f51f8af2a412b054
-launcher     EternalCoder454/atlasos-launcher  79c651e6e105bbb2d99b41c70119f3e15027c5a5  v0.3.2
+launcher     EternalCoder454/atlasos-launcher  08e5fcf7667e958dadf744eea16dee62a549e9bc  v0.3.3
 screenshot   EternalCoder454/atlasos-screenshot  ffd544f52d0b8fb0972345d473cb2210c623142b
 installer    EternalCoder454/atlasos-installer  529a1baf7fa1dca005d1dec9b3ae1b9381c797f9
