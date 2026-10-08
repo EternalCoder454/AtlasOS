@@ -66,7 +66,7 @@ rolls itself back.
 
 **Made for developers**
 - [Ghostty](https://ghostty.org) as the terminal (Ctrl+Alt+T), with
-  "Open Terminal Here" in Dolphin.
+  "Open Terminal Here" in Files.
 - Podman with a `docker` command and compose, Toolbox and Distrobox for
   mutable dev environments.
 - git, jq, ripgrep, fd and just, already there (Telamon Monitor in place of btop).

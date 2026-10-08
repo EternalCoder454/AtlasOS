@@ -1,6 +1,8 @@
 # No browser is set here (the installer's app step offers one). Telamon Notepad
 # opens text and source files,
 # Gwenview opens images, Okular opens PDFs, and Haruna opens video and audio.
+# Files (Telamon Explorer) opens folders and Telamon Archive the archive types it
+# claims (Dolphin and Ark are gone). ISO images and RPMs stay with their own apps.
 # Ahead of Fedora's lists, which name Firefox and KWrite, and of a browser's
 # own claim on PDFs and images.
 [Default Applications]
@@ -18,6 +20,14 @@ application/zstd=net.eterneon.telamon.archive.desktop
 application/x-bzip2=net.eterneon.telamon.archive.desktop
 application/vnd.rar=net.eterneon.telamon.archive.desktop
 application/x-rar=net.eterneon.telamon.archive.desktop
+application/x-bzip-compressed-tar=net.eterneon.telamon.archive.desktop
+application/x-lz4-compressed-tar=net.eterneon.telamon.archive.desktop
+application/x-bzip=net.eterneon.telamon.archive.desktop
+application/x-lz4=net.eterneon.telamon.archive.desktop
+application/vnd.ms-cab-compressed=net.eterneon.telamon.archive.desktop
+application/x-cpio=net.eterneon.telamon.archive.desktop
+application/x-archive=net.eterneon.telamon.archive.desktop
+application/vnd.debian.binary-package=net.eterneon.telamon.archive.desktop
 text/plain=net.eterneon.telamon.notepad.desktop
 text/markdown=net.eterneon.telamon.notepad.desktop
 text/x-readme=net.eterneon.telamon.notepad.desktop

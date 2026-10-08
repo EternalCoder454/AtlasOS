@@ -48,3 +48,7 @@ Script=telamon-20261008-remove-spectacle.sh,sh
 # A kdeglobals with colours but no ColorScheme (the name is in kdedefaults).
 Id=telamon-20261007-colorscheme
 Script=telamon-20261007-colorscheme.sh,sh
+
+# Files replaces KDE Dolphin and Telamon Archive replaces KDE Ark: pins, default apps and Dolphin's Meta+E move over.
+Id=telamon-20261008-replace-dolphin-ark
+Script=telamon-20261008-replace-dolphin-ark.sh,sh

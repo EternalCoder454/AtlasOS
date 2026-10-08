@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates Telamon OS's Kvantum themes: the application style for Qt/KDE apps
-(Dolphin, System Settings, Discover...), drawn to match the Telamon apps (Telamon
+(Gwenview, Okular, Discover...), drawn to match the Telamon apps (Telamon
 Updater, Telamon Monitor) as of Atlas.Ui 1.4.0, now Telamon.Ui: small-radius (4 px) buttons,
 fields and selections, 6 px cards, menus and tooltips, a hairline border, grey
 hover and press, accent-filled selected tab, thin rounded scrollbars. No pills.

@@ -381,7 +381,7 @@ bench runs="3" out=("build/bench/all-" + datetime("%Y%m%d-%H%M%S")):
 
 # Boot once and check the desktop works: Plasma, network, audio, Bluetooth,
 # printing, Flatpak, SELinux, firewalld, zram (zstd), systemd-oomd, power
-# profiles, no crashes, and Brave Origin, Ghostty and Dolphin opening.
+# profiles, no crashes, and Brave Origin, Ghostty and Files opening.
 # Screenshots in the output folder.
 [group('Measure')]
 check out=("build/bench/check-" + datetime("%Y%m%d-%H%M%S")):

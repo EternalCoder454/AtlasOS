@@ -51,6 +51,47 @@ for p in plasma-discover-notifier plasma-discover-rpm-ostree PackageKit; do
 done
 grep -qx 'UseUnattendedUpdates=false' /etc/xdg/PlasmaDiscoverUpdates
 
+# Files (Telamon Explorer) and Telamon Archive replace Dolphin and Ark (packages.sh
+# removes them; apps.sh checks the apps, the D-Bus name and Meta+E). The defaults
+# are the system_files lists copied above. Fedora's own kde-settings list, below
+# ours in the lookup order, names Dolphin and Ark: renamed, so nothing in it
+# points at an app that is gone. The dock's preferred://filemanager is the
+# preferred application for inode/directory (Plasma asks the same lookup).
+sed -i -e 's/\<org\.kde\.dolphin\.desktop\>/net.eterneon.telamon.explorer.desktop/' \
+	-e 's/\<org\.kde\.ark\.desktop\>/net.eterneon.telamon.archive.desktop/' /usr/share/applications/kde-mimeapps.list
+for l in /etc/xdg/mimeapps.list /etc/xdg/kde-mimeapps.list /usr/share/applications/kde-mimeapps.list; do
+	[ "$(grep -cx 'inode/directory=net.eterneon.telamon.explorer.desktop' "$l")" = 1 ]
+	[ "$(grep -c '^inode/directory=' "$l")" = 1 ]
+	if grep -qE 'org\.kde\.(dolphin|ark)\.desktop' "$l"; then
+		echo "build.sh: $l still names Dolphin or Ark" >&2
+		exit 1
+	fi
+done
+# No type is set twice in ours (the later line would be ignored), and every type
+# set to Archive is one its desktop file claims.
+for l in /etc/xdg/mimeapps.list /etc/xdg/kde-mimeapps.list; do
+	[ -z "$(awk '/^\[/ { on = ($0 == "[Default Applications]") } on && /^[a-z]+\/[^=]+=/ { sub(/=.*/, ""); print }' "$l" | sort | uniq -d)" ]
+	while read -r t; do
+		grep -q "^MimeType=\(.*;\)\?$t;" /usr/share/applications/net.eterneon.telamon.archive.desktop || {
+			echo "build.sh: $l sets $t to Telamon Archive, which doesn't claim it" >&2
+			exit 1
+		}
+	done < <(sed -n 's/^\([a-z]*\/[^=]*\)=net\.eterneon\.telamon\.archive\.desktop$/\1/p' "$l")
+done
+for t in application/zip application/x-7z-compressed application/x-tar application/x-compressed-tar \
+	application/x-bzip2-compressed-tar application/x-xz-compressed-tar application/x-zstd-compressed-tar \
+	application/gzip application/x-rar application/vnd.rar; do
+	grep -qx "$t=net.eterneon.telamon.archive.desktop" /etc/xdg/kde-mimeapps.list
+done
+# The desktop database knows no Dolphin or Ark either (the packages' removal ran update-desktop-database).
+if grep -qE 'org\.kde\.(dolphin|ark)\.desktop' /usr/share/applications/mimeinfo.cache; then
+	echo "build.sh: mimeinfo.cache still lists Dolphin or Ark" >&2
+	exit 1
+fi
+# What a client outside Plasma asks (xdg-mime reads the lists above, with a bare environment).
+[ "$(env -i PATH="$PATH" HOME=/nonexistent xdg-mime query default inode/directory)" = net.eterneon.telamon.explorer.desktop ]
+[ "$(env -i PATH="$PATH" HOME=/nonexistent xdg-mime query default application/zip)" = net.eterneon.telamon.archive.desktop ]
+
 # Image signatures. CI signs every Telamon OS image with cosign (the key pair's
 # public half is cosign.pub in the repo); bootc, rpm-ostree and Podman accept
 # ghcr.io/eternalcoder454/telamonos and telamonos-nvidia (and atlasos and
