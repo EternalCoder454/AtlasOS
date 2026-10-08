@@ -1,0 +1,22 @@
+#!/bin/sh
+# Stand-in for bootc in tests/update-stage: answers from the files in $T and
+# writes every call to $T/calls.
+echo "bootc $*" >>"$T/calls"
+case $1 in
+status) cat "$T/status.json" ;;
+upgrade)
+	case " $* " in
+	*" --check "*) echo "(check; the answer is in the status already)" ;;
+	*)
+		# a real upgrade: the status afterwards
+		if [ -f "$T/status-after.json" ]; then
+			cp "$T/status-after.json" "$T/status.json"
+			echo "Queued for next boot"
+		else
+			echo "Staged update present, not changed"
+		fi
+		;;
+	esac
+	;;
+*) exit 1 ;;
+esac
