@@ -1,0 +1,119 @@
+#!/usr/bin/python3
+# Asks for a new sign-in PIN, twice, in one window whose fields are labelled
+# PIN (kdialog's password dialog labels its field "Password", which is what
+# people reported seeing when they set a PIN up; see DEV.md, "PIN sign-in").
+# Run by pin-setup. The PIN goes to stdout; nothing else does.
+#   exit 0   a PIN was chosen (4 to 8 digits, typed the same twice)
+#   exit 1   cancelled or the window was closed
+#   exit 2   the window can't be shown (pin-setup then falls back to kdialog)
+import re
+import sys
+
+try:
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gdk, Gio, Gtk
+except (ImportError, ValueError, RuntimeError):
+    sys.exit(2)
+if Gdk.Display.get_default() is None:
+    sys.exit(2)
+
+PIN_SHAPE = re.compile(r"[0-9]{4,8}")
+
+INTRO = ("Choose a PIN of 4 to 8 digits.\n\n"
+         "It works at the login screen and the lock screen only: type it "
+         "where you would type your password. Your password keeps working.\n\n"
+         "A PIN is easier to guess than a password if someone gets at the "
+         "disk: don't reuse a bank-card PIN, and a longer PIN is safer.")
+
+
+class PinPrompt(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id="org.telamon.PinPrompt",
+                         flags=Gio.ApplicationFlags.NON_UNIQUE)
+        self.status = 1
+        self.pin = ""
+
+    def do_activate(self):
+        win = Gtk.ApplicationWindow(application=self, title="Set Up PIN",
+                                    resizable=False)
+        win.set_default_size(420, -1)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                      margin_top=18, margin_bottom=18,
+                      margin_start=18, margin_end=18)
+        win.set_child(box)
+
+        heading = Gtk.Label(label="Choose a PIN", xalign=0)
+        heading.add_css_class("title-3")
+        box.append(heading)
+        intro = Gtk.Label(label=INTRO, xalign=0, wrap=True, max_width_chars=48)
+        box.append(intro)
+
+        grid = Gtk.Grid(row_spacing=8, column_spacing=12)
+        self.first = Gtk.PasswordEntry(placeholder_text="PIN",
+                                       show_peek_icon=True, hexpand=True)
+        self.again = Gtk.PasswordEntry(placeholder_text="PIN again",
+                                       show_peek_icon=True, hexpand=True)
+        for row, (text, entry) in enumerate((("PIN", self.first),
+                                             ("Confirm PIN", self.again))):
+            label = Gtk.Label(label=text, xalign=0)
+            label.set_mnemonic_widget(entry)
+            grid.attach(label, 0, row, 1, 1)
+            grid.attach(entry, 1, row, 1, 1)
+        box.append(grid)
+
+        self.note = Gtk.Label(label="", xalign=0, wrap=True)
+        self.note.add_css_class("dim-label")
+        box.append(self.note)
+        box.append(Gtk.Label(
+            label="Next you confirm with your account password.",
+            xalign=0, wrap=True))
+
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label="Cancel")
+        self.ok = Gtk.Button(label="Set PIN", sensitive=False)
+        self.ok.add_css_class("suggested-action")
+        buttons.append(cancel)
+        buttons.append(self.ok)
+        box.append(buttons)
+
+        cancel.connect("clicked", lambda _b: win.close())
+        self.ok.connect("clicked", self.accept)
+        for entry in (self.first, self.again):
+            entry.connect("changed", self.check)
+            entry.connect("activate", self.activate_entry)
+        win.set_default_widget(self.ok)
+        self.first.grab_focus()
+        win.present()
+
+    def check(self, _entry):
+        first, again = self.first.get_text(), self.again.get_text()
+        if first and not PIN_SHAPE.fullmatch(first):
+            note = "A PIN is 4 to 8 digits."
+        elif again and first != again:
+            note = "The two PINs aren't the same yet."
+        else:
+            note = ""
+        self.note.set_label(note)
+        self.ok.set_sensitive(
+            bool(PIN_SHAPE.fullmatch(first)) and first == again)
+
+    def activate_entry(self, entry):
+        if entry is self.first:
+            self.again.grab_focus()
+        elif self.ok.get_sensitive():
+            self.accept(None)
+
+    def accept(self, _button):
+        self.pin = self.first.get_text()
+        self.status = 0
+        self.quit()
+
+
+app = PinPrompt()
+app.run([sys.argv[0]])
+if app.status == 0:
+    sys.stdout.write(app.pin + "\n")
+    sys.stdout.flush()
+sys.exit(app.status)

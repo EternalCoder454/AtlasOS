@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Turns stock Fedora Kinoite into Telamon OS, part 1 of 4: packages. Runs in the
 # Containerfile's first RUN step on the base image, with the patched KIO
-# RPMs at /kio-rpms. Its own step, with
+# and login screen RPMs at /kio-rpms and /login-rpms. Its own step, with
 # nothing else from the repository bound in, so a change to system_files,
 # branding or the Telamon apps doesn't reinstall every package: Podman reuses
 # this step until the base image, this script or those RPMs change, or the
@@ -472,6 +472,40 @@ rpm -q kf6-kio-core | grep -q '\.atlas1\.' || {
 	rpm -qa 'kf6-kio-*' >&2
 	exit 1
 }
+
+### Login screen
+
+# Fedora's plasma-login-manager rebuilt with the "Password or PIN" placeholder
+# (the login stage of the Containerfile, bound in at /login-rpms; see
+# login/build-rpm.sh). Same rules as for KIO: only what the image has, one
+# release, and no repo, so a build needing newer libraries fails.
+login=()
+for f in /login-rpms/*.rpm; do
+	rpm -q "$(rpm -qp --qf '%{NAME}' "$f")" >/dev/null 2>&1 && login+=("$f")
+done
+[ ${#login[@]} -gt 0 ]
+"${dnf[@]}" --disablerepo='*' upgrade "${login[@]}"
+rpm -q plasma-login-manager | grep -q '\.atlas1\.' || {
+	echo "packages.sh: plasma-login-manager is not Telamon OS's build" >&2
+	exit 1
+}
+[ "$(rpm -qa --qf '%{RELEASE}\n' plasma-login-manager kcm-plasmalogin | sort -u | wc -l)" -eq 1 ] || {
+	echo "packages.sh: plasma-login-manager and kcm-plasmalogin are from different builds" >&2
+	exit 1
+}
+# The patched placeholder is in the built greeter (Qt keeps QML strings in
+# the binary as Latin-1 or UTF-16), and QML has no file access.
+python3 - <<'PYEOF2'
+import sys
+d = open("/usr/libexec/plasma-login-greeter", "rb").read()
+for s in ("Password or PIN", "pinSignIn", "TelamonSignIn", "/etc/authselect/authselect.conf"):
+    if s.encode("utf-16le") not in d and s.encode() not in d:
+        sys.exit(f"packages.sh: the login greeter has no {s!r}: the patch is not in it")
+# QML must not get file access in the pre-authentication greeter
+for s in ("QML_XHR_ALLOW_FILE_READ",):
+    if s.encode("utf-16le") in d or s.encode() in d:
+        sys.exit(f"packages.sh: the login greeter allows QML file reads ({s})")
+PYEOF2
 
 ### First-run wizard
 
