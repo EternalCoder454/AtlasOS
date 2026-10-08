@@ -165,6 +165,15 @@ PlasmoidItem {
 
         default property alias items: menu.content
 
+        // As tall as the menu bar, not as tall as its own padding wants: at a
+        // larger font the button's implicit height (text + 2 x 4 px) is more
+        // than the bar's, a row can't shrink below that, so everything is
+        // laid out from the top of a taller row and sits low in the island.
+        // With no vertical padding the text is centred in the bar's height.
+        Layout.fillHeight: true
+        Layout.minimumHeight: 0
+        topPadding: 0
+        bottomPadding: 0
         checked: menu.status === PlasmaExtras.Menu.Open
         onPressed: checked ? menu.close() : menu.openRelative()
 
@@ -187,6 +196,11 @@ PlasmoidItem {
             text: root.hasWindow ? root.appName : i18n("Desktop")
             font.bold: true
             elide: Text.ElideRight
+            // Fills the bar's height with the text centred in it, instead of
+            // sitting at its own implicit height (see BarMenu)
+            Layout.fillHeight: true
+            Layout.minimumHeight: 0
+            verticalAlignment: Text.AlignVCenter
             Layout.maximumWidth: Kirigami.Units.gridUnit * 12
             Layout.leftMargin: 6
             Layout.rightMargin: 6
