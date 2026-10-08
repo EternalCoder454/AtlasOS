@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stand-in for skopeo in tests/update-stage: inspect answers with $T/skopeo.json.
+echo "skopeo $*" >>"$T/calls"
+[ -f "$T/skopeo.json" ] && cat "$T/skopeo.json"

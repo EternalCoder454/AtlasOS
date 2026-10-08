@@ -1,0 +1,14 @@
+#!/bin/sh
+# Stand-in for rpm-ostree in tests/update-stage.
+echo "rpm-ostree $*" >>"$T/calls"
+case $1 in
+status) cat "$T/rpm.json" ;;
+upgrade)
+	# the status afterwards
+	if [ -f "$T/rpm-after.json" ]; then
+		cp "$T/rpm-after.json" "$T/rpm.json"
+	fi
+	;;
+cleanup) ;;
+*) exit 1 ;;
+esac

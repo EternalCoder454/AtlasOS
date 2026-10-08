@@ -1,0 +1,3 @@
+#!/bin/sh
+# No NetworkManager here: the connection is not metered.
+exit 1
