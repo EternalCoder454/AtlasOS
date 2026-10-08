@@ -273,6 +273,10 @@ leftover=$(find /etc/yum.repos.d \( -iname '*ghostty*' -o -iname '*nvidia-contai
 "${dnf[@]}" install gwenview okular okular-part qalculate-qt haruna plasma-camera \
 	kf6-kimageformats qt6-qtimageformats kdegraphics-thumbnailers
 [ -f /usr/lib64/qt6/plugins/okular_generators/okularGenerator_poppler.so ]
+# AppImages (type 2) need libfuse.so.2; Telamon Store installs them
+# (otherwise they fall back to APPIMAGE_EXTRACT_AND_RUN, which is slower).
+"${dnf[@]}" install fuse-libs
+[ -e /usr/lib64/libfuse.so.2 ]
 
 # Codecs and video decoding on the GPU. Fedora's ffmpeg, GStreamer and Mesa
 # leave out H.264, H.265 and the like; RPM Fusion's builds have them. Its
