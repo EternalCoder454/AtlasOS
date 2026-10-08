@@ -57,14 +57,17 @@ def agent(domain: str, command: str, **args) -> dict:
 def session_screenshot(con: "Console", password: str, user: str, path: pathlib.Path) -> None:
     """Screenshots USER's Wayland session from inside the guest. QEMU can't
     read back a SPICE OpenGL display, so once Plasma draws with the GPU
-    virsh screenshot has nothing to save. Spectacle saves the picture and the
-    guest agent copies it out; the new label lets the agent's SELinux domain
-    read it."""
+    virsh screenshot has nothing to save. Telamon Screenshot saves the picture
+    (in the user's Pictures/Screenshots; it prints the path), a copy goes to
+    /tmp, and the guest agent copies that out; the new label lets the agent's
+    SELinux domain read it."""
     tmp = f"/tmp/vmctl-{path.stem}.png"
     con.sudo(
-        f"u=$(id -u {user}) && runuser -u {user} -- env XDG_RUNTIME_DIR=/run/user/$u "
+        f"u=$(id -u {user}) && h=$(getent passwd {user} | cut -d: -f6) && "
+        f"p=$(runuser -u {user} -- env HOME=$h XDG_RUNTIME_DIR=/run/user/$u "
         f"WAYLAND_DISPLAY=wayland-0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus "
-        f"spectacle -b -n -f -o {tmp} && chcon -t virt_qemu_ga_tmp_t {tmp}",
+        f"telamon-screenshot --full --no-notify) && cp \"$p\" {tmp} && rm -f \"$p\" && "
+        f"chcon -t virt_qemu_ga_tmp_t {tmp}",
         password,
     )
     try:

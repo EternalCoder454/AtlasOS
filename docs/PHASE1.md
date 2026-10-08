@@ -138,5 +138,6 @@ this one is not.
   them, so it is untidy rather than wrong (inference from KConfig's format).
 - `branding/render.sh` uses paths relative to its arguments; it works when
   run from the Containerfile, as it is.
-- Screenshots of Plasma itself are taken inside the guest with Spectacle:
+- Screenshots of Plasma itself are taken inside the guest with Spectacle (now
+  Telamon Screenshot, which replaced it):
   QEMU can't read a SPICE OpenGL display back, and `egl-headless` failed too.

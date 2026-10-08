@@ -130,20 +130,46 @@ fi
 # the panels of existing users (the image's kconf_update migration renames it
 # first, in the same login; each leaves the other nothing to do).
 [ -f /usr/share/plasma/shells/org.kde.plasma.desktop/contents/updates/telamon-20261007-launcher-button.js ]
-# Telamon Screenshot takes Meta+Shift+S (its .desktop, in kglobalaccel too, so
-# KDE's ScreenShot2 grant matches the binary); Spectacle keeps Print and its
-# other shortcuts. The kglobalaccel copy of Spectacle's file is a symlink.
+# Telamon Screenshot replaces Spectacle (packages.sh removes it first: the
+# telamon-screenshot-spectacle-compat package Conflicts with it, and Provides
+# spectacle for whatever asks for it). Its .desktop file has Spectacle's
+# shortcuts and action ids (Print takes a region), and Meta+Shift+S on the
+# region action; the copy in kglobalaccel is what registers them, and KDE's
+# ScreenShot2 grant matches the binary the file names.
 [ -x /usr/bin/telamon-screenshot ]
 # The old name is a link to it, which is how KWin's grant reaches the shortcut.
 [ "$(readlink -f /usr/bin/atlasos-screenshot)" = /usr/bin/telamon-screenshot ]
-grep -qx 'X-KDE-Shortcuts=Meta+Shift+S' /usr/share/kglobalaccel/net.eterneon.telamon.screenshot.desktop
-grep -qx 'X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2' /usr/share/applications/net.eterneon.telamon.screenshot.desktop
-sed -i 's/^X-KDE-Shortcuts=Print,Meta+Shift+S$/X-KDE-Shortcuts=Print/' /usr/share/applications/org.kde.spectacle.desktop
-if grep -q 'Meta+Shift+S' /usr/share/applications/org.kde.spectacle.desktop; then
-	echo "apps.sh: Spectacle still claims Meta+Shift+S" >&2
+rpm -q telamon-screenshot-spectacle-compat
+# Names only: rpm -q does not match what a package provides.
+if rpm -q --quiet spectacle; then
+	echo "apps.sh: spectacle is still installed beside telamon-screenshot" >&2
 	exit 1
 fi
-grep -qx 'X-KDE-Shortcuts=Print' /usr/share/applications/org.kde.spectacle.desktop
+[ "$(rpm -q --whatprovides spectacle --qf '%{NAME}\n')" = telamon-screenshot-spectacle-compat ]
+for gone in /usr/bin/spectacle /usr/share/applications/org.kde.spectacle.desktop /usr/share/kglobalaccel/org.kde.spectacle.desktop; do
+	if [ -e "$gone" ] || [ -L "$gone" ]; then
+		echo "apps.sh: $gone is left from Spectacle" >&2
+		exit 1
+	fi
+done
+# The annotation editor: its own program, so the capture path never loads Qt.
+[ -x /usr/bin/telamon-screenshot-editor ]
+[ -f /usr/share/applications/net.eterneon.telamon.screenshot.editor.desktop ]
+# org.kde.Spectacle on the session bus is Telamon Screenshot's (--dbus), and no
+# other service file claims the name.
+grep -qx 'Exec=/usr/bin/telamon-screenshot --dbus' /usr/share/dbus-1/services/org.kde.Spectacle.service
+[ "$(grep -l '^Name=org.kde.Spectacle$' /usr/share/dbus-1/services/*.service)" = /usr/share/dbus-1/services/org.kde.Spectacle.service ]
+for f in /usr/share/applications/net.eterneon.telamon.screenshot.desktop /usr/share/kglobalaccel/net.eterneon.telamon.screenshot.desktop; do
+	grep -qx 'X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2' "$f"
+	grep -qx 'X-KDE-Shortcuts=Print' "$f"
+	grep -qx 'X-KDE-Shortcuts=Shift+Print' "$f"
+	grep -qx 'X-KDE-Shortcuts=Meta+Print' "$f"
+	grep -qx 'X-KDE-Shortcuts=Meta+Shift+Print,Meta+Shift+S' "$f"
+	grep -qx 'X-KDE-Shortcuts=Meta+Ctrl+Print' "$f"
+done
+# Nothing else in the image takes Meta+Shift+S.
+[ "$(grep -l 'X-KDE-Shortcuts=.*Meta+Shift+S\($\|,\)' /usr/share/applications/*.desktop /usr/share/kglobalaccel/*.desktop | sort | tr '\n' ' ')" = \
+	'/usr/share/applications/net.eterneon.telamon.screenshot.desktop /usr/share/kglobalaccel/net.eterneon.telamon.screenshot.desktop ' ]
 # The first-run setup: its session user comes from the RPM's sysusers.d file
 # (provides user(telamon-setup)), and its boot unit, which runs before the
 # display manager on every boot, is on by the RPM's preset; enabled here too,
