@@ -40,3 +40,7 @@ Script=atlasos-20261003-kvantum.sh,sh
 
 Id=atlasos-20261003-papirus
 Script=atlasos-20261003-papirus.sh,sh
+
+# A kdeglobals with colours but no ColorScheme (the name is in kdedefaults).
+Id=telamon-20261007-colorscheme
+Script=telamon-20261007-colorscheme.sh,sh

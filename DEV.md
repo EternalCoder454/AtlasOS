@@ -1155,7 +1155,11 @@ under a wider splitter (its width sum assumes Breeze's).
 `~/.config/Kvantum/kvantum.kvconfig`: Dark when the `ColorScheme` in kdeglobals
 contains "Dark" (read like the session does: `~/.config/kdeglobals`, then
 `~/.config/kdedefaults/kdeglobals`, where applying a Global Theme puts it, then
-`/etc/xdg`), Solid when `telamonrc` `[Appearance] Transparency` is false (the
+`/etc/xdg`; each file on its own, with awk: `kreadconfig6` also walks
+`XDG_CONFIG_DIRS`, which has `/etc/xdg` (Light) before the Global Theme's
+defaults until Plasma starts, so a kdeglobals with no `ColorScheme` read as
+Light at login and the Kvantum theme, the Qt apps and the portal's
+`color-scheme` came up Light on a Dark desktop), Solid when `telamonrc` `[Appearance] Transparency` is false (the
 switch the Telamon apps use). It leaves a Kvantum theme the user picked that
 isn't one of ours alone. The user units `atlasos-kvantum-sync.service` and
 `.path` (both enabled globally) run it at login and on any save directly in
@@ -1167,6 +1171,11 @@ unless kdeglobals, kdedefaults/kdeglobals or telamonrc was saved since its last
 read (other apps' saves cost only that check); then it waits a second for a
 theme switch's burst of saves to settle, and reads again (twice at most) if
 one landed while it ran, since that starts nothing new. Running apps keep their style until restarted.
+
+`telamon-20261007-colorscheme.sh` (a settings update) gives a kdeglobals that has
+colours but no `[General] ColorScheme` the name from `kdedefaults/kdeglobals`,
+which is all that Flatpak apps and anything else reading kdeglobals alone can
+see. `tests/colorscheme/run.sh [IMAGE]` tests it and kvantum-sync on such a home.
 
 It keeps GTK in step too. Plasma's gtkconfig (kded) sets GTK's dark
 preference, icon theme and gsettings colour scheme when kdeglobals notifies a
