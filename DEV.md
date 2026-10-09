@@ -782,7 +782,8 @@ password always keeps working.
   /usr/libexec/telamon/pin-daemon`, then authenticate with service `kde`
   (as the user), `plasmalogin` (as root) and `sshd` or `sudo`. A probe module
   placed in place of the wallet lines shows what they would be given.
-  SELinux and the real greeters are not covered that way.
+  SELinux and the real greeters are not covered that way. `tests/pin/run.sh`
+  does all of this against the published image (see docs/SECURITY.md).
 
 ## NVIDIA
 

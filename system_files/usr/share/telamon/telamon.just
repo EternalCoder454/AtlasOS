@@ -66,7 +66,7 @@ brew:
     echo "This runs Homebrew's own installer from https://brew.sh."
     echo "It asks for your password once, to make $prefix yours."
     sudo install -d -o "$(id -u)" -g "$(id -g)" /home/linuxbrew "$prefix"
-    NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 bash -c "$(curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     echo
     echo "Done. Open a new terminal, then: brew install <tool>"
     echo "Homebrew's commands come after the system's (/etc/profile.d/atlasos-brew.sh)."
@@ -100,11 +100,21 @@ jetbrains-toolbox:
         https://download.jetbrains.com/*.tar.gz) ;;
         *) echo "telamon jetbrains-toolbox: unexpected download link: $url" >&2; exit 1 ;;
         esac
+        case $sum in
+        https://download.jetbrains.com/*.sha256) ;;
+        *) echo "telamon jetbrains-toolbox: unexpected checksum link: $sum" >&2; exit 1 ;;
+        esac
         tmp=$(mktemp -d)
         trap 'rm -rf "$tmp"' EXIT
         echo "Downloading $url"
-        curl -fL --retry 3 -o "$tmp/toolbox.tar.gz" "$url"
-        echo "$(curl -fsSL "$sum" | cut -d' ' -f1)  $tmp/toolbox.tar.gz" | sha256sum -c --quiet
+        # HTTPS only, and a redirect may not leave it
+        curl -fL --proto '=https' --proto-redir '=https' --tlsv1.2 --retry 3 -o "$tmp/toolbox.tar.gz" "$url"
+        want=$(curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 "$sum" | cut -d' ' -f1)
+        case $want in
+        *[!0-9a-f]* | '') echo "telamon jetbrains-toolbox: the checksum file is not a SHA-256" >&2; exit 1 ;;
+        esac
+        [ "${#want}" = 64 ] || { echo "telamon jetbrains-toolbox: the checksum file is not a SHA-256" >&2; exit 1; }
+        echo "$want  $tmp/toolbox.tar.gz" | sha256sum -c --quiet
         mkdir -p "$dir"
         tar -xzf "$tmp/toolbox.tar.gz" -C "$dir" --strip-components=1
     fi
