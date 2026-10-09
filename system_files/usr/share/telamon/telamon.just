@@ -54,6 +54,25 @@ channel name:
     rpm-ostree rebase "$kind$repo:$name"
     echo "Restart to start using $name."
 
+alias g := gates
+
+# Open Telamon Gates, the local AI chat app, from the Store
+gates:
+    #!/bin/bash
+    set -euo pipefail
+    app=net.eterneon.telamon.gates
+    # Where the app menu looks: the Store puts its apps in the first
+    IFS=: read -ra dirs <<<"${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    for dir in "${dirs[@]}"; do
+        if [ -f "$dir/applications/$app.desktop" ]; then
+            # Started like from the app menu: its environment, and an
+            # already open window comes to the front
+            exec kstart --application "$app"
+        fi
+    done
+    echo "telamon gates: Telamon Gates isn't installed; install it from the Store" >&2
+    exit 1
+
 # Install Homebrew, for command-line tools Fedora doesn't package
 brew:
     #!/bin/bash
