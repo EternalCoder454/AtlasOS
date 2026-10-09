@@ -465,6 +465,15 @@ jobs:
           # and this as the telamon-installer one.
           TELAMON_INSTALLER_SRC: ${{ github.workspace }}/telamon-installer
         run: |
+          # Fetch the Kinoite build now, before the app stages take an hour:
+          # Fedora retags fedora-kinoite:44 often and the registry drops the
+          # old digest, which used to fail the build when the base stage
+          # finally pulled it. `podman build` then uses the local copy.
+          for try in 1 2 3; do
+            podman pull --quiet "${{ steps.decide.outputs.base }}" >/dev/null && break
+            [ "$try" = 3 ] && { echo "::error::could not fetch ${{ steps.decide.outputs.base }}"; exit 1; }
+            sleep 10
+          done
           just build "${{ steps.decide.outputs.tag }}" \
             --build-arg BASE_IMAGE="${{ steps.decide.outputs.base }}" \
             --label org.opencontainers.image.revision="${GITHUB_SHA}" \
