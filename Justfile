@@ -404,12 +404,22 @@ lint:
     shellcheck build_files/*.sh build_files/kio/*.sh build_files/login/*.sh build_files/nvidia/*.sh system_files_nvidia/usr/libexec/telamon/* scripts/*.sh scripts/guest/*.sh $(grep -lE '^#!.*sh$' system_files/usr/libexec/telamon/*) system_files/usr/lib/greenboot/*/*.sh system_files/usr/lib/greenboot/check/required.d/*.sh ci/vps-runner/*.sh ci/vps-runner/hooks/*.sh
     shellcheck -s sh branding/render.sh system_files/usr/bin/telamon system_files/etc/profile.d/*.sh system_files/usr/lib/systemd/user-environment-generators/*
     shellcheck -s sh system_files/usr/share/kconf_update/*.sh
+    shellcheck -S warning tests/pin/run.sh tests/pin/inner.sh tests/units/run.sh tests/signing/run.sh tests/signing/inner.sh
     just --unstable --fmt --check --justfile system_files/usr/share/telamon/telamon.just
     python3 -m py_compile scripts/vmctl.py scripts/vmswitch.py scripts/vmbench.py scripts/benchsum.py scripts/vmlive.py scripts/guest/atspi.py system_files/usr/libexec/telamon/pinlib.py
     python3 -m py_compile system_files/usr/libexec/telamon/pin-admin system_files/usr/libexec/telamon/pin-daemon
-    python3 -m py_compile scripts/telamon-pins.py scripts/update-size.py scripts/build-notes.py
+    python3 -m py_compile scripts/telamon-pins.py scripts/update-size.py scripts/build-notes.py tests/pin/pamconv.py tests/pin/ask.py tests/pin/fake-verifier.py tests/units/check.py
     scripts/telamon-pins.py list >/dev/null
-    rm -rf system_files/usr/libexec/telamon/__pycache__ scripts/__pycache__
+    rm -rf system_files/usr/libexec/telamon/__pycache__ scripts/__pycache__ tests/pin/__pycache__ tests/units/__pycache__
+
+# The security tests (docs/SECURITY.md): the PIN stack, the shipped units and
+# polkit actions, and the signature policy, in containers of the published
+# image (it is pulled once; the signing test also pulls registry:3 and cosign).
+[group('Checks')]
+security-tests image='ghcr.io/eternalcoder454/telamonos:testing':
+    tests/units/run.sh {{ image }}
+    tests/pin/run.sh {{ image }}
+    tests/signing/run.sh {{ image }}
 
 # Stop the test VMs and remove everything in build/: disk images, the stock
 # Kinoite VM (reinstalled on the next `just mem`), the VM password, memory

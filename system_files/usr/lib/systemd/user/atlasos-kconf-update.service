@@ -15,6 +15,15 @@ Before=plasma-kwin_wayland.service plasma-plasmashell.service plasma-kded6.servi
 Type=oneshot
 TimeoutStartSec=30
 ExecStart=/usr/libexec/kf6/kconf_update /usr/share/kconf_update/atlasos.upd
+# Sandbox: the little that is safe for a user service without a mount
+# namespace (those options need user namespaces, which not every system has).
+# It runs the user's own tools on the user's own files; none of them needs a
+# new privilege.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
 
 [Install]
 WantedBy=plasma-core.target
