@@ -228,6 +228,22 @@ check(scripts == onfs, "every kconf_update script is listed, and every listed on
 ids = re.findall(r"^Id=(\S+)", upd, re.M)
 check(len(ids) == len(set(ids)), "no Id is used twice")
 
+# ---- Homebrew's PATH -------------------------------------------------------
+print("== 7. Homebrew's commands reach only the user who owns the prefix")
+subprocess.run(["useradd", "-u", "1001", "alice"], capture_output=True)
+subprocess.run(["useradd", "-u", "1002", "bob"], capture_output=True)
+os.makedirs("/home/linuxbrew/.linuxbrew/bin", exist_ok=True)
+open("/home/linuxbrew/.linuxbrew/bin/brew", "w").write("#!/bin/sh\n")
+os.chmod("/home/linuxbrew/.linuxbrew/bin/brew", 0o755)
+subprocess.run(["chown", "-R", "1001", "/home/linuxbrew"])
+for uid, want in (("0", "out"), ("1001", "in"), ("1002", "out")):
+    out = subprocess.run(
+        ["setpriv", f"--reuid={uid}", f"--regid={uid}", "--clear-groups", "sh", "-c",
+         ". " + os.path.join(repo, "system_files/etc/profile.d/atlasos-brew.sh")
+         + '; case $PATH in *linuxbrew*) echo in;; *) echo out;; esac'],
+        capture_output=True, text=True).stdout.strip()
+    check(out == want, f"uid {uid} gets brew on PATH: {want}", out)
+
 print()
 print("PASS: tests/units" if not failed else f"FAIL: tests/units ({failed})")
 sys.exit(1 if failed else 0)

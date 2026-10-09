@@ -162,10 +162,12 @@ only through `kwriteconfig6`, and keeps its stamp in `XDG_RUNTIME_DIR`.
 | # | Issue | Severity | Fix | Test |
 |---|---|---|---|---|
 | I1 | No automated test of the PIN stack, its PAM gating, lockout, store or tools existed in the repository (the harness lived outside it) | process | `tests/pin` | 116 checks |
-| I2 | Nothing tested that the shipped units keep their sandboxing, that polkit actions stay closed to remote and inactive sessions, that no sudoers/rules/setuid file appears, or that scripts avoid eval and fixed temp files | process | `tests/units` | 271 checks |
+| I2 | Nothing tested that the shipped units keep their sandboxing, that polkit actions stay closed to remote and inactive sessions, that no sudoers/rules/setuid file appears, or that scripts avoid eval and fixed temp files | process | `tests/units` | 274 checks |
 | I3 | Nothing tested that a signed update is accepted, an unsigned or re-tagged or wrongly-signed one refused, under the image's real policy | process | `tests/signing` (local registry + cosign) | 24 checks |
 | I4 | The two user units that run at every login had no sandboxing at all | low | `NoNewPrivileges`, `LockPersonality`, `RestrictRealtime`, `RestrictSUIDSGID`, `SystemCallArchitectures` | `tests/units` section 3 |
 | I5 | `telamon jetbrains-toolbox` fetched with `curl` without pinning the protocol, did not check where the checksum link pointed, and passed whatever the checksum file held to `sha256sum` | low | https and TLS 1.2 only (also on redirects), the checksum link must be on `download.jetbrains.com`, the value must be 64 hex digits | `just --list` and `just --fmt --check` of the file |
+| I7 | `/etc/profile.d/atlasos-brew.sh` added the Homebrew prefix to every login shell's PATH, root's and other users' included; the prefix belongs to one user, who could plant a program named like a command the image lacks, for root to run by typing it | low | only for the user who owns the prefix, never for root | `tests/units` section 7 |
+| I8 | `telamon brew` fetched Homebrew's installer without pinning https | low | `--proto '=https' --tlsv1.2` | `just --fmt --check`, `--list` |
 | I6 | `pin-daemon` answers `set` to `status` for an account whose password is locked (verify answers `deny`) | info | none: harmless, and `pin-admin status` only knows four words; recorded in the test | `tests/pin` |
 
 Checked and fine: the PIN daemon and library, the PAM module and its gating,
@@ -185,6 +187,13 @@ tmpfiles and socket modes.
 | The PIN hash is guessable offline by someone with the disk | 4-8 digits | disk encryption (the installer offers it); a longer PIN |
 | A user with an all-digit password who mistypes it counts as a wrong PIN | by design | none |
 | No kernel hardening `sysctl` beyond Fedora's | `ptrace_scope`, `dmesg_restrict` and friends change developer workflows (this image targets developers); a product decision | pick a set |
+| Ghostty comes from one person's COPR, unpinned, rebuilt daily, `repo_gpgcheck=0`; the key proves only "built by COPR" (`build_files/packages.sh`) | the terminal is wanted; a package from COPR runs as root at build time and ships under our signature | build it from a pinned upstream tag in its own stage, or fetch the RPM by URL and check a pinned hash |
+| The signing and NVIDIA module-key secrets are repository secrets, readable by a workflow run from any branch by anyone with write access (no `environment:`) | GitHub settings, not code | a GitHub Environment limited to `main` with required reviewers |
+| `iso.yml` builds the ISO from the installer's `main`, not the commit in `telamon-apps.lock`, in the job that later holds `ISO_UPLOAD_KEY`; the ISO has no detached signature | the ISO should carry the newest installer | use the pinned commit when uploading, split build and upload, sign the ISO |
+| The VPS runner is not ephemeral and admits a push of any tag | `ci/vps-runner` | `--ephemeral` JIT registration; a tag ruleset |
+| `ci/crash-relay` trusts `X-Forwarded-For` from any peer when `RELAY_PROXY_SECRET` is unset (compose.yaml requires it) | the global caps still hold | make the secret mandatory |
+| Build stages use tag-only bases (`alpine`, `fedora`, `golang`); dependabot covers actions only | | digests and the docker ecosystem |
+| The default firewall zone allows ssh (sshd is off), mdns and Steam's services on every network | documented intent | a separate trusted zone |
 | The first-run wizard (`telamon-wizard`) creates the account as root | its own repository | audit it with this one's method |
 | Attestations are not enforced client-side | not an update gate | none |
 | SELinux and the real greeters are not covered by `tests/pin` | needs a booted VM | the VM pass in DEV.md |

@@ -66,7 +66,7 @@ brew:
     echo "This runs Homebrew's own installer from https://brew.sh."
     echo "It asks for your password once, to make $prefix yours."
     sudo install -d -o "$(id -u)" -g "$(id -g)" /home/linuxbrew "$prefix"
-    NONINTERACTIVE=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 bash -c "$(curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     echo
     echo "Done. Open a new terminal, then: brew install <tool>"
     echo "Homebrew's commands come after the system's (/etc/profile.d/atlasos-brew.sh)."
