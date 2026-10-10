@@ -5,7 +5,7 @@
 # checks the file.
 #
 # name       GitHub repository                 commit (40 hex)                           release
-framework    EternalCoder454/atlas-framework   e4c988e7e1cc81198e1979f3f6ae8eb711d962c8  v2.0.10
+framework    EternalCoder454/atlas-framework   72356aebee3d945c1ba1497c2af32a646497d272  v2.1.1
 updater      EternalCoder454/atlasos-updater   d46386263ccd81574924a83d7a63f34d11e1ba70
 monitor      EternalCoder454/atlasos-monitor   10a536bb370be4a05a7c589e1462fe60de48e0df
 notepad      EternalCoder454/atlasos-notepad   51be892fb5823bdb7d0c5515c23749ee363e1aca
